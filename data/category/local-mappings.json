@@ -1,0 +1,164 @@
+[
+  {
+    "item_id": "76330336699506",
+    "splr_item_id": "956263117864",
+    "hs": {
+      "category_id": 50012412,
+      "category_cn_name": "睡袋/凉席/枕头/床品",
+      "category_en_name": "Sleeping bag/cool mat/pillow/bedding",
+      "hs_code": "9404309000",
+      "declare_cn_name": "枕头",
+      "declare_en_name": "pillow"
+    },
+    "mapped_at": "2026-07-06T02:05:13.703Z",
+    "source": "correct"
+  },
+  {
+    "item_id": "76322604262421",
+    "splr_item_id": "707961865779",
+    "hs": {
+      "category_id": 50019155,
+      "category_cn_name": "解放包/单肩包",
+      "category_en_name": "liberation package/shoulder bag",
+      "hs_code": "4202920000",
+      "declare_cn_name": "背包",
+      "declare_en_name": "backpack",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-05T04:36:52.966Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "76322604517838",
+    "splr_item_id": "899113395613",
+    "hs": {
+      "category_id": 3,
+      "category_cn_name": "包包",
+      "category_en_name": "Bags",
+      "hs_code": "4202920000",
+      "declare_cn_name": "包包",
+      "declare_en_name": "Bags",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-05T04:36:50.578Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "DEMO-MAP-PENDING-01",
+    "splr_item_id": "990033445566",
+    "hs": {
+      "category_id": 50010850,
+      "category_cn_name": "连衣裙",
+      "category_en_name": "dress",
+      "hs_code": "6104420000",
+      "declare_cn_name": "连衣裙",
+      "declare_en_name": "dress",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-05T00:38:24.331Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "76321188325315",
+    "splr_item_id": "901045168148",
+    "hs": {
+      "category_id": 201164006,
+      "category_cn_name": "面部彩妆",
+      "category_en_name": "Facial makeup",
+      "hs_code": "nan",
+      "declare_cn_name": "nan",
+      "declare_en_name": "nan",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-05T00:38:21.196Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "76312476788294",
+    "splr_item_id": "938613438920",
+    "hs": {
+      "category_id": 50010850,
+      "category_cn_name": "连衣裙",
+      "category_en_name": "dress",
+      "hs_code": "6104420000",
+      "declare_cn_name": "连衣裙",
+      "declare_en_name": "dress",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-04T07:11:18.854Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "76312455627594",
+    "splr_item_id": "901070303778",
+    "hs": {
+      "category_id": 50010850,
+      "category_cn_name": "连衣裙",
+      "category_en_name": "dress",
+      "hs_code": "6104420000",
+      "declare_cn_name": "连衣裙",
+      "declare_en_name": "dress",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-04T07:11:12.379Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "76312449845754",
+    "splr_item_id": "939578775605",
+    "hs": {
+      "category_id": 50010850,
+      "category_cn_name": "连衣裙",
+      "category_en_name": "dress",
+      "hs_code": "6104420000",
+      "declare_cn_name": "连衣裙",
+      "declare_en_name": "dress",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-04T07:11:06.960Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "76312442459399",
+    "splr_item_id": "1014606819386",
+    "hs": {
+      "category_id": 50010850,
+      "category_cn_name": "连衣裙",
+      "category_en_name": "dress",
+      "hs_code": "6104420000",
+      "declare_cn_name": "连衣裙",
+      "declare_en_name": "dress"
+    },
+    "mapped_at": "2026-07-04T07:10:53.197Z",
+    "source": "correct"
+  },
+  {
+    "item_id": "TBMR4WC2KJBDTJ",
+    "splr_item_id": "1037523343451",
+    "hs": {
+      "category_id": 50019274,
+      "category_cn_name": "沙滩鞋/凉鞋/拖鞋",
+      "category_en_name": "Beach Shoes",
+      "hs_code": "6402200000",
+      "declare_cn_name": "沙滩鞋",
+      "declare_en_name": "Beach Shoes",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-03T13:33:48.669Z",
+    "source": "correct"
+  },
+  {
+    "item_id": "76308190988970",
+    "splr_item_id": "1055183586868",
+    "hs": {
+      "category_id": 50012048,
+      "category_cn_name": "运动沙滩鞋/凉鞋",
+      "category_en_name": "Motion Beach Shoes",
+      "hs_code": "6402200000",
+      "declare_cn_name": "运动沙滩鞋",
+      "declare_en_name": "Motion Beach Shoes"
+    },
+    "mapped_at": "2026-07-03T13:33:28.784Z",
+    "source": "correct"
+  }
+]

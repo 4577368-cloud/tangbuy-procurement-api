@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.env.local
+data/config/config-center.json
+data/products/center.json
+data/agent/tasks.json
+data/integrations/
+workspace/
+*.egg-info/

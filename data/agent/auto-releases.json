@@ -1,0 +1,192 @@
+[
+  {
+    "release_id": "rel-001",
+    "order_id": "ord-3001",
+    "external_order_no": "TO25110000252",
+    "product_title": "0-1岁女童软底高帮学步鞋 棕色",
+    "release_type": "procurement_pass",
+    "agent_label": "采购准入 Agent",
+    "released_at": "2026-07-03T08:12:00+08:00",
+    "conditions": [
+      { "key": "channel", "label": "渠道已识别", "passed": true, "detail": "1688" },
+      { "key": "sku", "label": "SKU 规格一致", "passed": true, "detail": "下单规格与货源 SKU 匹配" },
+      { "key": "category", "label": "品类已映射", "passed": true, "detail": "内部品类映射完整" },
+      { "key": "moq", "label": "起批量满足", "passed": true, "detail": "订购数量 ≥ 最低起批量" },
+      { "key": "margin", "label": "毛利条件符合", "passed": true, "detail": "毛利率 33.3%（¥9 / ¥27）≥ 15%" },
+      { "key": "price_note", "label": "无改价待处理", "passed": true, "detail": "备注未命中改价关键词" },
+      { "key": "stock", "label": "无缺货风险", "passed": true, "detail": "卖家在售、库存正常" },
+      { "key": "fields", "label": "关键字段完整", "passed": true, "detail": "货源链接、金额、用户 ID 齐全" }
+    ],
+    "summary": "全部准入条件满足，自动进入待支付",
+    "review_status": "confirmed",
+    "reviewed_at": "2026-07-03T09:00:00+08:00"
+  },
+  {
+    "release_id": "rel-002",
+    "order_id": "ord-3003",
+    "external_order_no": "TO25110000301",
+    "product_title": "无线蓝牙耳机 Pro 降噪版",
+    "release_type": "procurement_pass",
+    "agent_label": "采购准入 Agent",
+    "released_at": "2026-07-03T08:18:00+08:00",
+    "conditions": [
+      { "key": "channel", "label": "渠道已识别", "passed": true, "detail": "淘宝" },
+      { "key": "sku", "label": "SKU 规格一致", "passed": true, "detail": "下单规格与货源 SKU 匹配" },
+      { "key": "category", "label": "品类已映射", "passed": true, "detail": "内部品类映射完整" },
+      { "key": "moq", "label": "起批量满足", "passed": true, "detail": "订购数量 ≥ 最低起批量" },
+      { "key": "margin", "label": "毛利条件符合", "passed": true, "detail": "毛利率 41.6%（¥37 / ¥89）≥ 15%" },
+      { "key": "price_note", "label": "无改价待处理", "passed": true, "detail": "备注未命中改价关键词" },
+      { "key": "stock", "label": "无缺货风险", "passed": true, "detail": "卖家在售、库存正常" },
+      { "key": "fields", "label": "关键字段完整", "passed": true, "detail": "货源链接、金额、用户 ID 齐全" }
+    ],
+    "summary": "全部准入条件满足，自动进入待支付",
+    "review_status": "pending"
+  },
+  {
+    "release_id": "rel-003",
+    "order_id": "ord-3004",
+    "external_order_no": "TO25110000315",
+    "product_title": "厨房收纳盒六件套",
+    "release_type": "payment_pass",
+    "agent_label": "支付确认 Agent",
+    "released_at": "2026-07-03T08:25:00+08:00",
+    "conditions": [
+      { "key": "purchase_order", "label": "采购单有效", "passed": true, "detail": "已生成平台采购任务" },
+      { "key": "amount_cover", "label": "实付覆盖应付", "passed": true, "detail": "实付 ¥45 ≥ 应付 ¥28" },
+      { "key": "price_pending", "label": "无待处理改价", "passed": true, "detail": "卖家改价流程已结束" },
+      { "key": "pay_status", "label": "支付状态可执行", "passed": true, "detail": "非支付中 / 已支付" },
+      { "key": "risk_tag", "label": "无高风险标签", "passed": true, "detail": "未命中拦截类异常" }
+    ],
+    "summary": "支付条件满足，自动确认并下单",
+    "review_status": "pending"
+  },
+  {
+    "release_id": "rel-004",
+    "order_id": "ord-3005",
+    "external_order_no": "TO25110000328",
+    "product_title": "便携榨汁杯 380ml",
+    "release_type": "procurement_pass",
+    "agent_label": "采购准入 Agent",
+    "released_at": "2026-07-03T08:32:00+08:00",
+    "conditions": [
+      { "key": "channel", "label": "渠道已识别", "passed": true, "detail": "1688" },
+      { "key": "sku", "label": "SKU 规格一致", "passed": true, "detail": "下单规格与货源 SKU 匹配" },
+      { "key": "category", "label": "品类已映射", "passed": true, "detail": "内部品类映射完整" },
+      { "key": "moq", "label": "起批量满足", "passed": true, "detail": "订购数量 ≥ 最低起批量" },
+      { "key": "margin", "label": "毛利条件符合", "passed": true, "detail": "毛利率 51.3%（¥40 / ¥78）≥ 15%" },
+      { "key": "price_note", "label": "无改价待处理", "passed": true, "detail": "备注未命中改价关键词" },
+      { "key": "stock", "label": "无缺货风险", "passed": true, "detail": "卖家在售、库存正常" },
+      { "key": "fields", "label": "关键字段完整", "passed": true, "detail": "货源链接、金额、用户 ID 齐全" }
+    ],
+    "summary": "全部准入条件满足，自动进入待支付",
+    "review_status": "confirmed",
+    "reviewed_at": "2026-07-03T10:15:00+08:00"
+  },
+  {
+    "release_id": "rel-005",
+    "order_id": "ord-3002",
+    "external_order_no": "TO25110000288",
+    "product_title": "304 不锈钢螺丝 M4×20",
+    "release_type": "procurement_pass",
+    "agent_label": "采购准入 Agent",
+    "released_at": "2026-07-03T09:14:00+08:00",
+    "conditions": [
+      { "key": "channel", "label": "渠道已识别", "passed": true, "detail": "1688" },
+      { "key": "sku", "label": "SKU 规格一致", "passed": true, "detail": "下单规格与货源 SKU 匹配" },
+      { "key": "category", "label": "品类已映射", "passed": true, "detail": "内部品类映射完整" },
+      { "key": "moq", "label": "起批量满足", "passed": true, "detail": "订购 500 件 ≥ MOQ 100" },
+      { "key": "margin", "label": "毛利条件符合", "passed": true, "detail": "毛利率 37.2%（¥58 / ¥156）≥ 15%" },
+      { "key": "price_note", "label": "无改价待处理", "passed": true, "detail": "备注未命中改价关键词" },
+      { "key": "stock", "label": "无缺货风险", "passed": true, "detail": "卖家在售、库存正常" },
+      { "key": "fields", "label": "关键字段完整", "passed": true, "detail": "货源链接、金额、用户 ID 齐全" }
+    ],
+    "summary": "全部准入条件满足，自动进入待支付",
+    "review_status": "pending"
+  },
+  {
+    "release_id": "rel-006",
+    "order_id": "ord-1003",
+    "external_order_no": "TO25110000156",
+    "product_title": "Type-C 快充数据线 2m",
+    "release_type": "procurement_pass",
+    "agent_label": "采购准入 Agent",
+    "released_at": "2026-07-03T09:22:00+08:00",
+    "conditions": [
+      { "key": "channel", "label": "渠道已识别", "passed": true, "detail": "淘宝" },
+      { "key": "sku", "label": "SKU 规格一致", "passed": true, "detail": "下单规格与货源 SKU 匹配" },
+      { "key": "category", "label": "品类已映射", "passed": true, "detail": "内部品类映射完整" },
+      { "key": "moq", "label": "起批量满足", "passed": true, "detail": "订购数量 ≥ 最低起批量" },
+      { "key": "margin", "label": "毛利条件符合", "passed": true, "detail": "毛利率 52.8%（¥47 / ¥89）≥ 15%" },
+      { "key": "price_note", "label": "无改价待处理", "passed": true, "detail": "备注未命中改价关键词" },
+      { "key": "stock", "label": "无缺货风险", "passed": true, "detail": "卖家在售、库存正常" },
+      { "key": "fields", "label": "关键字段完整", "passed": true, "detail": "货源链接、金额、用户 ID 齐全" }
+    ],
+    "summary": "全部准入条件满足，自动进入待支付",
+    "review_status": "pending"
+  },
+  {
+    "release_id": "rel-007",
+    "order_id": "ord-1005",
+    "external_order_no": "TO25110000178",
+    "product_title": "不锈钢螺丝套装 M3-M6",
+    "release_type": "procurement_pass",
+    "agent_label": "采购准入 Agent",
+    "released_at": "2026-07-03T09:35:00+08:00",
+    "conditions": [
+      { "key": "channel", "label": "渠道已识别", "passed": true, "detail": "1688" },
+      { "key": "sku", "label": "SKU 规格一致", "passed": true, "detail": "下单规格与货源 SKU 匹配" },
+      { "key": "category", "label": "品类已映射", "passed": true, "detail": "内部品类映射完整" },
+      { "key": "moq", "label": "起批量满足", "passed": true, "detail": "订购数量 ≥ 最低起批量" },
+      { "key": "margin", "label": "毛利条件符合", "passed": true, "detail": "毛利率 42.9%（¥67 / ¥156）≥ 15%" },
+      { "key": "price_note", "label": "无改价待处理", "passed": true, "detail": "备注未命中改价关键词" },
+      { "key": "stock", "label": "无缺货风险", "passed": true, "detail": "卖家在售、库存正常" },
+      { "key": "fields", "label": "关键字段完整", "passed": true, "detail": "货源链接、金额、用户 ID 齐全" }
+    ],
+    "summary": "全部准入条件满足，自动进入待支付",
+    "review_status": "confirmed",
+    "reviewed_at": "2026-07-03T11:00:00+08:00"
+  },
+  {
+    "release_id": "rel-008",
+    "order_id": "ord-2004",
+    "external_order_no": "TO25110000201",
+    "product_title": "纯棉圆领短袖 T 恤",
+    "release_type": "payment_pass",
+    "agent_label": "支付确认 Agent",
+    "released_at": "2026-07-03T10:05:00+08:00",
+    "conditions": [
+      { "key": "purchase_order", "label": "采购单有效", "passed": true, "detail": "已生成平台采购任务" },
+      { "key": "amount_cover", "label": "实付覆盖应付", "passed": true, "detail": "实付 ¥42 ≥ 应付 ¥22" },
+      { "key": "price_pending", "label": "无待处理改价", "passed": true, "detail": "卖家改价流程已结束" },
+      { "key": "pay_status", "label": "支付状态可执行", "passed": true, "detail": "非支付中 / 已支付" },
+      { "key": "risk_tag", "label": "无高风险标签", "passed": true, "detail": "未命中拦截类异常" }
+    ],
+    "summary": "支付条件满足，自动确认并下单",
+    "review_status": "flagged",
+    "reviewed_at": "2026-07-03T10:30:00+08:00",
+    "reviewer_note": "尺码备注与 SKU 映射有歧义，需跟单确认"
+  },
+  {
+    "release_id": "rel-009",
+    "order_id": "ord-3006",
+    "external_order_no": "TO25110000340",
+    "product_title": "宠物自动饮水器 2.5L",
+    "release_type": "procurement_pass",
+    "agent_label": "采购准入 Agent",
+    "released_at": "2026-07-02T16:08:00+08:00",
+    "conditions": [
+      { "key": "channel", "label": "渠道已识别", "passed": true, "detail": "1688" },
+      { "key": "sku", "label": "SKU 规格一致", "passed": true, "detail": "下单规格与货源 SKU 匹配" },
+      { "key": "category", "label": "品类已映射", "passed": true, "detail": "内部品类映射完整" },
+      { "key": "moq", "label": "起批量满足", "passed": true, "detail": "订购数量 ≥ 最低起批量" },
+      { "key": "margin", "label": "毛利条件符合", "passed": false, "detail": "毛利率 0%（¥0 / ¥55），命中 VIP 零毛利备注放行策略" },
+      { "key": "price_note", "label": "无改价待处理", "passed": true, "detail": "备注：VIP 客户，零毛利可放行" },
+      { "key": "stock", "label": "无缺货风险", "passed": true, "detail": "卖家在售、库存正常" },
+      { "key": "fields", "label": "关键字段完整", "passed": true, "detail": "货源链接、金额、用户 ID 齐全" }
+    ],
+    "summary": "毛利未达阈值，但命中 VIP 零毛利策略，策略放行",
+    "review_status": "flagged",
+    "reviewed_at": "2026-07-02T17:00:00+08:00",
+    "reviewer_note": "零毛利策略放行合理，已确认"
+  }
+]

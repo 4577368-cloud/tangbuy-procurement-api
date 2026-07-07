@@ -1,0 +1,16 @@
+[project]
+name = "tangbuy-procurement-api"
+version = "1.0.0"
+description = "Tangbuy 智能采购履约系统 API"
+requires-python = ">=3.9"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "pydantic-settings>=2.0",
+  "httpx>=0.27",
+  "apscheduler>=3.10",
+  "requests>=2.31",
+]
+
+[tool.uvicorn]
+factory = false
