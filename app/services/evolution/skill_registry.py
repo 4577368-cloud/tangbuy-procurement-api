@@ -130,9 +130,9 @@ SKILL_DEFINITIONS: list[SkillEvolutionDescriptor] = [
         ),
         patch_prompt_template=(
             "品类映射prompt调优：\n"
-            "1. 补充"XX品类与YY品类容易混淆，应优先检查ZZ关键词"的区分指令\n"
+            "1. 补充「XX品类与YY品类容易混淆，应优先检查ZZ关键词」的区分指令\n"
             "2. 降低特定锚点词的权重\n"
-            "3. 增加特定场景的判断规则（如"标题含X但不含Y时，应排除Z品类"）"
+            "3. 增加特定场景的判断规则（如「标题含X但不含Y时，应排除Z品类」）"
         ),
     ),
     # ── 订单流程域 ──

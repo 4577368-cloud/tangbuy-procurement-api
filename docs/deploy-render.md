@@ -32,7 +32,7 @@
 
 | 项 | 值 |
 |----|-----|
-| Runtime | Python 3 |
+| Runtime | Python 3.11（环境变量 `PYTHON_VERSION=3.11.11` 或根目录 `runtime.txt`） |
 | Build Command | `pip install -r requirements.txt` |
 | Start Command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
 | Health Check Path | `/api/health` |

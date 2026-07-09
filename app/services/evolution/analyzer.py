@@ -50,13 +50,13 @@ def build_domain_analysis_prompt(
 
     skill_descriptor = get_evolution_skill(feedbacks[0].get("skill_id", "")) if feedbacks else None
     custom_template = skill_descriptor.analysis_prompt_template if skill_descriptor else ""
+    custom_block = f"专项分析指引:\n{custom_template}\n" if custom_template else ""
 
     return f"""你是一个AI质量分析师。请分析以下 {domain_label} 领域的 AI badcase 反馈数据。
 
 涉及技能: {skill_list}
 
-{f'专项分析指引:\n{custom_template}\n' if custom_template else ''}
-
+{custom_block}
 反馈数据（共{len(feedbacks)}条）:
 {"".join(feedback_lines)}
 
@@ -81,7 +81,7 @@ def build_domain_analysis_prompt(
   }},
   "summary": "一段话总结本次分析发现",
   "improvement_suggestions": ["3-5条改进建议"]
-}
+}}
 
 只输出JSON，不要附加解释。"""
 

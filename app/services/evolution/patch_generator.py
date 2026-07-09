@@ -95,6 +95,8 @@ def _generate_patch_content_with_llm(
     elif patch_type == PatchType.ROUTE_RULE:
         payload_instruction = "同时输出 JSON payload: {\"trigger_pattern\": \"...\", \"target_skill\": \"...\", \"condition\": \"...\", \"priority\": \"high|low\"}"
 
+    custom_block = f"技能专项调优指引:\n{custom_template}\n" if custom_template else ""
+
     prompt = f"""你是一个AI系统调优专家。请根据以下错误模式和技能描述，生成一个具体的调优补丁。
 
 技能: {descriptor.skill_name}({descriptor.skill_id})
@@ -105,8 +107,7 @@ def _generate_patch_content_with_llm(
 频次: {pattern.get('frequency')}次
 触发关键词: {', '.join(pattern.get('trigger_keywords') or []) or '(无)'}
 
-{f'技能专项调优指引:\n{custom_template}\n' if custom_template else ''}
-
+{custom_block}
 代表性案例:
 {cases_preview}
 
@@ -158,14 +159,14 @@ def _build_template_patch_content(
     keywords = "、".join(pattern.get("trigger_keywords") or [pattern.get("name")])
 
     if patch_type == PatchType.PROMPT_PATCH:
-        return f"【自进化补丁】当用户输入涉及"{keywords}"时，应优先走{descriptor.skill_name}而非其他技能；若无法确定意图，应追问而非自行选择。"
+        return f"【自进化补丁】当用户输入涉及「{keywords}」时，应优先走{descriptor.skill_name}而非其他技能；若无法确定意图，应追问而非自行选择。"
 
     if patch_type == PatchType.ROUTE_RULE:
         keyword = (pattern.get("trigger_keywords") or ["关键词"])[0]
         return json.dumps({
             "trigger_pattern": keyword,
             "target_skill": descriptor.skill_id,
-            "condition": f"用户消息含"{keyword}"时，强制路由到 {descriptor.skill_id}",
+            "condition": f"用户消息含「{keyword}」时，强制路由到 {descriptor.skill_id}",
             "priority": "high",
         }, ensure_ascii=False)
 
@@ -211,7 +212,7 @@ def _build_template_patch_payload(
         return {
             "trigger_pattern": keyword,
             "target_skill": descriptor.skill_id,
-            "condition": f"用户消息含"{keyword}"时，强制路由到 {descriptor.skill_id}",
+            "condition": f"用户消息含「{keyword}」时，强制路由到 {descriptor.skill_id}",
             "priority": "high",
         }
     return None
