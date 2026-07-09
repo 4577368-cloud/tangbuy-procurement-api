@@ -56,7 +56,7 @@ def _build_auto_release_seeds() -> list[dict[str, Any]]:
         total = len(r.get("conditions", []))
         review = r.get("review_status", "pending")
         status = _auto_release_status(review)
-        timeline = [{"at": r["released_at"], "label": "自动放行执行", "detail": r.get("summary", "")}]
+        timeline = [{"at": r["released_at"], "label": "自动下单执行", "detail": r.get("summary", "")}]
         if r.get("reviewed_at"):
             timeline.append(
                 {

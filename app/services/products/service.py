@@ -7,16 +7,20 @@ import time
 from datetime import datetime, timezone
 from typing import Any, Callable, Optional
 
-from app.integrations.skill_cli import run_category_suggest
+from app.integrations.skill_cli import run_category_suggest, unwrap_category_suggest_result
+from app.services.category_mapping.suggest import run_category_mapping_suggest
+from app.config.business_config import get_price_markup
 from app.services.products.store import (
     confirm_product_mapping,
     find_by_source_product_id,
+    find_reusable_hs_mapping,
+    get_product_by_id as store_get_product_by_id,
+    is_valid_hs_mapping,
     load_products,
+    mapping_hint_for_product,
     save_products,
     update_product,
 )
-
-MARKUP = 1.2
 
 
 def _now_iso() -> str:
@@ -39,15 +43,22 @@ def _parse_price(raw: Any) -> float:
         return 0.0
 
 
-def _apply_shipping_markup(shipping: Optional[float]) -> Optional[float]:
+def _apply_shipping_markup(shipping: Optional[float], markup: Optional[float] = None) -> Optional[float]:
     if shipping is None:
         return None
-    return round(shipping * MARKUP, 2)
+    rate = get_price_markup() if markup is None else markup
+    return round(shipping * rate, 2)
 
 
-def _build_tier_prices(unit: float, shipping: Optional[float]) -> list[dict[str, Any]]:
-    tangbuy_unit = round(unit * MARKUP, 2)
-    tangbuy_ship = _apply_shipping_markup(shipping)
+def _build_tier_prices(
+    unit: float,
+    shipping: Optional[float],
+    *,
+    markup: Optional[float] = None,
+) -> list[dict[str, Any]]:
+    rate = get_price_markup() if markup is None else markup
+    tangbuy_unit = round(unit * rate, 2)
+    tangbuy_ship = _apply_shipping_markup(shipping, rate)
     return [
         {
             "min_qty": 1,
@@ -70,7 +81,7 @@ def get_product_stats() -> dict[str, int]:
 
 
 def get_product_by_id(pid: str) -> Optional[dict[str, Any]]:
-    return next((p for p in load_products() if p.get("tangbuy_product_id") == pid), None)
+    return store_get_product_by_id(pid)
 
 
 def add_product_from_find_item(
@@ -107,6 +118,8 @@ def add_product_from_find_item(
         "shipping_source": "manual" if has_manual else "unknown",
         "shop_name": product.get("supplier") or "—",
         "source_product_id": source_id,
+        "source": "find",
+        "in_store": True,
     }
     items = load_products()
     items.insert(0, record)
@@ -137,30 +150,62 @@ def set_product_shipping(
     return update_product(pid, updater)
 
 
+def _normalize_category_suggest_result(result: dict[str, Any]) -> dict[str, Any]:
+    return unwrap_category_suggest_result(result)
+
+
+def _hs_from_suggest_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "category_id": payload.get("category_id", 0),
+        "category_cn_name": payload.get("category_cn_name", ""),
+        "category_en_name": payload.get("category_en_name", ""),
+        "hs_code": payload.get("hs_code", ""),
+        "declare_cn_name": payload.get("declare_cn_name", ""),
+        "declare_en_name": payload.get("declare_en_name", ""),
+        "tariff": payload.get("tariff"),
+    }
+
+
 def map_product_category_by_id(pid: str) -> Optional[dict[str, Any]]:
-    product = get_product_by_id(pid)
+    product = store_get_product_by_id(pid)
     if not product:
         return None
+
+    reused = find_reusable_hs_mapping(product, exclude_id=pid)
+    if reused:
+        hs, detail = reused
+        return update_product(
+            pid,
+            lambda p: confirm_product_mapping(
+                {
+                    **p,
+                    "mapping_record": {
+                        **(p.get("mapping_record") or {}),
+                        "match_detail": detail,
+                        "match_method": "local_item_mapped",
+                    },
+                },
+                hs,
+            ),
+        )
+
     update_product(pid, lambda p: {**p, "category_status": "mapping"})
-    result = run_category_suggest(
+    payload = run_category_mapping_suggest(
         product.get("product_name", ""),
+        hint=mapping_hint_for_product(product),
         goods_id=product.get("source_product_id"),
         image_url=product.get("image_url"),
     )
-    if not result.get("success"):
+    if not payload.get("success"):
         return update_product(pid, lambda p: {**p, "category_status": "failed"})
-    hs = {
-        "category_id": result.get("category_id", 0),
-        "category_cn_name": result.get("category_cn_name", ""),
-        "category_en_name": result.get("category_en_name", ""),
-        "hs_code": result.get("hs_code", ""),
-        "declare_cn_name": result.get("declare_cn_name", ""),
-        "declare_en_name": result.get("declare_en_name", ""),
-        "tariff": result.get("tariff"),
-    }
+    hs = _hs_from_suggest_payload(payload)
+    if not is_valid_hs_mapping(hs):
+        return update_product(pid, lambda p: {**p, "category_status": "failed"})
     return update_product(pid, lambda p: confirm_product_mapping(p, hs))
 
 
 def apply_mapping_record(product: dict[str, Any], record: dict[str, Any]) -> dict[str, Any]:
-    hs = record.get("suggested_hs") or {}
-    return confirm_product_mapping(product, hs if isinstance(hs, dict) else {})
+    hs = record.get("suggested_hs") or record.get("corrected_hs") or {}
+    if not isinstance(hs, dict) or not is_valid_hs_mapping(hs):
+        raise ValueError("映射结果无效，请重新运行品类映射")
+    return confirm_product_mapping(product, hs)

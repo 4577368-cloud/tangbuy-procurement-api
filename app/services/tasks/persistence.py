@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import fcntl
 import json
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Optional
 
 from app.core.paths import data_dir
 
@@ -23,13 +24,12 @@ def _ensure_dir() -> None:
     STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
-def load_runtime_tasks() -> list[dict[str, Any]]:
-    _ensure_dir()
-    if not STORE_PATH.exists():
+def _parse_tasks(raw: str) -> list[dict[str, Any]]:
+    if not raw.strip():
         return []
     try:
-        parsed = json.loads(STORE_PATH.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
         return []
     if not isinstance(parsed, list):
         return []
@@ -38,12 +38,61 @@ def load_runtime_tasks() -> list[dict[str, Any]]:
     return tasks
 
 
-def save_runtime_tasks(tasks: list[dict[str, Any]]) -> None:
-    _ensure_dir()
+def _write_tasks_locked(handle, tasks: list[dict[str, Any]]) -> None:
     runtime = [t for t in tasks if is_runtime_task(t)]
-    tmp = STORE_PATH.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(runtime, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    tmp.replace(STORE_PATH)
+    runtime.sort(key=lambda t: t.get("created_at", ""), reverse=True)
+    payload = json.dumps(runtime, ensure_ascii=False, indent=2) + "\n"
+    handle.seek(0)
+    handle.write(payload)
+    handle.truncate()
+    handle.flush()
+
+
+def with_runtime_tasks(
+    mutator: Optional[Callable[[list[dict[str, Any]]], None]] = None,
+    *,
+    repair: bool = True,
+) -> list[dict[str, Any]]:
+    """在文件锁内读取/修复/修改/写回 runtime 任务，避免并发覆盖丢数据。"""
+    _ensure_dir()
+    STORE_PATH.touch(exist_ok=True)
+    with open(STORE_PATH, "r+", encoding="utf-8") as handle:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            handle.seek(0)
+            tasks = _parse_tasks(handle.read())
+            dirty = False
+            if repair:
+                dirty = any(repair_order_followup_task(t) for t in tasks)
+            if mutator is not None:
+                mutator(tasks)
+                dirty = True
+            if dirty or mutator is not None:
+                _write_tasks_locked(handle, tasks)
+            return tasks
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+def load_runtime_tasks() -> list[dict[str, Any]]:
+    return with_runtime_tasks(repair=False)
+
+
+def save_runtime_tasks(tasks: list[dict[str, Any]]) -> None:
+    """按 id 合并写回，避免 list/refresh 的过期快照冲掉刚 append 的任务。"""
+    snapshot_by_id = {
+        str(t.get("id")): t
+        for t in tasks
+        if isinstance(t, dict) and is_runtime_task(t) and t.get("id")
+    }
+
+    def mutator(current: list[dict[str, Any]]) -> None:
+        merged = {str(t.get("id")): t for t in current if t.get("id")}
+        merged.update(snapshot_by_id)
+        current.clear()
+        current.extend(merged.values())
+
+    with_runtime_tasks(mutator, repair=False)
 
 
 def repair_order_followup_task(task: dict[str, Any]) -> bool:
@@ -82,8 +131,14 @@ def repair_order_followup_task(task: dict[str, Any]) -> bool:
 
 
 def load_and_repair() -> list[dict[str, Any]]:
-    tasks = load_runtime_tasks()
-    dirty = any(repair_order_followup_task(t) for t in tasks)
-    if dirty:
-        save_runtime_tasks(tasks)
-    return tasks
+    return with_runtime_tasks()
+
+
+def append_runtime_task(task: dict[str, Any]) -> list[dict[str, Any]]:
+    if not is_runtime_task(task):
+        return load_and_repair()
+
+    def mutator(tasks: list[dict[str, Any]]) -> None:
+        tasks.insert(0, task)
+
+    return with_runtime_tasks(mutator)

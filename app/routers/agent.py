@@ -11,6 +11,7 @@ from app.auth.permissions import RoleGrants
 from app.config.store import get_role_grants
 from app.core.config import get_settings
 from app.core.paths import PROJECT_ROOT, data_dir
+from app.core.json_safe import sanitize_for_json
 from app.services.agent.orchestrator import run_agent_chat
 from app.services.agent.skills import LEGACY_SKILLS, UNIFIED_ASSISTANT_ID
 
@@ -43,15 +44,17 @@ def agent_chat(request: Request, body: ChatBody) -> dict[str, Any]:
     grants: RoleGrants = get_role_grants(user.role)
 
     try:
-        return run_agent_chat(
-            skill_id,
-            [m.model_dump() for m in body.messages],
-            context=body.context,
-            intent=body.intent,
-            grants=grants,
+        return sanitize_for_json(
+            run_agent_chat(
+                skill_id,
+                [m.model_dump() for m in body.messages],
+                context=body.context,
+                intent=body.intent,
+                grants=grants,
+            )
         )
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(status_code=500, detail=str(exc) or "助手处理失败") from exc
 
 
 @router.get("/skills")

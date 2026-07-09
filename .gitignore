@@ -1,10 +1,15 @@
 .venv/
 __pycache__/
 *.pyc
+.DS_Store
 .env.local
 data/config/config-center.json
 data/products/center.json
+data/products/*.tmp
+data/products/*.bak*
 data/agent/tasks.json
 data/integrations/
 workspace/
 *.egg-info/
+package-lock.json
+docs/long_text_*.txt

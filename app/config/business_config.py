@@ -9,6 +9,8 @@ DEFAULT_BUSINESS_CONFIG: dict[str, Any] = {
     "moq": {"enabled": True, "default_min": 1},
     "unshipped_timeout_hours": 48,
     "ai_confidence_threshold": 0.85,
+    # 大店售价 / 运费统一加价倍率（相对 1688 原价）
+    "price_markup": 1.2,
     "rules": {
         "auto_category_mapping": True,
         "auto_add_to_store": False,
@@ -26,7 +28,11 @@ RULE_KEYS = (
 
 
 def normalize_business_config(raw: dict[str, Any] | None) -> dict[str, Any]:
-    base = DEFAULT_BUSINESS_CONFIG.copy()
+    base = {
+        **DEFAULT_BUSINESS_CONFIG,
+        "moq": dict(DEFAULT_BUSINESS_CONFIG["moq"]),
+        "rules": dict(DEFAULT_BUSINESS_CONFIG["rules"]),
+    }
     if not raw:
         return base
     moq = {**base["moq"], **(raw.get("moq") or {})}
@@ -35,6 +41,11 @@ def normalize_business_config(raw: dict[str, Any] | None) -> dict[str, Any]:
     pct = raw.get("gross_margin_threshold", base["gross_margin_threshold"])
     conf = raw.get("ai_confidence_threshold", base["ai_confidence_threshold"])
     hours = raw.get("unshipped_timeout_hours", base["unshipped_timeout_hours"])
+    markup_raw = raw.get("price_markup", base["price_markup"])
+    try:
+        markup = float(markup_raw) if markup_raw is not None else 1.2
+    except (TypeError, ValueError):
+        markup = 1.2
     return {
         "gross_margin_threshold": max(0, min(100, float(pct) if pct is not None else 15)),
         "moq": {
@@ -43,5 +54,17 @@ def normalize_business_config(raw: dict[str, Any] | None) -> dict[str, Any]:
         },
         "unshipped_timeout_hours": max(0, int(hours or 0)),
         "ai_confidence_threshold": max(0, min(1, float(conf) if conf is not None else 0.85)),
+        "price_markup": max(1.0, min(5.0, round(markup, 4))),
         "rules": rules,
     }
+
+
+def get_price_markup() -> float:
+    from app.config.store import get_business_config
+
+    cfg = get_business_config()
+    try:
+        n = float(cfg.get("price_markup") or 1.2)
+    except (TypeError, ValueError):
+        n = 1.2
+    return max(1.0, min(5.0, n))

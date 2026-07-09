@@ -7,7 +7,7 @@
 
 命令：
   text_search   --query "关键词" [--limit 10] [--sort price_asc|price_desc|sold_desc|yx_desc]
-  image_search  --image-url "https://..." [--limit 10]
+  image_search  --image-url "https://..." [--query "短主体词"] [--limit 10]
   link_search   --url "1688商品链接" [--image-url "主图URL"] [--limit 10]
   compare       --url "链接" | --image-url "主图" [--query "规格"] [--limit 3]
   order_inquiry_send --order-id "订单ID" --question "催发货问题"
@@ -22,6 +22,7 @@ import json
 import os
 import re
 import sys
+import time
 import uuid
 from pathlib import Path
 from typing import Any
@@ -78,24 +79,69 @@ def _ak_ready() -> bool:
     return bool(build_auth_headers("POST", FIND_PRODUCT_API, "{}"))
 
 
-def _gateway_post(path: str, body: dict, timeout: int = 30) -> dict:
+_TRANSIENT_GATEWAY_MARKERS = (
+    "后端服务调用失败",
+    "系统繁忙",
+    "ServiceUnavailable",
+    "timeout",
+    "temporarily",
+    "请稍后",
+)
+
+
+def _is_transient_gateway_error(message: str) -> bool:
+    lower = (message or "").lower()
+    return any(m.lower() in lower for m in _TRANSIENT_GATEWAY_MARKERS)
+
+
+def simplify_search_query(query: str) -> str:
+    q = (query or "").strip()
+    if not q:
+        return ""
+    noise = re.compile(
+        r"(帮我|请|想要|想找|搜索|找一下|推荐|给我|我要|一些|几款|几个|有没有|偏向|风格|款式|的)",
+    )
+    q = noise.sub(" ", q)
+    q = re.sub(r"\s+", " ", q).strip()
+    tokens = re.findall(r"[\u4e00-\u9fffA-Za-z0-9]+", q)
+    if tokens:
+        return " ".join(tokens)[:60]
+    return q[:60]
+
+
+def _gateway_post(path: str, body: dict, timeout: int = 30, *, retries: int = 3) -> dict:
     body_str = json.dumps(body, ensure_ascii=False)
     headers = build_auth_headers("POST", path, body_str)
     if not headers:
         raise RuntimeError("AK 未配置")
 
-    resp = requests.post(
-        f"{GATEWAY_BASE}{path}",
-        headers=headers,
-        data=body_str.encode("utf-8"),
-        timeout=timeout,
-    )
-    resp.raise_for_status()
-    result = resp.json()
-    if result.get("success") is False:
-        detail = result.get("msgInfo") or result.get("msgCode") or "未知业务错误"
-        raise RuntimeError(str(detail))
-    return result
+    last_err: Exception | None = None
+    for attempt in range(max(retries, 1)):
+        try:
+            resp = requests.post(
+                f"{GATEWAY_BASE}{path}",
+                headers=headers,
+                data=body_str.encode("utf-8"),
+                timeout=timeout,
+            )
+            resp.raise_for_status()
+            result = resp.json()
+            if result.get("success") is False:
+                detail = str(result.get("msgInfo") or result.get("msgCode") or "未知业务错误")
+                if _is_transient_gateway_error(detail) and attempt < retries - 1:
+                    time.sleep(0.6 * (attempt + 1))
+                    continue
+                raise RuntimeError(detail)
+            return result
+        except requests.RequestException as exc:
+            last_err = exc
+            if attempt < retries - 1:
+                time.sleep(0.6 * (attempt + 1))
+                continue
+            raise RuntimeError(str(exc)) from exc
+    if last_err:
+        raise last_err
+    raise RuntimeError("网关调用失败")
 
 
 def _unwrap_gateway_model(result: dict) -> Any:
@@ -122,20 +168,55 @@ def _gateway_find_products(body: dict) -> list[dict]:
 
 
 def _parse_product(item: dict) -> dict:
-    product_id = str(item.get("itemId", ""))
+    product_id = str(item.get("itemId", "") or item.get("offerId", "") or "")
     detail_url = item.get("detailUrl") or (
         f"https://detail.1688.com/offer/{product_id}.html" if product_id else ""
     )
+    title = (
+        item.get("title")
+        or item.get("subject")
+        or item.get("offerTitle")
+        or item.get("itemTitle")
+        or item.get("skuTitle")
+        or ""
+    )
+    try:
+        qty_begin = item.get("quantityBegin")
+        min_order_qty = int(qty_begin) if qty_begin not in (None, "") else None
+    except (TypeError, ValueError):
+        min_order_qty = None
+    try:
+        store_amount = item.get("storeAmount")
+        inventory = int(store_amount) if store_amount not in (None, "") else None
+    except (TypeError, ValueError):
+        inventory = None
+    cate_id = item.get("cateId") or item.get("categoryId")
     return {
         "product_id": product_id,
-        "title": item.get("title", ""),
-        "image_url": item.get("imageUrl", ""),
+        "title": str(title).strip(),
+        "image_url": item.get("imageUrl", "") or "",
         "detail_url": detail_url,
         "price": item.get("currentPrice"),
-        "supplier": item.get("company", ""),
-        "sold_count": item.get("soldOut", 0),
-        "similarity_score": float(item.get("score", 0)),
+        "supplier": item.get("company", "") or "",
+        "sold_count": item.get("soldOut", 0) or 0,
+        "similarity_score": float(item.get("score", 0) or 0),
         "yx_index": item.get("yxIndex"),
+        # 图搜可带回、换供入库要用的附加信息
+        "sku_id": str(item.get("skuId") or "").strip() or None,
+        "sku_title": str(item.get("skuTitle") or "").strip() or None,
+        "cate_id": str(cate_id).strip() if cate_id not in (None, "") else None,
+        "industry_name": str(item.get("industryName") or "").strip() or None,
+        "min_order_qty": min_order_qty,
+        "inventory": inventory,
+        "selling_points": item.get("sellingPoints")
+        if isinstance(item.get("sellingPoints"), list)
+        else None,
+        "service_tags": item.get("serviceTags")
+        if isinstance(item.get("serviceTags"), list)
+        else None,
+        "offer_tags": item.get("offerTags") if isinstance(item.get("offerTags"), list) else None,
+        "recall_source": str(item.get("recallSource") or item.get("source") or "").strip()
+        or None,
     }
 
 
@@ -217,21 +298,41 @@ def search_text(
 ) -> dict[str, Any]:
     if not _ak_ready():
         return _skill_result(False, markdown="❌ AK 未配置", error="ak_not_configured")
-    body = _build_request(
-        limit=limit,
-        sort_type=sort_type,
-        purchase_amount=purchase_amount,
-        extra={"query": query},
+
+    candidates: list[str] = []
+    for q in (query.strip(), simplify_search_query(query)):
+        if q and q not in candidates:
+            candidates.append(q)
+
+    last_exc: Exception | None = None
+    for q in candidates:
+        try:
+            body = _build_request(
+                limit=limit,
+                sort_type=sort_type,
+                purchase_amount=purchase_amount,
+                extra={"query": q},
+            )
+            products = _search_products(body)
+            result = {
+                "query": q,
+                "search_type": "text_search",
+                "total_results": len(products),
+                "similar_products": products,
+            }
+            header = f"✅ 搜索「{q}」找到 {len(products)} 个商品"
+            return _skill_result(True, _format_table(products, header), result)
+        except Exception as exc:
+            last_exc = exc
+            if not _is_transient_gateway_error(str(exc)):
+                break
+
+    detail = str(last_exc) if last_exc else "未知错误"
+    return _skill_result(
+        False,
+        markdown=f"❌ 牛顿 API 调用失败：{detail}",
+        error=detail,
     )
-    products = _search_products(body)
-    result = {
-        "query": query,
-        "search_type": "text_search",
-        "total_results": len(products),
-        "similar_products": products,
-    }
-    header = f"✅ 搜索「{query}」找到 {len(products)} 个商品"
-    return _skill_result(True, _format_table(products, header), result)
 
 
 def search_image(
@@ -239,24 +340,41 @@ def search_image(
     limit: int = 10,
     sort_type: str | None = None,
     purchase_amount: int = 1,
+    query: str | None = None,
 ) -> dict[str, Any]:
     if not _ak_ready():
         return _skill_result(False, markdown="❌ AK 未配置", error="ak_not_configured")
-    body = _build_request(
-        limit=limit,
-        sort_type=sort_type,
-        purchase_amount=purchase_amount,
-        extra={"imageUrl": image_url, "imgBase64": ""},
-    )
-    products = _search_products(body)
-    result = {
-        "image_url": image_url,
-        "search_type": "image_search",
-        "total_results": len(products),
-        "similar_products": products,
-    }
-    header = f"✅ 以图搜图找到 {len(products)} 个相似商品"
-    return _skill_result(True, _format_table(products, header), result)
+    try:
+        extra: dict[str, Any] = {"imageUrl": image_url, "imgBase64": ""}
+        q = (query or "").strip()
+        if q:
+            # 与文搜同源字段；图为主、短词纠偏主体（同 compare_products）
+            extra["query"] = q
+        body = _build_request(
+            limit=limit,
+            sort_type=sort_type,
+            purchase_amount=purchase_amount,
+            extra=extra,
+        )
+        products = _search_products(body)
+        result = {
+            "image_url": image_url,
+            "query": q or None,
+            "search_type": "image_search",
+            "total_results": len(products),
+            "similar_products": products,
+        }
+        header = (
+            f"✅ 以图搜图找到 {len(products)} 个相似商品"
+            + (f"（纠偏词：{q}）" if q else "")
+        )
+        return _skill_result(True, _format_table(products, header), result)
+    except Exception as exc:
+        return _skill_result(
+            False,
+            markdown=f"❌ 牛顿 API 调用失败：{exc}",
+            error=str(exc),
+        )
 
 
 def search_link(
@@ -268,29 +386,36 @@ def search_link(
 ) -> dict[str, Any]:
     if not _ak_ready():
         return _skill_result(False, markdown="❌ AK 未配置", error="ak_not_configured")
-    offer_id, norm_url = _normalize_offer_url(url)
-    img = image_url or _fetch_og_image(url) or (norm_url and _fetch_og_image(norm_url))
-    if not img:
+    try:
+        offer_id, norm_url = _normalize_offer_url(url)
+        img = image_url or _fetch_og_image(url) or (norm_url and _fetch_og_image(norm_url))
+        if not img:
+            return _skill_result(
+                False,
+                markdown="❌ 未能从链接获取主图。请粘贴商品主图 URL，或改用关键词搜索。",
+            )
+        body = _build_request(
+            limit=limit,
+            sort_type=sort_type,
+            purchase_amount=purchase_amount,
+            extra={"imageUrl": img, "imgBase64": ""},
+        )
+        products = _search_products(body)
+        result = {
+            "source_url": norm_url or url,
+            "source_image": img,
+            "search_type": "link_search",
+            "total_results": len(products),
+            "similar_products": products,
+        }
+        header = f"✅ 链接找同款找到 {len(products)} 个商品"
+        return _skill_result(True, _format_table(products, header), result)
+    except Exception as exc:
         return _skill_result(
             False,
-            markdown="❌ 未能从链接获取主图。请粘贴商品主图 URL，或改用关键词搜索。",
+            markdown=f"❌ 牛顿 API 调用失败：{exc}",
+            error=str(exc),
         )
-    body = _build_request(
-        limit=limit,
-        sort_type=sort_type,
-        purchase_amount=purchase_amount,
-        extra={"imageUrl": img, "imgBase64": ""},
-    )
-    products = _search_products(body)
-    result = {
-        "source_url": norm_url or url,
-        "source_image": img,
-        "search_type": "link_search",
-        "total_results": len(products),
-        "similar_products": products,
-    }
-    header = f"✅ 链接找同款找到 {len(products)} 个商品"
-    return _skill_result(True, _format_table(products, header), result)
 
 
 def compare_products(
@@ -303,31 +428,38 @@ def compare_products(
         return _skill_result(False, markdown="❌ AK 未配置", error="ak_not_configured")
     if not url and not image_url:
         return _skill_result(False, markdown="❌ 需要商品链接 url 或主图 image_url")
-    img = image_url
-    source_url = url
-    if url and not img:
-        _, norm = _normalize_offer_url(url)
-        source_url = norm or url
-        img = _fetch_og_image(source_url)
-    if not img:
-        return _skill_result(False, markdown="❌ 未能获取主图，请提供 image_url")
-    body = _build_request(limit=max(limit * 5, 15), extra={"imageUrl": img, "imgBase64": ""})
-    if query:
-        body["query"] = query
-    candidates = _search_products(body)
-    selected = _select_compare_products(candidates, limit=limit)
-    result = {
-        "search_type": "compare",
-        "total_candidates": len(candidates),
-        "total_compared": len(selected),
-        "source_url": source_url,
-        "source_image": img,
-        "query": query,
-        "compare_products": selected,
-        "similar_products": selected,
-    }
-    header = f"✅ 同款比价（共 {len(candidates)} 候选，展示 {len(selected)} 款）"
-    return _skill_result(True, _format_compare_table(selected, len(candidates)), result)
+    try:
+        img = image_url
+        source_url = url
+        if url and not img:
+            _, norm = _normalize_offer_url(url)
+            source_url = norm or url
+            img = _fetch_og_image(source_url)
+        if not img:
+            return _skill_result(False, markdown="❌ 未能获取主图，请提供 image_url")
+        body = _build_request(limit=max(limit * 5, 15), extra={"imageUrl": img, "imgBase64": ""})
+        if query:
+            body["query"] = query
+        candidates = _search_products(body)
+        selected = _select_compare_products(candidates, limit=limit)
+        result = {
+            "search_type": "compare",
+            "total_candidates": len(candidates),
+            "total_compared": len(selected),
+            "source_url": source_url,
+            "source_image": img,
+            "query": query,
+            "compare_products": selected,
+            "similar_products": selected,
+        }
+        header = f"✅ 同款比价（共 {len(candidates)} 候选，展示 {len(selected)} 款）"
+        return _skill_result(True, _format_compare_table(selected, len(candidates)), result)
+    except Exception as exc:
+        return _skill_result(
+            False,
+            markdown=f"❌ 牛顿 API 调用失败：{exc}",
+            error=str(exc),
+        )
 
 
 def cmd_text_search(args: argparse.Namespace) -> None:
@@ -342,7 +474,13 @@ def cmd_image_search(args: argparse.Namespace) -> None:
     if not _ak_ready():
         cmd_status()
         return
-    r = search_image(args.image_url, args.limit, args.sort, args.purchase_amount)
+    r = search_image(
+        args.image_url,
+        args.limit,
+        args.sort,
+        args.purchase_amount,
+        query=getattr(args, "query", None),
+    )
     _output(r["success"], r.get("markdown", ""), r.get("data"))
 
 
@@ -434,6 +572,55 @@ def _fetch_og_image(url: str) -> str | None:
                     return image
             if attempt == 0:
                 time.sleep(0.4)
+    return None
+
+
+def _parse_title_from_html(html: str) -> str | None:
+    patterns = [
+        r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\']+)["\']',
+        r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:title["\']',
+        r'<title>([^<]+)</title>',
+    ]
+    for pat in patterns:
+        m = re.search(pat, html, re.I)
+        if not m:
+            continue
+        title = re.sub(r"\s+", " ", m.group(1)).strip()
+        title = re.sub(r"\s*[-|_].*1688.*$", "", title, flags=re.I).strip()
+        if title and title.lower() not in ("1688", "alibaba"):
+            return title[:200]
+    return None
+
+
+def fetch_offer_title(offer_id_or_url: str) -> str | None:
+    """换供兜底：从图搜无标题时拉 offer 页 og:title。"""
+    offer_id, _ = _normalize_offer_url(
+        offer_id_or_url
+        if "://" in (offer_id_or_url or "")
+        else f"https://detail.1688.com/offer/{offer_id_or_url}.html"
+    )
+    if not offer_id:
+        raw = (offer_id_or_url or "").strip()
+        if raw.isdigit():
+            offer_id = raw
+        else:
+            return None
+
+    import time
+
+    candidates: list[tuple[str, str]] = [
+        (f"https://m.1688.com/offer/{offer_id}.html", _MOBILE_UA),
+        (f"https://detail.1688.com/offer/{offer_id}.html", _DESKTOP_UA),
+    ]
+    for page_url, ua in candidates:
+        for attempt in range(2):
+            html = _fetch_html(page_url, ua)
+            if html:
+                title = _parse_title_from_html(html)
+                if title:
+                    return title
+            if attempt == 0:
+                time.sleep(0.35)
     return None
 
 
@@ -597,6 +784,12 @@ def main() -> None:
 
     p_image = sub.add_parser("image_search", help="图片 URL 以图搜图")
     p_image.add_argument("--image-url", required=True)
+    p_image.add_argument(
+        "--query",
+        "-q",
+        default=None,
+        help="可选短主体纠偏词（与图同发）",
+    )
     p_image.add_argument("--limit", "-l", type=int, default=10)
     p_image.add_argument(
         "--sort",

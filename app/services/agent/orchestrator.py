@@ -48,6 +48,20 @@ INTENT_HINTS = {
 }
 
 
+def _append_evolution_prompt_patches(system_parts: list[str]) -> None:
+    """注入已部署的自进化 prompt 补丁（失败时静默跳过）。"""
+    try:
+        from app.services.evolution.patch_generator import get_all_active_prompt_patches
+
+        patches = get_all_active_prompt_patches()
+        if patches:
+            system_parts.append(
+                "## 自进化调优补丁\n" + "\n".join(f"- {p}" for p in patches)
+            )
+    except Exception:
+        pass
+
+
 def _tool_denied(tool_name: str) -> dict[str, Any]:
     return {
         "success": False,
@@ -140,6 +154,7 @@ def run_agent_chat(
         system_parts.append("## 当前订单上下文\n" + ctx_text)
     if intent and intent in INTENT_HINTS:
         system_parts.append("## 用户当前意图倾向\n" + INTENT_HINTS[intent])
+    _append_evolution_prompt_patches(system_parts)
 
     transcript: list[dict[str, Any]] = [
         {"role": "system", "content": "\n\n".join(system_parts)},

@@ -43,7 +43,6 @@ def register_task_from_tool(
     if tool_name in ("supplychain_inquiry_start", "supplychain_inquiry_query"):
         return None
 
-    tasks = persistence.load_and_repair()
     created = _now_iso()
     task: Optional[dict[str, Any]] = None
 
@@ -203,6 +202,4 @@ def register_task_from_tool(
     if not task:
         return None
 
-    tasks.insert(0, task)
-    persistence.save_runtime_tasks(tasks)
-    return task
+    return persistence.append_runtime_task(task)

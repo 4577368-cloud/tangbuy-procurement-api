@@ -94,6 +94,34 @@ TITLE_SEMANTIC_NOISE = {
     "经典",
     "简约",
     "大容量",
+    # 人群/场景修饰，不是申报品类本身
+    "孕妇",
+    "产妇",
+    "孕妈",
+    "婴童",
+    "成人",
+    "学生",
+}
+
+# 人群/受众词：出现在标题里但不是商品品类（如「孕妇款长袜」里的孕妇）
+AUDIENCE_DESCRIPTOR_TERMS = {
+    "孕妇", "产妇", "孕妈", "哺乳", "月子", "孕", "男士", "女士", "男款", "女款",
+    "成人", "儿童", "婴童", "学生", "中老年", "青少年",
+}
+
+# 动物词：单独出现不是商品（羊绒袜里的「羊绒/羊羔绒」另当别论）
+ANIMAL_DESCRIPTOR_TERMS = {
+    "羊羔", "羔羊", "小羊", "种羊", "活羊", "山羊", "绵羊", "牛犊", "仔猪", "雏鸡",
+}
+
+# 英文标题 → 中文商品词干（用于频次统计）
+EN_PRODUCT_NOUN_MAP = {
+    "socks": "袜",
+    "sock": "袜",
+    "stockings": "袜",
+    "stocking": "袜",
+    "pantyhose": "袜",
+    "tights": "袜",
 }
 
 
@@ -120,11 +148,12 @@ def score_to_confidence(score: float) -> float:
 
 # 候选品类置信度的参与维度（加权和 = 展示/决策用 confidence）
 DIMENSION_WEIGHTS = {
-    "term_match": 0.16,
-    "label_fit": 0.22,
+    "term_match": 0.14,
+    "term_frequency": 0.12,
+    "label_fit": 0.20,
     "catalog_fit": 0.18,
     "term_specificity": 0.12,
-    "vision": 0.14,
+    "vision": 0.12,
     "hint": 0.08,
     "specificity": 0.06,
     "feedback": 0.04,
@@ -132,6 +161,7 @@ DIMENSION_WEIGHTS = {
 
 DIMENSION_COMPARE_KEYS = (
     "term_match",
+    "term_frequency",
     "label_fit",
     "catalog_fit",
     "term_specificity",
@@ -156,6 +186,44 @@ def category_label_fit(term: str, cn: str, dec: str) -> float:
         extra = max(0, len(host) - len(term))
         base = max(0.3, 0.88 - extra * 0.045)
     return round(base * label_fit_adjustment(term, cn, dec), 3)
+
+
+def term_frequency_score(term: str, title: str, hint: str = "") -> float:
+    """标题中商品词出现次数越多，置信度越高（人群/动物修饰词不适用）。"""
+    if term in AUDIENCE_DESCRIPTOR_TERMS or term in ANIMAL_DESCRIPTOR_TERMS:
+        return 0.2
+    blob = f"{title or ''} {hint or ''}"
+    count = blob.count(term)
+    for en, zh in EN_PRODUCT_NOUN_MAP.items():
+        if zh == term or term in zh or zh in term:
+            count += len(re.findall(rf"\b{en}\b", (title or "").lower()))
+    if count <= 0:
+        return 0.0
+    return round(min(1.0, 0.45 + 0.18 * min(count - 1, 4)), 3)
+
+
+def dominant_product_signals(title: str, hint: str = "") -> list[tuple[str, int]]:
+    """从标题+平台类目提取主商品词及频次。"""
+    counts: dict[str, int] = {}
+    blob = title or ""
+    for en, zh in EN_PRODUCT_NOUN_MAP.items():
+        n = len(re.findall(rf"\b{en}\b", blob.lower()))
+        if n:
+            counts[zh] = counts.get(zh, 0) + n
+    for term in re.findall(r"[\u4e00-\u9fff]{2,6}", blob):
+        if term in TITLE_SEMANTIC_NOISE or term in AUDIENCE_DESCRIPTOR_TERMS:
+            continue
+        if term in ANIMAL_DESCRIPTOR_TERMS and "绒" not in blob[max(0, blob.find(term) - 1) : blob.find(term) + len(term) + 1]:
+            continue
+        if term.endswith(("袜", "鞋", "靴", "帽", "包", "裙", "裤", "衣", "服", "被", "毯", "枕", "巾")):
+            counts[term] = counts.get(term, 0) + blob.count(term)
+        elif term in ("袜", "鞋", "帽", "包"):
+            counts[term] = counts.get(term, 0) + blob.count(term)
+    if hint:
+        for term in re.findall(r"[\u4e00-\u9fff]{2,6}", hint):
+            if term not in TITLE_SEMANTIC_NOISE:
+                counts[term] = counts.get(term, 0) + 3
+    return sorted(counts.items(), key=lambda x: (-x[1], -len(x[0])))
 
 
 def term_specificity_bonus(term: str, all_terms: list[str]) -> float:
@@ -189,8 +257,10 @@ def compute_candidate_dimensions(
     spec = {"specific": 1.0, "generic": 0.35, "attribute": 0.15}.get(kind, 0.5)
     term_in_title = term in (title or "")
     term_in_cat = term in cn or term in dec
+    freq = term_frequency_score(term, title, hint)
     return {
         "term_match": round(1.0 if term_in_title else (0.65 if term_in_cat else 0.0), 3),
+        "term_frequency": freq,
         "label_fit": round(category_label_fit(term, cn, dec), 3),
         "catalog_fit": round(catalog_fit, 3),
         "term_specificity": round(term_specificity_bonus(term, all_terms or []), 3),
@@ -231,6 +301,8 @@ def compute_separation(top: dict, second: dict) -> dict:
 def classify_term(term: str) -> str:
     """term -> 'attribute' | 'generic' | 'specific'"""
     if term in ATTRIBUTE_TERMS:
+        return "attribute"
+    if term in AUDIENCE_DESCRIPTOR_TERMS or term in ANIMAL_DESCRIPTOR_TERMS:
         return "attribute"
     if term in generic_parent_terms():
         return "generic"
@@ -318,18 +390,36 @@ def load_feedback_boost() -> dict[str, float]:
             row = json.loads(line)
             cid = str(row.get("corrected_category_id", "") or "")
             orig = str(row.get("original_category_id", "") or "")
+            rejected = bool(row.get("rejected"))
+            confirmed = bool(row.get("confirmed"))
             kws = row.get("matched_keywords") or []
+            title = str(row.get("source_title", "") or "")
+            hint = str(row.get("source_category_hint", "") or "")
+
+            if rejected and orig:
+                for kw in kws:
+                    if kw:
+                        boosts[f"{kw}:{orig}"] = boosts.get(f"{kw}:{orig}", 0) - 0.35
+                for term, _ in dominant_product_signals(title, hint)[:3]:
+                    boosts[f"{term}:{orig}"] = boosts.get(f"{term}:{orig}", 0) - 0.28
+                continue
+
             for kw in kws:
                 if not kw:
                     continue
-                if cid:
-                    boosts[f"{kw}:{cid}"] = boosts.get(f"{kw}:{cid}", 0) + 0.28
+                if cid and not rejected:
+                    weight = 0.15 if confirmed and orig == cid else 0.28
+                    boosts[f"{kw}:{cid}"] = boosts.get(f"{kw}:{cid}", 0) + weight
                 if orig and orig != cid:
                     key = f"{kw}:{orig}"
                     boosts[key] = boosts.get(key, 0) - 0.32
-            title = str(row.get("source_title", ""))[:20]
-            if title and cid:
-                boosts[f"{title}:{cid}"] = boosts.get(f"{title}:{cid}", 0) + 0.1
+
+            if title and cid and not rejected:
+                boosts[f"{title[:20]}:{cid}"] = boosts.get(f"{title[:20]}:{cid}", 0) + 0.1
+
+            if cid and not rejected:
+                for term, _ in dominant_product_signals(title, hint)[:3]:
+                    boosts[f"{term}:{cid}"] = boosts.get(f"{term}:{cid}", 0) + 0.22
         except Exception:
             pass
     return boosts
@@ -484,6 +574,11 @@ def extract_title_semantics(title: str) -> list[str]:
                 continue
             raw.append(seg)
 
+    # 英文商品词补入（如 socks → 袜）
+    for en, zh in EN_PRODUCT_NOUN_MAP.items():
+        if re.search(rf"\b{en}\b", title.lower()) and zh in catalog_terms:
+            raw.append(zh)
+
     unique = sorted(set(raw), key=len, reverse=True)
     found: list[str] = []
     for seg in unique:
@@ -603,6 +698,34 @@ def rank_semantic_candidates(
         label = str(item["label"])
         if label not in by_label or item["score"] > by_label[label]["score"]:
             by_label[label] = item
+
+    # 主商品词（如袜/长袜）频次高时，人群/动物修饰词候选降权
+    dominant = dominant_product_signals(title, hint)
+    if dominant:
+        top_term, top_cnt = dominant[0]
+        for item in by_label.values():
+            label = str(item.get("label", ""))
+            cn = str(item.get("category_cn_name", ""))
+            dec = str(item.get("declare_cn_name", ""))
+            cat_blob = f"{cn} {dec}"
+            if label in AUDIENCE_DESCRIPTOR_TERMS or label in ANIMAL_DESCRIPTOR_TERMS:
+                if top_cnt >= 2 and top_term not in cat_blob and top_term not in label:
+                    dims = dict(item.get("dimensions") or {})
+                    for key in ("term_match", "term_frequency", "label_fit", "catalog_fit"):
+                        dims[key] = round(float(dims.get(key, 0.0)) * 0.22, 3)
+                    item["dimensions"] = dims
+                    item["confidence"] = confidence_from_dimensions(dims)
+                    item["score"] = round(float(item["score"]) * 0.25, 3)
+                    item["reason"] = f"标题主商品为「{top_term}」（×{top_cnt}），「{label}」为修饰词已降权"
+            elif top_cnt >= 2 and top_term not in cat_blob and top_term not in label:
+                if not any(t in cat_blob or t in label for t, _ in dominant[:2]):
+                    dims = dict(item.get("dimensions") or {})
+                    dims["catalog_fit"] = round(float(dims.get("catalog_fit", 0.0)) * 0.45, 3)
+                    item["dimensions"] = dims
+                    item["confidence"] = confidence_from_dimensions(dims)
+                    item["score"] = round(float(item["score"]) * 0.5, 3)
+                    if not item.get("reason"):
+                        item["reason"] = f"与标题主商品「{top_term}」不一致，已降权"
 
     pool = _primary_pool(list(by_label.values()))
     ranked = sorted(pool, key=lambda x: float(x.get("confidence") or 0), reverse=True)[:3]

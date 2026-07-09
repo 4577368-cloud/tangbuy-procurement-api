@@ -13,8 +13,37 @@ from category_heuristics import build_heuristics_from_catalog
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "data" / "category"
-HS_XLSX = ROOT / "all_hscode_category.xlsx"
-HIST_XLSX = ROOT / "历史设置类目信息商品记录.xlsx"
+
+
+def _find_xlsx(name: str) -> Path:
+    """Excel 源可能在 api 根目录或同级 procurement-demo 目录。"""
+    candidates = [
+        ROOT / name,
+        ROOT.parent / "procurement-demo" / name,
+    ]
+    for path in candidates:
+        if path.exists():
+            return path
+    return candidates[0]
+
+
+HS_XLSX = _find_xlsx("all_hscode_category.xlsx")
+HIST_XLSX = _find_xlsx("历史设置类目信息商品记录.xlsx")
+
+
+def normalize_hs_code(raw: object) -> str:
+    """归一化中国海关 HS 编码为 10 位。
+
+    源 Excel 曾把编码当数字存储，导致 01–09 章的前导 0 被吞（如
+    0901110000 → 901110000）。这里对纯数字 9 位左补 0 至 10 位；
+    10 位保持原样；其余（脏数据/占位符）原样返回，交由上游治理。
+    """
+    text = str(raw or "").strip()
+    if not text or text.lower() == "nan":
+        return ""
+    if text.isdigit() and len(text) == 9:
+        return text.zfill(10)
+    return text
 
 
 def tokenize(text: str) -> set[str]:
@@ -46,7 +75,7 @@ def main() -> int:
             "cid": cid,
             "cn_name": str(row.get("cn_name") or "").strip(),
             "en_name": str(row.get("en_name") or "").strip(),
-            "hs_code": str(row.get("hs_code") or "").strip(),
+            "hs_code": normalize_hs_code(row.get("hs_code")),
             "dec_cn_name": str(row.get("dec_cn_name") or "").strip(),
             "dec_en_name": str(row.get("dec_en_name") or "").strip(),
             "tariff": None if pd.isna(row.get("tariff")) else float(row["tariff"]),

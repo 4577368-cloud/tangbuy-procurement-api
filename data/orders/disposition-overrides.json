@@ -1,0 +1,36 @@
+{
+  "TI26070000085": {
+    "ord_line_stat": -1,
+    "ord_line_stat_nm": "待支付",
+    "queue_override": "pending_payment",
+    "passed_at": "2026-07-07T09:19:44.165061+00:00",
+    "action_key": "manual_confirm",
+    "signal_type": "ZERO_MARGIN",
+    "operator": null,
+    "note": "继续采购",
+    "ord_no": "TO26070000062"
+  },
+  "TI26070000045": {
+    "ord_line_stat": -1,
+    "ord_line_stat_nm": "待支付",
+    "queue_override": "pending_payment",
+    "passed_at": "2026-07-07T10:27:52.563844+00:00",
+    "action_key": "manual_confirm",
+    "signal_type": "ZERO_MARGIN",
+    "operator": null,
+    "note": "继续采购",
+    "ord_no": "TO26070000037"
+  },
+  "TI26030000337": {
+    "splr_item_id": "999620702996",
+    "item_url": "https://detail.1688.com/offer/999620702996.html?&object_id=999620702996",
+    "item_img": "https://cbu01.alicdn.com/img/ibank/O1CN01Zy13Wx1GYsc5NuRfR_!!2206579220635-0-cib.jpg",
+    "item_nm": "（无标题）",
+    "splr_shop_nm": "新乡市中驰防护用品有限公司",
+    "pur_prc": 50.54,
+    "tangbuy_product_id": "178351707648573915",
+    "supplier_switched_at": "2026-07-08T13:24:36.489Z",
+    "supplier_switched_from": "38498958869",
+    "supplier_switched_from_product_id": "123674394361888"
+  }
+}

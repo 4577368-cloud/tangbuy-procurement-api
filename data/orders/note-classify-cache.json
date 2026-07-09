@@ -1,0 +1,178 @@
+{
+  "7250036caa546715fed789d0": {
+    "tier": "high",
+    "topics": [
+      "size_change"
+    ],
+    "block_procurement": true,
+    "signal_type": "SKU_MISMATCH",
+    "reason": "用户明确要求更改尺码为L",
+    "confidence": 0.95,
+    "source": "llm"
+  },
+  "8cd2bd9be0442380f12002fe": {
+    "tier": "low",
+    "topics": [
+      "other"
+    ],
+    "block_procurement": false,
+    "signal_type": null,
+    "reason": "内容为测试订单，无实际规格变更需求",
+    "confidence": 0.95,
+    "source": "llm"
+  },
+  "99d66cc6d2706825a63179ee": {
+    "tier": "low",
+    "topics": [
+      "other"
+    ],
+    "block_procurement": false,
+    "signal_type": null,
+    "reason": "备注内容为测试性质，无实际采购变更需求",
+    "confidence": 0.95,
+    "source": "llm"
+  },
+  "cc399d73903f06ee694032ab": {
+    "tier": "low",
+    "topics": [
+      "other"
+    ],
+    "block_procurement": false,
+    "signal_type": null,
+    "reason": "备注内容为无意义数字",
+    "confidence": 0.95,
+    "source": "llm"
+  },
+  "b88e284fe0e4fa0b00fd09de": {
+    "tier": "low",
+    "topics": [
+      "other"
+    ],
+    "block_procurement": false,
+    "signal_type": null,
+    "reason": "备注内容为空或无效",
+    "confidence": 0.95,
+    "source": "llm"
+  },
+  "15622e591270294bf9e6d322": {
+    "tier": "low",
+    "topics": [
+      "other"
+    ],
+    "block_procurement": false,
+    "signal_type": null,
+    "reason": "备注内容为空或无效",
+    "confidence": 0.95,
+    "source": "llm"
+  },
+  "e467997ffb0b84b5fddfadb4": {
+    "tier": "low",
+    "topics": [
+      "other"
+    ],
+    "block_procurement": false,
+    "signal_type": null,
+    "reason": "乱码及无意义字符",
+    "confidence": 0.95,
+    "source": "llm"
+  },
+  "67171dd3925c41ff7f96f4f1": {
+    "tier": "low",
+    "topics": [
+      "other"
+    ],
+    "block_procurement": false,
+    "signal_type": null,
+    "reason": "属于测试订单备注，不涉及规格、颜色、尺码或数量的变更",
+    "confidence": 0.95,
+    "source": "llm"
+  },
+  "2a004787ab857235a12e5b78": {
+    "tier": "high",
+    "topics": [
+      "size_change"
+    ],
+    "block_procurement": true,
+    "signal_type": "SKU_MISMATCH",
+    "reason": "用户明确提出修改尺码要求",
+    "confidence": 0.95,
+    "source": "llm"
+  },
+  "012639f72b5897c485607c5f": {
+    "tier": "low",
+    "topics": [
+      "other"
+    ],
+    "block_procurement": false,
+    "signal_type": null,
+    "reason": "备注内容为测试字符，无实际采购变更需求",
+    "confidence": 0.95,
+    "source": "llm"
+  },
+  "d91b658870de27e55a3a67ca": {
+    "tier": "low",
+    "topics": [
+      "other"
+    ],
+    "block_procurement": false,
+    "signal_type": null,
+    "reason": "备注内容为占位符，无实际业务含义",
+    "confidence": 0.95,
+    "source": "llm"
+  },
+  "82786ff9af4f7522a56656b3": {
+    "tier": "low",
+    "topics": [
+      "other"
+    ],
+    "block_procurement": false,
+    "signal_type": null,
+    "reason": "纯评价性内容，不涉及采购规格变更",
+    "confidence": 0.95,
+    "source": "llm"
+  },
+  "b083badd559a4a4e8c82fd2b": {
+    "tier": "low",
+    "topics": [
+      "other"
+    ],
+    "block_procurement": false,
+    "signal_type": null,
+    "reason": "备注内容为无意义占位符",
+    "confidence": 0.95,
+    "source": "llm"
+  },
+  "1ddb386f64b6ceff77153419": {
+    "tier": "low",
+    "topics": [
+      "other"
+    ],
+    "block_procurement": false,
+    "signal_type": null,
+    "reason": "输入为乱码，无实际业务含义",
+    "confidence": 0.95,
+    "source": "llm"
+  },
+  "b14b7e9044ad758e07ce0963": {
+    "tier": "low",
+    "topics": [
+      "other"
+    ],
+    "block_procurement": false,
+    "signal_type": null,
+    "reason": "用户仅发送指令说明，未提供具体备注内容",
+    "confidence": 0.95,
+    "source": "llm"
+  },
+  "c292b5c46d1fa4cd1773f397": {
+    "tier": "low",
+    "topics": [
+      "other"
+    ],
+    "block_procurement": false,
+    "signal_type": null,
+    "reason": "备注内容为无意义字符",
+    "confidence": 0.95,
+    "source": "llm"
+  }
+}

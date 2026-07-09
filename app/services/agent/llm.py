@@ -71,7 +71,10 @@ def chat_completion(
     if res.status_code >= 400:
         raise RuntimeError(f"LLM 请求失败 ({res.status_code}): {res.text[:300]}")
 
-    data = res.json()
+    try:
+        data = res.json()
+    except ValueError as exc:
+        raise RuntimeError(f"LLM 返回非 JSON：{res.text[:200]}") from exc
     message = (data.get("choices") or [{}])[0].get("message") or {}
     tool_calls = [
         ToolCall(

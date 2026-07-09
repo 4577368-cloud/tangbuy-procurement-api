@@ -95,9 +95,7 @@ def start_supplychain_inquiry(
 
 
 def _add_runtime_task(task: dict[str, Any]) -> dict[str, Any]:
-    tasks = persistence.load_and_repair()
-    tasks.insert(0, task)
-    persistence.save_runtime_tasks(tasks)
+    persistence.append_runtime_task(task)
     return task
 
 

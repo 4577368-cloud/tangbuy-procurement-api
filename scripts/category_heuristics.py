@@ -46,6 +46,21 @@ MANUAL_DOMAIN_MARKERS: list[dict] = [
         "markers": ["哺乳", "喂奶", "喂奶衣", "产后", "孕哺", "哺乳期", "月子", "产检"],
         "human_context": [],
     },
+    {
+        "domain": "孕哺",
+        "markers": ["孕妇", "产妇", "孕款", "孕妈"],
+        "human_context": [
+            "袜", "长袜", "短袜", "连裤袜", "鞋", "凉鞋", "拖鞋", "靴",
+            "衣", "服", "裙", "裤", "帽", "包", "被", "毯", "枕",
+        ],
+    },
+    {
+        "domain": "牲畜",
+        "markers": ["羊羔", "羔羊", "小羊", "种羊", "活羊", "山羊", "绵羊"],
+        "human_context": [
+            "袜", "绒", "毛", "衣", "服", "鞋", "包", "帽", "被", "毯", "围巾", "手套",
+        ],
+    },
 ]
 
 # 锚点词过泛时不参与「必须有标题证据」
@@ -169,15 +184,25 @@ def load_learned_anchor_penalties(catalog_by_cid: dict | None = None) -> dict[st
 
         orig_id = str(row.get("original_category_id") or "")
         corrected_id = str(row.get("corrected_category_id") or "")
-        if not orig_id or orig_id == corrected_id:
+        if not orig_id:
+            continue
+        if corrected_id and corrected_id == orig_id and not row.get("rejected"):
             continue
 
         title = str(row.get("source_title") or "")
+        hint = str(row.get("source_category_hint") or "")
         blob = _title_blob(title, row.get("vision_keywords") or [])
         kws = row.get("matched_keywords") or []
         for kw in kws:
             if kw:
                 blob += f" {kw}"
+        try:
+            from category_mapper import dominant_product_signals
+
+            for term, _ in dominant_product_signals(title, hint)[:4]:
+                blob += f" {term}"
+        except Exception:
+            pass
 
         wrong_anchors = row.get("wrong_specialty_tokens")
         if not wrong_anchors and catalog_by_cid and orig_id in catalog_by_cid:

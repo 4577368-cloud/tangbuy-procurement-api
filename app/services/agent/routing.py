@@ -92,9 +92,25 @@ def looks_like_fabricated_followup(text: str) -> bool:
     ) and "❌" not in text
 
 
+_LEADING_FILLER = re.compile(
+    r"^(帮我|请|想要|想找|搜索|找一下|推荐|给我|我要|找些|找一些)\s*",
+    re.I,
+)
+_QUERY_NOISE = re.compile(
+    r"(帮我|请|想要|想找|搜索|找一下|推荐|给我|我要|一些|几款|几个|有没有|偏向|风格|款式|的商品|商品|产品|的)",
+)
+
+
 def extract_product_search_query(text: str) -> str:
-    q = re.sub(r"^(帮我|请|想要|想找|搜索|找一下|推荐)\s*", "", text.strip())
+    q = text.strip()
+    while True:
+        nq = _LEADING_FILLER.sub("", q).strip()
+        if nq == q:
+            break
+        q = nq
     q = re.sub(r"[？?！!。]+$", "", q).strip()
+    q = _QUERY_NOISE.sub(" ", q)
+    q = re.sub(r"\s+", " ", q).strip()
     return q[:80] or text.strip()[:80]
 
 
@@ -181,12 +197,80 @@ def resolve_instant_product_route(user_text: str, allowed: set[str]) -> Optional
     return None
 
 
+_SKILL_DEFAULT_TOOL: dict[str, str] = {
+    "order-followup": "order_inquiry_send",
+    "1688-product-find": "product_text_search",
+    "product-compare": "product_compare",
+    "supplychain-procurement": "supplychain_inquiry_start",
+    "1688-sourcing": "procurement_inquiry",
+    "newton-cloud": "newton_consult",
+}
+
+
+def _build_evolution_route_args(
+    tool: str,
+    user_text: str,
+    context: Optional[dict[str, Any]],
+) -> dict[str, str]:
+    if tool == "order_inquiry_send":
+        order_id = resolve_followup_order_id(user_text, context) or ""
+        question = resolve_followup_question(user_text, order_id, context) if order_id else user_text.strip()
+        return {"order_id": order_id, "question": question}
+    if tool == "product_text_search":
+        return {"query": extract_product_search_query(user_text), "limit": "10"}
+    if tool == "supplychain_inquiry_start":
+        return build_supplychain_inquiry_args(user_text)
+    if tool == "newton_consult":
+        message = (
+            build_merchant_consult_message(user_text, context)
+            if looks_like_merchant_inquiry(user_text)
+            else user_text.strip()
+        )
+        return {"message": message, "user_question": user_text.strip()}
+    return {}
+
+
+def resolve_evolution_route(
+    user_text: str,
+    allowed: set[str],
+    context: Optional[dict[str, Any]] = None,
+) -> Optional[dict[str, Any]]:
+    """自进化路由补丁：关键词命中时优先路由到目标技能对应工具。"""
+    try:
+        from app.services.evolution.patch_generator import get_active_route_patches
+
+        rules = get_active_route_patches()
+    except Exception:
+        return None
+
+    text = user_text.strip()
+    if not text:
+        return None
+
+    for rule in rules:
+        pattern = (rule.get("trigger_pattern") or "").strip()
+        if not pattern or pattern not in text:
+            continue
+        tool = _SKILL_DEFAULT_TOOL.get(rule.get("target_skill") or "")
+        if not tool or tool not in allowed:
+            continue
+        args = _build_evolution_route_args(tool, text, context)
+        if tool == "order_inquiry_send" and not args.get("order_id"):
+            continue
+        return {"tool": tool, "args": args}
+    return None
+
+
 def resolve_deterministic_route(
     user_text: str,
     intent: Optional[str],
     allowed: set[str],
     context: Optional[dict[str, Any]] = None,
 ) -> Optional[dict[str, Any]]:
+    evolution = resolve_evolution_route(user_text, allowed, context)
+    if evolution:
+        return evolution
+
     if intent == "sourcing":
         if looks_like_fuzzy_sourcing(user_text) and "supplychain_inquiry_start" in allowed:
             return {

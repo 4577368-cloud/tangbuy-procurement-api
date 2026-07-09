@@ -27,6 +27,16 @@ NEWTON_GET_GRACE_MS = int(os.environ.get("NEWTON_TASK_GET_GRACE_MS", "180000"))
 TERMINAL_STATUSES = frozenset({"completed", "failed", "killed"})
 ACTIVE_STATUSES = frozenset({"in_progress", "ready", "needs_review"})
 
+OPERATION_TASK_TYPES = (
+    "order_followup",
+    "newton_agent",
+    "supplychain_inquiry",
+    "inquiry_1688",
+    "sourcing_inquiry",
+    "auto_release",
+    "category_mapping",
+)
+
 _newton_get_cache: dict[str, dict[str, int]] = {}
 _refresh_locks: dict[str, threading.Lock] = {}
 _store_lock = threading.Lock()
@@ -158,13 +168,28 @@ def _save_tasks(tasks: list[dict[str, Any]]) -> None:
         persistence.save_runtime_tasks(tasks)
 
 
+def _refresh_and_persist(runtime: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """时间态刷新；仅状态真变时写回，降低与 append 的竞态窗口。"""
+    before = {
+        str(t.get("id")): (t.get("status"), t.get("updated_at"), len(t.get("timeline") or []))
+        for t in runtime
+    }
+    _refresh_time_based_statuses(runtime)
+    dirty = any(
+        before.get(str(t.get("id")))
+        != (t.get("status"), t.get("updated_at"), len(t.get("timeline") or []))
+        for t in runtime
+    )
+    if dirty:
+        _save_tasks(runtime)
+    return runtime
+
+
 def list_tasks(
     task_type: Optional[str] = None,
     status: Optional[str] = None,
 ) -> list[dict[str, Any]]:
-    runtime = _load_tasks()
-    _refresh_time_based_statuses(runtime)
-    _save_tasks(runtime)
+    runtime = _refresh_and_persist(_load_tasks())
     tasks = merge_tasks_with_seeds(runtime)
     out = tasks
     if task_type:
@@ -175,9 +200,7 @@ def list_tasks(
 
 
 def get_task(task_id: str) -> Optional[dict[str, Any]]:
-    runtime = _load_tasks()
-    _refresh_time_based_statuses(runtime)
-    _save_tasks(runtime)
+    runtime = _refresh_and_persist(_load_tasks())
     tasks = merge_tasks_with_seeds(runtime)
     return next((t for t in tasks if t.get("id") == task_id), None)
 
@@ -192,6 +215,40 @@ def get_task_stats() -> dict[str, int]:
         "completed": sum(1 for t in tasks if t.get("status") == "completed"),
         "failed": sum(1 for t in tasks if t.get("status") == "failed"),
         "killed": sum(1 for t in tasks if t.get("status") == "killed"),
+    }
+
+
+def get_agent_operation_stats() -> dict[str, Any]:
+    tasks = list_tasks()
+    by_type = []
+    for task_type in OPERATION_TASK_TYPES:
+        typed = [t for t in tasks if t.get("type") == task_type]
+        by_type.append(
+            {
+                "type": task_type,
+                "total": len(typed),
+                "active": sum(1 for t in typed if t.get("status") in ACTIVE_STATUSES),
+                "completed": sum(1 for t in typed if t.get("status") == "completed"),
+                "failed": sum(
+                    1 for t in typed if t.get("status") in ("failed", "killed")
+                ),
+            }
+        )
+    by_status = {
+        "in_progress": sum(1 for t in tasks if t.get("status") == "in_progress"),
+        "ready": sum(1 for t in tasks if t.get("status") == "ready"),
+        "needs_review": sum(1 for t in tasks if t.get("status") == "needs_review"),
+        "completed": sum(1 for t in tasks if t.get("status") == "completed"),
+        "failed": sum(1 for t in tasks if t.get("status") == "failed"),
+        "killed": sum(1 for t in tasks if t.get("status") == "killed"),
+    }
+    return {
+        "total": len(tasks),
+        "active": sum(1 for t in tasks if t.get("status") in ACTIVE_STATUSES),
+        "completed": by_status["completed"],
+        "failed": by_status["failed"] + by_status["killed"],
+        "by_type": by_type,
+        "by_status": by_status,
     }
 
 

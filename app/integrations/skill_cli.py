@@ -173,7 +173,15 @@ def run_category_suggest(
         cmd.extend(["--goods-id", goods_id])
     if image_url:
         cmd.extend(["--image-url", image_url])
-    return run_python_cli(category_mapper_path(), cmd, timeout=120)
+    return unwrap_category_suggest_result(run_python_cli(category_mapper_path(), cmd, timeout=120))
+
+
+def unwrap_category_suggest_result(result: dict[str, Any]) -> dict[str, Any]:
+    """run_python_cli 包一层 data；品类映射消费方需要内层 payload。"""
+    data = result.get("data")
+    if isinstance(data, dict) and ("category_id" in data or data.get("success") is False):
+        return data
+    return result
 
 
 def is_inquiry_configured() -> bool:

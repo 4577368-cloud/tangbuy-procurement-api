@@ -1,81 +1,142 @@
 [
   {
-    "item_id": "76330336699506",
-    "splr_item_id": "956263117864",
+    "item_id": "178351707648573915",
+    "splr_item_id": "999620702996",
     "hs": {
-      "category_id": 50012412,
-      "category_cn_name": "睡袋/凉席/枕头/床品",
-      "category_en_name": "Sleeping bag/cool mat/pillow/bedding",
-      "hs_code": "9404309000",
-      "declare_cn_name": "枕头",
-      "declare_en_name": "pillow"
-    },
-    "mapped_at": "2026-07-06T02:05:13.703Z",
-    "source": "correct"
-  },
-  {
-    "item_id": "76322604262421",
-    "splr_item_id": "707961865779",
-    "hs": {
-      "category_id": 50019155,
-      "category_cn_name": "解放包/单肩包",
-      "category_en_name": "liberation package/shoulder bag",
-      "hs_code": "4202920000",
-      "declare_cn_name": "背包",
-      "declare_en_name": "backpack",
+      "category_id": 50015377,
+      "category_cn_name": "雨衣/雨裤/雨披",
+      "category_en_name": "Rain coat",
+      "hs_code": "3926209000",
+      "declare_cn_name": "雨衣雨披",
+      "declare_en_name": "Raincoat",
       "tariff": null
     },
-    "mapped_at": "2026-07-05T04:36:52.966Z",
+    "mapped_at": "2026-07-08T13:32:29.923Z",
     "source": "confirm"
   },
   {
-    "item_id": "76322604517838",
-    "splr_item_id": "899113395613",
+    "item_id": "178350320414334629",
+    "splr_item_id": "797824879151",
     "hs": {
-      "category_id": 3,
-      "category_cn_name": "包包",
-      "category_en_name": "Bags",
-      "hs_code": "4202920000",
-      "declare_cn_name": "包包",
-      "declare_en_name": "Bags",
+      "category_id": 201581901,
+      "category_cn_name": "连裤袜/打底袜",
+      "category_en_name": "pantyhose/stockings",
+      "hs_code": "6115299000",
+      "declare_cn_name": "nan",
+      "declare_en_name": "nan",
       "tariff": null
     },
-    "mapped_at": "2026-07-05T04:36:50.578Z",
+    "mapped_at": "2026-07-08T09:41:24.960Z",
     "source": "confirm"
   },
   {
-    "item_id": "DEMO-MAP-PENDING-01",
-    "splr_item_id": "990033445566",
+    "item_id": "178350320415678389",
+    "splr_item_id": "811563829713",
     "hs": {
-      "category_id": 50010850,
-      "category_cn_name": "连衣裙",
-      "category_en_name": "dress",
-      "hs_code": "6104420000",
-      "declare_cn_name": "连衣裙",
-      "declare_en_name": "dress",
+      "category_id": 162105,
+      "category_cn_name": "小背心/小吊带",
+      "category_en_name": "Smallvest",
+      "hs_code": "6109909060",
+      "declare_cn_name": "小背心/小吊带",
+      "declare_en_name": "Smallvest",
       "tariff": null
     },
-    "mapped_at": "2026-07-05T00:38:24.331Z",
+    "mapped_at": "2026-07-08T09:41:24.938Z",
     "source": "confirm"
   },
   {
-    "item_id": "76321188325315",
-    "splr_item_id": "901045168148",
+    "item_id": "70019933257760",
+    "splr_item_id": "998588795309",
     "hs": {
-      "category_id": 201164006,
-      "category_cn_name": "面部彩妆",
-      "category_en_name": "Facial makeup",
+      "category_id": 125304009,
+      "category_cn_name": "西式",
+      "category_en_name": "Western-style",
       "hs_code": "nan",
       "declare_cn_name": "nan",
       "declare_en_name": "nan",
       "tariff": null
     },
-    "mapped_at": "2026-07-05T00:38:21.196Z",
+    "mapped_at": "2026-07-08T09:41:24.879Z",
     "source": "confirm"
   },
   {
-    "item_id": "76312476788294",
-    "splr_item_id": "938613438920",
+    "item_id": "88465678057504",
+    "splr_item_id": "792508964505",
+    "hs": {
+      "category_id": 50011858,
+      "category_cn_name": "车载加热/保温杯",
+      "category_en_name": "vehicle-mounted heater",
+      "hs_code": "9617009000",
+      "declare_cn_name": "车载加热/保温杯",
+      "declare_en_name": "vehicle-mounted heater",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.867Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "123674394361888",
+    "splr_item_id": "38498958869",
+    "hs": {
+      "category_id": 50496004,
+      "category_cn_name": "高等成人教育",
+      "category_en_name": "Higher Adult Education",
+      "hs_code": "4901990000",
+      "declare_cn_name": "高等成人教育",
+      "declare_en_name": "Higher Adult Education",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.767Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "94107565850656",
+    "splr_item_id": "903047096701",
+    "hs": {
+      "category_id": 201304232,
+      "category_cn_name": "床头靠垫",
+      "category_en_name": "Bedside cushion",
+      "hs_code": "nan",
+      "declare_cn_name": "nan",
+      "declare_en_name": "nan",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.716Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "178350320423632427",
+    "splr_item_id": "920533039260",
+    "hs": {
+      "category_id": 50012372,
+      "category_cn_name": "吊带/背心",
+      "category_en_name": "Camisole",
+      "hs_code": "6109100010",
+      "declare_cn_name": "吊带背心",
+      "declare_en_name": "Camisole",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.693Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "178350320421882285",
+    "splr_item_id": "928043806165",
+    "hs": {
+      "category_id": 201581801,
+      "category_cn_name": "长筒袜",
+      "category_en_name": "stockings",
+      "hs_code": "6115960000",
+      "declare_cn_name": "nan",
+      "declare_en_name": "nan",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.682Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "30492513124384",
+    "splr_item_id": "703881912974",
     "hs": {
       "category_id": 50010850,
       "category_cn_name": "连衣裙",
@@ -85,80 +146,1027 @@
       "declare_en_name": "dress",
       "tariff": null
     },
-    "mapped_at": "2026-07-04T07:11:18.854Z",
+    "mapped_at": "2026-07-08T09:41:24.577Z",
     "source": "confirm"
   },
   {
-    "item_id": "76312455627594",
-    "splr_item_id": "901070303778",
+    "item_id": "178350320384445660",
+    "splr_item_id": "1034678664126",
     "hs": {
-      "category_id": 50010850,
-      "category_cn_name": "连衣裙",
-      "category_en_name": "dress",
-      "hs_code": "6104420000",
-      "declare_cn_name": "连衣裙",
-      "declare_en_name": "dress",
+      "category_id": 50009283,
+      "category_cn_name": "时尚烟灰缸",
+      "category_en_name": "fashion ash tray",
+      "hs_code": "3924900000",
+      "declare_cn_name": "时尚烟灰缸",
+      "declare_en_name": "fashion ash tray",
       "tariff": null
     },
-    "mapped_at": "2026-07-04T07:11:12.379Z",
+    "mapped_at": "2026-07-08T09:41:24.545Z",
     "source": "confirm"
   },
   {
-    "item_id": "76312449845754",
-    "splr_item_id": "939578775605",
+    "item_id": "178350320382810681",
+    "splr_item_id": "872122261385",
     "hs": {
-      "category_id": 50010850,
-      "category_cn_name": "连衣裙",
-      "category_en_name": "dress",
-      "hs_code": "6104420000",
-      "declare_cn_name": "连衣裙",
-      "declare_en_name": "dress",
+      "category_id": 125726007,
+      "category_cn_name": "短袜/打底袜/丝袜/美腿袜",
+      "category_en_name": "Short socks/stockings/silk stockings/stockings",
+      "hs_code": "6115960000",
+      "declare_cn_name": "短袜",
+      "declare_en_name": "sock",
       "tariff": null
     },
-    "mapped_at": "2026-07-04T07:11:06.960Z",
+    "mapped_at": "2026-07-08T09:41:24.533Z",
     "source": "confirm"
   },
   {
-    "item_id": "76312442459399",
-    "splr_item_id": "1014606819386",
+    "item_id": "204050907922464",
+    "splr_item_id": "847902059632",
     "hs": {
-      "category_id": 50010850,
-      "category_cn_name": "连衣裙",
-      "category_en_name": "dress",
-      "hs_code": "6104420000",
-      "declare_cn_name": "连衣裙",
-      "declare_en_name": "dress"
+      "category_id": 1000008612,
+      "category_cn_name": "外套",
+      "category_en_name": "Coat",
+      "hs_code": "6204330000",
+      "declare_cn_name": "外套",
+      "declare_en_name": "Coat",
+      "tariff": null
     },
-    "mapped_at": "2026-07-04T07:10:53.197Z",
-    "source": "correct"
+    "mapped_at": "2026-07-08T09:41:24.499Z",
+    "source": "confirm"
   },
   {
-    "item_id": "TBMR4WC2KJBDTJ",
-    "splr_item_id": "1037523343451",
+    "item_id": "164295379075104",
+    "splr_item_id": "628046174298",
     "hs": {
-      "category_id": 50019274,
-      "category_cn_name": "沙滩鞋/凉鞋/拖鞋",
-      "category_en_name": "Beach Shoes",
+      "category_id": 10000086553,
+      "category_cn_name": "测试",
+      "category_en_name": "test",
+      "hs_code": "0",
+      "declare_cn_name": "测试分类",
+      "declare_en_name": "testclass",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.488Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "204050974507040",
+    "splr_item_id": "665261848507",
+    "hs": {
+      "category_id": 201581901,
+      "category_cn_name": "连裤袜/打底袜",
+      "category_en_name": "pantyhose/stockings",
+      "hs_code": "6115299000",
+      "declare_cn_name": "nan",
+      "declare_en_name": "nan",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.477Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "238495011504192",
+    "splr_item_id": "855629770550",
+    "hs": {
+      "category_id": 125304009,
+      "category_cn_name": "西式",
+      "category_en_name": "Western-style",
+      "hs_code": "nan",
+      "declare_cn_name": "nan",
+      "declare_en_name": "nan",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.441Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "172922347651104",
+    "splr_item_id": "805476456577",
+    "hs": {
+      "category_id": 50005470,
+      "category_cn_name": "宠物用品",
+      "category_en_name": "Pet supplies",
+      "hs_code": "nan",
+      "declare_cn_name": "nan",
+      "declare_en_name": "nan",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.407Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72649264365584",
+    "splr_item_id": "742908724475",
+    "hs": {
+      "category_id": 1000008653,
+      "category_cn_name": "摆件饰品",
+      "category_en_name": "JewelryOrnaments",
+      "hs_code": "8306299000",
+      "declare_cn_name": "摆件饰品",
+      "declare_en_name": "JewelryOrnaments",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.381Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "204050941296672",
+    "splr_item_id": "748131233166",
+    "hs": {
+      "category_id": 121484003,
+      "category_cn_name": "领针",
+      "category_en_name": "Collar pin",
+      "hs_code": "7117190000",
+      "declare_cn_name": "领针",
+      "declare_en_name": "Collar pin",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.369Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "204050966052896",
+    "splr_item_id": "693344661167",
+    "hs": {
+      "category_id": 1000008612,
+      "category_cn_name": "外套",
+      "category_en_name": "Coat",
+      "hs_code": "6204330000",
+      "declare_cn_name": "外套",
+      "declare_en_name": "Coat",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.357Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "204050994266144",
+    "splr_item_id": "800451575891",
+    "hs": {
+      "category_id": 50023105,
+      "category_cn_name": "运动裤",
+      "category_en_name": "Sweatpants",
+      "hs_code": "6204630000",
+      "declare_cn_name": "裤子",
+      "declare_en_name": "pants",
+      "tariff": 6103410000.0
+    },
+    "mapped_at": "2026-07-08T09:41:24.345Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "172544192577568",
+    "splr_item_id": "689592059628",
+    "hs": {
+      "category_id": 50006889,
+      "category_cn_name": "保温杯",
+      "category_en_name": "Vacuum cup",
+      "hs_code": "9617009000",
+      "declare_cn_name": "保温杯",
+      "declare_en_name": "Vacuum cup",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.333Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "212152241373216",
+    "splr_item_id": "857474773321",
+    "hs": {
+      "category_id": 50014227,
+      "category_cn_name": "耳饰",
+      "category_en_name": "Earrings",
+      "hs_code": "7117190000",
+      "declare_cn_name": "耳环",
+      "declare_en_name": "earrings",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.296Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72521315909648",
+    "splr_item_id": "573555334148",
+    "hs": {
+      "category_id": 50020050,
+      "category_cn_name": "瑜伽鞋",
+      "category_en_name": "yoga shoes",
+      "hs_code": "6402190090",
+      "declare_cn_name": "鞋",
+      "declare_en_name": "shoe",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.269Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72514295463952",
+    "splr_item_id": "822048488722",
+    "hs": {
+      "category_id": 50012341,
+      "category_cn_name": "运动鞋",
+      "category_en_name": "Sports shoes",
+      "hs_code": "6402190090",
+      "declare_cn_name": "运动鞋",
+      "declare_en_name": "Sports shoes",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.257Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72503592402960",
+    "splr_item_id": "824148059021",
+    "hs": {
+      "category_id": 50112002,
+      "category_cn_name": "男鞋",
+      "category_en_name": "Men's shoes",
       "hs_code": "6402200000",
-      "declare_cn_name": "沙滩鞋",
-      "declare_en_name": "Beach Shoes",
+      "declare_cn_name": "男鞋",
+      "declare_en_name": "Men's shoes",
       "tariff": null
     },
-    "mapped_at": "2026-07-03T13:33:48.669Z",
-    "source": "correct"
+    "mapped_at": "2026-07-08T09:41:24.246Z",
+    "source": "confirm"
   },
   {
-    "item_id": "76308190988970",
-    "splr_item_id": "1055183586868",
+    "item_id": "72502825058320",
+    "splr_item_id": "827009819846",
     "hs": {
-      "category_id": 50012048,
-      "category_cn_name": "运动沙滩鞋/凉鞋",
-      "category_en_name": "Motion Beach Shoes",
-      "hs_code": "6402200000",
-      "declare_cn_name": "运动沙滩鞋",
-      "declare_en_name": "Motion Beach Shoes"
+      "category_id": 201309706,
+      "category_cn_name": "休闲板鞋",
+      "category_en_name": "Casual sneakers",
+      "hs_code": "nan",
+      "declare_cn_name": "nan",
+      "declare_en_name": "nan",
+      "tariff": null
     },
-    "mapped_at": "2026-07-03T13:33:28.784Z",
-    "source": "correct"
+    "mapped_at": "2026-07-08T09:41:24.223Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72502030450704",
+    "splr_item_id": "837718356845",
+    "hs": {
+      "category_id": 50012341,
+      "category_cn_name": "运动鞋",
+      "category_en_name": "Sports shoes",
+      "hs_code": "6402190090",
+      "declare_cn_name": "运动鞋",
+      "declare_en_name": "Sports shoes",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.211Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72898127544336",
+    "splr_item_id": "718711091441",
+    "hs": {
+      "category_id": 50012043,
+      "category_cn_name": "板鞋/休闲鞋",
+      "category_en_name": "Casual Shoes",
+      "hs_code": "6402190090",
+      "declare_cn_name": "休闲鞋",
+      "declare_en_name": "Casual Shoes",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.186Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "204050976374816",
+    "splr_item_id": "709763372657",
+    "hs": {
+      "category_id": 125726007,
+      "category_cn_name": "短袜/打底袜/丝袜/美腿袜",
+      "category_en_name": "Short socks/stockings/silk stockings/stockings",
+      "hs_code": "6115960000",
+      "declare_cn_name": "短袜",
+      "declare_en_name": "sock",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.176Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "204050763071520",
+    "splr_item_id": "782879521202",
+    "hs": {
+      "category_id": 50012784,
+      "category_cn_name": "肩带",
+      "category_en_name": "Shoulder strap",
+      "hs_code": "3926209000",
+      "declare_cn_name": "肩带",
+      "declare_en_name": "Shoulder strap",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.167Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72756466139152",
+    "splr_item_id": "784756797761",
+    "hs": {
+      "category_id": 50026079,
+      "category_cn_name": "茶宠摆件",
+      "category_en_name": "Tea pet",
+      "hs_code": "3926400000",
+      "declare_cn_name": "茶宠摆件",
+      "declare_en_name": "Tea pet",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.146Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "247556306911264",
+    "splr_item_id": "714035624086",
+    "hs": {
+      "category_id": 50012043,
+      "category_cn_name": "板鞋/休闲鞋",
+      "category_en_name": "Casual Shoes",
+      "hs_code": "6402190090",
+      "declare_cn_name": "休闲鞋",
+      "declare_en_name": "Casual Shoes",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.136Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "127629572997152",
+    "splr_item_id": "851898079887",
+    "hs": {
+      "category_id": 201174617,
+      "category_cn_name": "硅胶",
+      "category_en_name": "nan",
+      "hs_code": "nan",
+      "declare_cn_name": "nan",
+      "declare_en_name": "nan",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.126Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "165822656577568",
+    "splr_item_id": "877512134874",
+    "hs": {
+      "category_id": 50050431,
+      "category_cn_name": "杏仁",
+      "category_en_name": "Almond",
+      "hs_code": "nan",
+      "declare_cn_name": "nan",
+      "declare_en_name": "nan",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.096Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "123459249258528",
+    "splr_item_id": "836620589022",
+    "hs": {
+      "category_id": 50009819,
+      "category_cn_name": "便携/折叠餐具",
+      "category_en_name": "folding table ware",
+      "hs_code": "7616999000",
+      "declare_cn_name": "便携折叠餐具",
+      "declare_en_name": "folding tableware",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.086Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "123624722776096",
+    "splr_item_id": "848625028098",
+    "hs": {
+      "category_id": 50456005,
+      "category_cn_name": "毛绒玩具",
+      "category_en_name": "Plush toys",
+      "hs_code": "9503002900",
+      "declare_cn_name": "毛绒玩具",
+      "declare_en_name": "Plush toys",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.075Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72845680328720",
+    "splr_item_id": "749339470617",
+    "hs": {
+      "category_id": 50050366,
+      "category_cn_name": "手机数据线",
+      "category_en_name": "phone cable",
+      "hs_code": "8544421900",
+      "declare_cn_name": "手机数据线",
+      "declare_en_name": "phone cable",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.045Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "123672912068640",
+    "splr_item_id": "619445109557",
+    "hs": {
+      "category_id": 122660003,
+      "category_cn_name": "电动车雨披",
+      "category_en_name": "Electric vehicle rain cape",
+      "hs_code": "3926209000",
+      "declare_cn_name": "雨衣",
+      "declare_en_name": "raincoat",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.035Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "204050940559392",
+    "splr_item_id": "860804799757",
+    "hs": {
+      "category_id": 1623,
+      "category_cn_name": "半身裙",
+      "category_en_name": "Skirt",
+      "hs_code": "6204530090",
+      "declare_cn_name": "半身裙",
+      "declare_en_name": "Skirt",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.014Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72677638897680",
+    "splr_item_id": "775870967323",
+    "hs": {
+      "category_id": 121416008,
+      "category_cn_name": "枕套",
+      "category_en_name": "pillow cases",
+      "hs_code": "6302109000",
+      "declare_cn_name": "枕套",
+      "declare_en_name": "pillow cases",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:24.004Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "103939813244960",
+    "splr_item_id": "980259869022",
+    "hs": {
+      "category_id": 201305305,
+      "category_cn_name": "靠枕/抱枕新",
+      "category_en_name": "New cushion/throw pillow",
+      "hs_code": "nan",
+      "declare_cn_name": "nan",
+      "declare_en_name": "nan",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.994Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "204050755158048",
+    "splr_item_id": "818832423622",
+    "hs": {
+      "category_id": 162105,
+      "category_cn_name": "小背心/小吊带",
+      "category_en_name": "Smallvest",
+      "hs_code": "6109909060",
+      "declare_cn_name": "小背心/小吊带",
+      "declare_en_name": "Smallvest",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.984Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72522506174480",
+    "splr_item_id": "727114334871",
+    "hs": {
+      "category_id": 50122002,
+      "category_cn_name": "女包",
+      "category_en_name": "Female bag",
+      "hs_code": "4202220000",
+      "declare_cn_name": "女包",
+      "declare_en_name": "Female bag",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.974Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72331308875792",
+    "splr_item_id": "745625121850",
+    "hs": {
+      "category_id": 50023107,
+      "category_cn_name": "运动长裤",
+      "category_en_name": "Sports pants",
+      "hs_code": "6204630000",
+      "declare_cn_name": "运动长裤",
+      "declare_en_name": "Sports pants",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.964Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "107738309771296",
+    "splr_item_id": "582487292293",
+    "hs": {
+      "category_id": 50010159,
+      "category_cn_name": "卫衣",
+      "category_en_name": "Sweater",
+      "hs_code": "6110200090",
+      "declare_cn_name": "卫衣1",
+      "declare_en_name": "Sweater1",
+      "tariff": 6103410000.0
+    },
+    "mapped_at": "2026-07-08T09:41:23.943Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "204050998870048",
+    "splr_item_id": "626487976579",
+    "hs": {
+      "category_id": 50007068,
+      "category_cn_name": "打底裤",
+      "category_en_name": "Leggings",
+      "hs_code": "6204630000",
+      "declare_cn_name": "打底裤",
+      "declare_en_name": "Leggings.",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.901Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "6504765702208",
+    "splr_item_id": "1047334602315",
+    "hs": {
+      "category_id": 50003509,
+      "category_cn_name": "上衣",
+      "category_en_name": "tops",
+      "hs_code": "6204330000",
+      "declare_cn_name": "上衣",
+      "declare_en_name": "Jacket",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.851Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "204050926813216",
+    "splr_item_id": "868601784992",
+    "hs": {
+      "category_id": 50019651,
+      "category_cn_name": "情趣内衣",
+      "category_en_name": "nan",
+      "hs_code": "6212101000",
+      "declare_cn_name": "内衣",
+      "declare_en_name": "underwears",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.758Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "10897296425024",
+    "splr_item_id": "1027162362559",
+    "hs": {
+      "category_id": 50011982,
+      "category_cn_name": "防晒",
+      "category_en_name": "sun protector",
+      "hs_code": "3304990099",
+      "declare_cn_name": "日用品",
+      "declare_en_name": "daily necessities",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.673Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "204050975162400",
+    "splr_item_id": "737900503440",
+    "hs": {
+      "category_id": 50010159,
+      "category_cn_name": "卫衣",
+      "category_en_name": "Sweater",
+      "hs_code": "6110200090",
+      "declare_cn_name": "卫衣1",
+      "declare_en_name": "Sweater1",
+      "tariff": 6103410000.0
+    },
+    "mapped_at": "2026-07-08T09:41:23.582Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72513609777168",
+    "splr_item_id": "836501153276",
+    "hs": {
+      "category_id": 50012341,
+      "category_cn_name": "运动鞋",
+      "category_en_name": "Sports shoes",
+      "hs_code": "6402190090",
+      "declare_cn_name": "运动鞋",
+      "declare_en_name": "Sports shoes",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.468Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72858290995216",
+    "splr_item_id": "724560723720",
+    "hs": {
+      "category_id": 50005778,
+      "category_cn_name": "其它蜂产品",
+      "category_en_name": "Other bee products",
+      "hs_code": "0410004900",
+      "declare_cn_name": "其它蜂产品",
+      "declare_en_name": "bee products",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.434Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "213973400698912",
+    "splr_item_id": "765174797449",
+    "hs": {
+      "category_id": 162104,
+      "category_cn_name": "衬衫",
+      "category_en_name": "Shirt",
+      "hs_code": "6205300099",
+      "declare_cn_name": "衬衫",
+      "declare_en_name": "Shirt",
+      "tariff": 6211322000.0
+    },
+    "mapped_at": "2026-07-08T09:41:23.412Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72864274300944",
+    "splr_item_id": "822251875151",
+    "hs": {
+      "category_id": 50015576,
+      "category_cn_name": "亚克力",
+      "category_en_name": "Acrylic",
+      "hs_code": "nan",
+      "declare_cn_name": "nan",
+      "declare_en_name": "nan",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.366Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "123485676208160",
+    "splr_item_id": "659438061435",
+    "hs": {
+      "category_id": 50015490,
+      "category_cn_name": "折叠椅/躺椅",
+      "category_en_name": "Folding chair",
+      "hs_code": "9401719000",
+      "declare_cn_name": "折叠椅",
+      "declare_en_name": "Folding chair",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.326Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72370217173008",
+    "splr_item_id": "775726469786",
+    "hs": {
+      "category_id": 50003509,
+      "category_cn_name": "上衣",
+      "category_en_name": "tops",
+      "hs_code": "6204330000",
+      "declare_cn_name": "上衣",
+      "declare_en_name": "Jacket",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.316Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "172951893114912",
+    "splr_item_id": "864202004470",
+    "hs": {
+      "category_id": 50015494,
+      "category_cn_name": "矮凳",
+      "category_en_name": "low stool",
+      "hs_code": "9401619090",
+      "declare_cn_name": "矮凳",
+      "declare_en_name": "low stool",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.305Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72756953120784",
+    "splr_item_id": "567011623220",
+    "hs": {
+      "category_id": 124900262,
+      "category_cn_name": "生日蛋糕",
+      "category_en_name": "Birthday cake",
+      "hs_code": "nan",
+      "declare_cn_name": "nan",
+      "declare_en_name": "nan",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.200Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "123497837772832",
+    "splr_item_id": "671504034622",
+    "hs": {
+      "category_id": 50013908,
+      "category_cn_name": "睡袋",
+      "category_en_name": "Sleeping bag",
+      "hs_code": "9404309000",
+      "declare_cn_name": "睡袋",
+      "declare_en_name": "Sleeping bag",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.190Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72756920254480",
+    "splr_item_id": "773412313606",
+    "hs": {
+      "category_id": 50013877,
+      "category_cn_name": "摆件",
+      "category_en_name": "Ornaments",
+      "hs_code": "3926400000",
+      "declare_cn_name": "摆件",
+      "declare_en_name": "Ornaments",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.179Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72757448818704",
+    "splr_item_id": "728640626260",
+    "hs": {
+      "category_id": 122680006,
+      "category_cn_name": "卡通/动漫周边",
+      "category_en_name": "Cartoon/Anime Merchandise",
+      "hs_code": "nan",
+      "declare_cn_name": "nan",
+      "declare_en_name": "nan",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.169Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72756600930320",
+    "splr_item_id": "781943346464",
+    "hs": {
+      "category_id": 121394030,
+      "category_cn_name": "摆件",
+      "category_en_name": "ornament",
+      "hs_code": "9503008900",
+      "declare_cn_name": "益智玩具",
+      "declare_en_name": "Souptoys",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.158Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "44292416159776",
+    "splr_item_id": "760309954234",
+    "hs": {
+      "category_id": 50014460,
+      "category_cn_name": "礼品",
+      "category_en_name": "Gift",
+      "hs_code": "nan",
+      "declare_cn_name": "nan",
+      "declare_en_name": "nan",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.147Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "94086122487840",
+    "splr_item_id": "910101699273",
+    "hs": {
+      "category_id": 50017261,
+      "category_cn_name": "篮球袜",
+      "category_en_name": "Basketball socks",
+      "hs_code": "9506621000",
+      "declare_cn_name": "篮球袜",
+      "declare_en_name": "Basketball socks",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.135Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "85660752625696",
+    "splr_item_id": "783041288551",
+    "hs": {
+      "category_id": 201699902,
+      "category_cn_name": "史莱姆/起泡胶/水晶泥",
+      "category_en_name": "Slime/bubble gum/crystal mud",
+      "hs_code": "nan",
+      "declare_cn_name": "nan",
+      "declare_en_name": "nan",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.121Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "116656151904288",
+    "splr_item_id": "832887949146",
+    "hs": {
+      "category_id": 50012314,
+      "category_cn_name": "产妇帽/孕妇袜/孕妇鞋",
+      "category_en_name": "maternity hat/pregnant women's socks/maternity shoes",
+      "hs_code": "6505009900",
+      "declare_cn_name": "帽",
+      "declare_en_name": "cap",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.069Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "204050779389984",
+    "splr_item_id": "875724267165",
+    "hs": {
+      "category_id": 124756013,
+      "category_cn_name": "女鞋单鞋",
+      "category_en_name": "women's thin shoes",
+      "hs_code": "6402190090",
+      "declare_cn_name": "鞋",
+      "declare_en_name": "shoe",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.058Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "204050835931168",
+    "splr_item_id": "840360274119",
+    "hs": {
+      "category_id": 50014227,
+      "category_cn_name": "耳饰",
+      "category_en_name": "Earrings",
+      "hs_code": "7117190000",
+      "declare_cn_name": "耳环",
+      "declare_en_name": "earrings",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.047Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "204050788139040",
+    "splr_item_id": "775668803767",
+    "hs": {
+      "category_id": 1000008613,
+      "category_cn_name": "短裙",
+      "category_en_name": "ShortSkirt",
+      "hs_code": "6204530090",
+      "declare_cn_name": "短裙",
+      "declare_en_name": "ShortSkirt",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.037Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72666549436432",
+    "splr_item_id": "741167714703",
+    "hs": {
+      "category_id": 121458013,
+      "category_cn_name": "桌布",
+      "category_en_name": "table cloth",
+      "hs_code": "3924900000",
+      "declare_cn_name": "桌布",
+      "declare_en_name": "table cloth",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:23.026Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "68464943153184",
+    "splr_item_id": "994043247112",
+    "hs": {
+      "category_id": 50005030,
+      "category_cn_name": "拉链",
+      "category_en_name": "Zipper",
+      "hs_code": "9607110000",
+      "declare_cn_name": "拉链",
+      "declare_en_name": "Zipper",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:22.926Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "130426303660064",
+    "splr_item_id": "890876810068",
+    "hs": {
+      "category_id": 50014564,
+      "category_cn_name": "减震",
+      "category_en_name": "Shock absorption",
+      "hs_code": "nan",
+      "declare_cn_name": "nan",
+      "declare_en_name": "nan",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:22.915Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "204050794938400",
+    "splr_item_id": "872398451504",
+    "hs": {
+      "category_id": 50025431,
+      "category_cn_name": "女鞋",
+      "category_en_name": "Women’s shoes",
+      "hs_code": "6402200000",
+      "declare_cn_name": "女鞋",
+      "declare_en_name": "Shoes",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:22.873Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72523222155280",
+    "splr_item_id": "848959297498",
+    "hs": {
+      "category_id": 1000008623,
+      "category_cn_name": "斜挎包",
+      "category_en_name": "MessengerBag",
+      "hs_code": "4202920000",
+      "declare_cn_name": "斜挎包",
+      "declare_en_name": "MessengerBag",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:22.863Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72898487975952",
+    "splr_item_id": "717666138672",
+    "hs": {
+      "category_id": 50012043,
+      "category_cn_name": "板鞋/休闲鞋",
+      "category_en_name": "Casual Shoes",
+      "hs_code": "6402190090",
+      "declare_cn_name": "休闲鞋",
+      "declare_en_name": "Casual Shoes",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:22.842Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "204050968100896",
+    "splr_item_id": "683451269189",
+    "hs": {
+      "category_id": 50010159,
+      "category_cn_name": "卫衣",
+      "category_en_name": "Sweater",
+      "hs_code": "6110200090",
+      "declare_cn_name": "卫衣1",
+      "declare_en_name": "Sweater1",
+      "tariff": 6103410000.0
+    },
+    "mapped_at": "2026-07-08T09:41:22.832Z",
+    "source": "confirm"
+  },
+  {
+    "item_id": "72895280087056",
+    "splr_item_id": "818761121687",
+    "hs": {
+      "category_id": 2512,
+      "category_cn_name": "户外运动/休闲/传统玩具",
+      "category_en_name": "Outdoor Sports/Leisure/Traditional Toys",
+      "hs_code": "9503008900",
+      "declare_cn_name": "益智玩具",
+      "declare_en_name": "Souptoys",
+      "tariff": null
+    },
+    "mapped_at": "2026-07-08T09:41:22.789Z",
+    "source": "confirm"
   }
 ]
