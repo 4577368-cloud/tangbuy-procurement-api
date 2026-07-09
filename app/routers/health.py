@@ -32,5 +32,6 @@ def health() -> dict[str, object]:
         "service": "tangbuy-procurement-api",
         "admin_configured": admin_configured,
         "admin_base_url": settings.tangbuy_admin_base_url,
+        "admin_connect_ip": settings.tangbuy_admin_connect_ip or None,
         "admin_dns": _admin_host_probe(),
     }

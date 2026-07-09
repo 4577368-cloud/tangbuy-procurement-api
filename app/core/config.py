@@ -31,11 +31,14 @@ class Settings(BaseSettings):
     tangbuy_admin_token: str = ""
     tangbuy_admin_storage_no: int = 1
     tangbuy_admin_event_type_pending: int = 5888
+    # 部分海外机房 DNS 解析不了 admin.tangbuy.cc，用 IP + Host 头直连；留空则走域名
+    tangbuy_admin_connect_ip: str = "47.242.247.65"
     # 待采购人工放行 → 待支付；留空则仅写本地覆盖 + 审计，待接 Admin 写接口
     tangbuy_admin_procurement_pass_path: str = ""
 
     # Tangbuy Portal 商品详情（itemGet）
     tangbuy_portal_base_url: str = "https://www.tangbuy.cc/gateway"
+    tangbuy_portal_connect_ip: str = "47.242.247.65"
     tangbuy_portal_token: str = ""
     tangbuy_portal_currency: str = "CNY"
     tangbuy_default_shipping_city: str = "广东惠州市"
