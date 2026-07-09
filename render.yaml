@@ -24,6 +24,11 @@ services:
         value: https://your-app.vercel.app
       - key: TANGBUY_ADMIN_BASE_URL
         value: https://admin.tangbuy.cc/prod-api
+      # Render 新加坡等区域可能无法解析 .cc 域名，用 IP 直连 + Host 头
+      - key: TANGBUY_ADMIN_CONNECT_IP
+        value: 47.242.247.65
+      - key: TANGBUY_PORTAL_CONNECT_IP
+        value: 47.242.247.65
       - key: TANGBUY_ADMIN_STORAGE_NO
         value: "1"
       - key: TANGBUY_ADMIN_EVENT_TYPE_PENDING

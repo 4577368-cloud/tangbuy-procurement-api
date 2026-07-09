@@ -57,6 +57,8 @@
 |------|------|
 | `TANGBUY_PORTAL_TOKEN` | Portal `itemGet` 商品详情补全 |
 | `TANGBUY_ADMIN_BASE_URL` | 默认 `https://admin.tangbuy.cc/prod-api` |
+| `TANGBUY_ADMIN_CONNECT_IP` | 可选。Render 部分区域 DNS 解析不了 `admin.tangbuy.cc` 时填 `47.242.247.65` |
+| `TANGBUY_PORTAL_CONNECT_IP` | 同上，Portal 网关 IP 直连 |
 | `TANGBUY_PORTAL_BASE_URL` | 默认 `https://www.tangbuy.cc/gateway` |
 | `PRODUCT_AUTO_PIPELINE` | `true` — 入库后自动详情补全 |
 | `PRODUCT_AUTO_SCAN_MS` | `0` 关闭周期扫；生产可按需开启 |

@@ -54,7 +54,10 @@ def admin_post(path: str, body: dict[str, Any], *, timeout: int = 45) -> dict[st
     normalized = path if path.startswith("/") else f"/{path}"
     url = f"{settings.tangbuy_admin_base_url.rstrip('/')}{normalized}"
     try:
-        raw = request_json("POST", url, headers=_admin_headers(), json_body=body, timeout=timeout)
+        raw = request_json(
+            "POST", url, headers=_admin_headers(), json_body=body, timeout=timeout,
+            connect_ip_env="TANGBUY_ADMIN_CONNECT_IP",
+        )
         return _parse_admin_response(raw)
     except RuntimeError as exc:
         msg = str(exc)
@@ -69,7 +72,10 @@ def list_order_detail(body: dict[str, Any], *, timeout: int = 90) -> dict[str, A
     settings = get_settings()
     url = f"{settings.tangbuy_admin_base_url.rstrip('/')}{LIST_ORDER_DETAIL}"
     try:
-        raw = request_json("POST", url, headers=_admin_headers(), json_body=body, timeout=timeout)
+        raw = request_json(
+            "POST", url, headers=_admin_headers(), json_body=body, timeout=timeout,
+            connect_ip_env="TANGBUY_ADMIN_CONNECT_IP",
+        )
         data = _parse_admin_response(raw)
         if not isinstance(data, dict):
             raise TangbuyAdminError("Admin 响应缺少 data")

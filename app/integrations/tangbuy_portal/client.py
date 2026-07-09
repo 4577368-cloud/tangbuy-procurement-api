@@ -38,7 +38,7 @@ def item_get(*, product_page_url: str, timeout: int = 45) -> dict[str, Any]:
         "lang": "cn",
     }
     try:
-        raw = request_json("GET", url, headers=headers, timeout=timeout)
+        raw = request_json("GET", url, headers=headers, timeout=timeout, connect_ip_env="TANGBUY_PORTAL_CONNECT_IP")
     except RuntimeError as exc:
         raise TangbuyPortalError(f"Portal {exc}") from exc
 
