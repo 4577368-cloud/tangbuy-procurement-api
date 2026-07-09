@@ -1,12 +1,28 @@
-"""出站 HTTP（绕过平台 HTTP_PROXY，避免 Render 等环境误走不可达代理）。"""
+"""出站 HTTP（httpx，忽略平台 HTTP_PROXY）。"""
 
 from __future__ import annotations
 
-from typing import Optional
-from urllib.request import ProxyHandler, Request, build_opener
+from typing import Any, Optional
 
-_DIRECT_OPENER = build_opener(ProxyHandler({}))
+import httpx
 
 
-def urlopen_direct(req: Request, *, timeout: Optional[int] = None):
-    return _DIRECT_OPENER.open(req, timeout=timeout)
+def request_json(
+    method: str,
+    url: str,
+    *,
+    headers: Optional[dict[str, str]] = None,
+    json_body: Optional[dict[str, Any]] = None,
+    timeout: int = 45,
+) -> dict[str, Any]:
+    try:
+        with httpx.Client(trust_env=False, timeout=timeout, follow_redirects=True) as client:
+            resp = client.request(method.upper(), url, headers=headers, json=json_body)
+            resp.raise_for_status()
+            data = resp.json()
+            return data if isinstance(data, dict) else {"raw": data}
+    except httpx.HTTPStatusError as exc:
+        detail = exc.response.text[:500]
+        raise RuntimeError(f"HTTP {exc.response.status_code}: {detail}") from exc
+    except httpx.RequestError as exc:
+        raise RuntimeError(f"请求失败: {exc}") from exc
