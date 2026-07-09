@@ -2,8 +2,7 @@
 """
 AK 认证模块
 
-AK 来源：只从 AK_STORE_FILE（{workspace}/.1688-AK/.ak_store.json）读取。
-不再从 ALI_1688_AK 环境变量或 ~/.openclaw/openclaw.json 读取。
+AK 来源：`ALI_1688_AK` 环境变量，或 `{workspace}/.1688-AK/.ak_store.json`。
 """
 from __future__ import annotations
 
@@ -23,7 +22,12 @@ logger = logging.getLogger(__name__)
 
 
 def get_ak_raw() -> Optional[str]:
-    """从 AK_STORE_FILE 读取原始 AK 字符串"""
+    """从环境变量或 AK_STORE_FILE 读取原始 AK 字符串。"""
+    import os
+
+    env_ak = (os.environ.get("ALI_1688_AK") or "").strip()
+    if env_ak:
+        return env_ak
     if not AK_STORE_FILE.exists():
         return None
     try:

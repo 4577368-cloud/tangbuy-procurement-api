@@ -53,6 +53,9 @@ def _merge_ord_line(product: dict[str, Any], row: dict[str, Any]) -> dict[str, A
         merged["image_url"] = image
     if url and not merged.get("source_url"):
         merged["source_url"] = url
+    tang_url = str(row.get("tang_item_url") or "").strip()
+    if tang_url and not merged.get("tang_item_url"):
+        merged["tang_item_url"] = tang_url
     if shop and (not merged.get("shop_name") or merged.get("shop_name") == "—"):
         merged["shop_name"] = shop
     splr = str(row.get("splr_item_id") or "").strip()
@@ -94,6 +97,7 @@ def _new_product_from_ord_line(row: dict[str, Any], *, new_id_fn) -> dict[str, A
         "tier_prices": tiers,
         "created_at": _now_iso(),
         "source_url": str(row.get("item_url") or ""),
+        "tang_item_url": str(row.get("tang_item_url") or "") or None,
         "sold_count": 0,
         "product_name": name,
         "image_url": str(row.get("item_img") or ""),

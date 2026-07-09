@@ -56,6 +56,8 @@
 | 变量 | 说明 |
 |------|------|
 | `TANGBUY_PORTAL_TOKEN` | Portal `itemGet` 商品详情补全 |
+| `ALI_1688_AK` | **备选图搜必填**（与本地 `.env.local` 相同，牛顿 Hub AK） |
+| `PRODUCT_ALT_SCAN_SYNC` | 默认 `false`（后台扫，防 HTTP 超时）；本地可设 `true` 同步返回 |
 | `TANGBUY_ADMIN_BASE_URL` | 默认 `https://admin.tangbuy.cc/prod-api` |
 | `TANGBUY_ADMIN_CONNECT_IP` | 可选。Render 部分区域 DNS 解析不了 `admin.tangbuy.cc` 时填 `47.242.247.65` |
 | `TANGBUY_PORTAL_CONNECT_IP` | 同上，Portal 网关 IP 直连 |
@@ -134,6 +136,14 @@ curl https://你的-render-域名.onrender.com/api/health
 ### CORS 报错
 
 在 Render 把 Vercel 预览域名也加入 `BACKEND_CORS_ORIGINS`（含 `https://`，逗号分隔）。
+
+### 502 / 返回 HTML 而非 JSON
+
+- Vercel 旧版 `rewrites` 代理约 30s 超时 → 前端已改为 `app/api/[...path]/route.ts`（120s），需 **重新部署 web**
+- Render 冷启动首请求可能 30–60s，属正常
+- 备选扫描需 Render 配置 `ALI_1688_AK`；`/api/health` 中 `newton_ak.ok` 应为 `true`
+
+### 备选扫描失败
 
 ## 相关仓库
 

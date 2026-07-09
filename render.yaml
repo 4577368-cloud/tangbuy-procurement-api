@@ -45,7 +45,11 @@ services:
         value: "0"
       - key: PRODUCT_AUTO_SCAN_ON_CREATE
         value: "false"
+      - key: PRODUCT_ALT_SCAN_SYNC
+        value: "false"
       # 以下在 Render 控制台手动填写（Secret）
+      - key: ALI_1688_AK
+        sync: false
       - key: TANGBUY_ADMIN_TOKEN
         sync: false
       - key: TANGBUY_PORTAL_TOKEN

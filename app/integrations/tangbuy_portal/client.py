@@ -24,6 +24,33 @@ def _portal_token() -> str:
     return token
 
 
+def _unwrap_item_get_payload(raw: dict[str, Any]) -> dict[str, Any]:
+    code = raw.get("code")
+    if code not in (200, "200"):
+        msg = raw.get("msg") or raw.get("message") or f"code={code}"
+        raise TangbuyPortalError(f"itemGet 失败：{msg}")
+
+    data = raw.get("data")
+    if data is None:
+        raise TangbuyPortalError("itemGet 无商品数据")
+    if not isinstance(data, dict):
+        raise TangbuyPortalError("itemGet 响应缺少 data")
+
+    # Portal 新格式：{ item, itemResultCode, detailUrl, validToken }
+    if "item" in data:
+        item = data.get("item")
+        if not isinstance(item, dict):
+            result_code = data.get("itemResultCode")
+            raise TangbuyPortalError(f"itemGet 无商品详情（itemResultCode={result_code}）")
+        return item
+
+    # 旧格式：字段直接在 data 上
+    if data.get("itemName") or data.get("productSkus") or data.get("itemId"):
+        return data
+
+    raise TangbuyPortalError("itemGet 响应缺少 data")
+
+
 def item_get(*, product_page_url: str, timeout: int = 45) -> dict[str, Any]:
     """GET /gateway/product/v3/itemGet?url=..."""
     settings = get_settings()
@@ -48,11 +75,4 @@ def item_get(*, product_page_url: str, timeout: int = 45) -> dict[str, Any]:
     except RuntimeError as exc:
         raise TangbuyPortalError(f"Portal {exc}") from exc
 
-    code = raw.get("code")
-    if code not in (200, "200"):
-        msg = raw.get("msg") or raw.get("message") or f"code={code}"
-        raise TangbuyPortalError(f"itemGet 失败：{msg}")
-    data = raw.get("data")
-    if not isinstance(data, dict):
-        raise TangbuyPortalError("itemGet 响应缺少 data")
-    return data
+    return _unwrap_item_get_payload(raw)

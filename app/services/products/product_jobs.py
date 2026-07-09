@@ -301,6 +301,7 @@ def enqueue_alt_scan_product(
     """单商品备选扫描：仅扫该商品。refresh=屏蔽上一轮并重取。"""
     from app.services.products.store import get_product_by_id, update_product
 
+    settings = get_settings()
     pid = (product_id or "").strip()
     if not pid:
         return {"ok": False, "enqueued": 0, "message": "缺少商品 ID"}
@@ -344,15 +345,17 @@ def enqueue_alt_scan_product(
             "product_id": pid,
         }
 
-    if not _enqueue(pid, do_enrich=False, do_scan=True, refresh=refresh):
-        return {
-            "ok": True,
-            "enqueued": 0,
-            "product_ids": [pid],
-            "message": "已在队列",
-            "quota": get_alt_scan_quota_status(),
-            "product_id": pid,
-        }
+    with _lock:
+        if pid in _queued:
+            return {
+                "ok": True,
+                "enqueued": 0,
+                "product_ids": [pid],
+                "message": "扫描中",
+                "quota": get_alt_scan_quota_status(),
+                "product_id": pid,
+            }
+        _queued.add(pid)
 
     update_product(
         pid,
@@ -363,17 +366,52 @@ def enqueue_alt_scan_product(
         },
     )
     new_status = get_alt_scan_quota_status()
-    msg = "已刷新入队" if refresh else "已入队"
-    if not new_status.get("unlimited"):
-        msg = f"{msg} · 今日 {new_status['used']}/{new_status['daily_limit']}"
+
+    if not settings.product_alt_scan_sync:
+        with _lock:
+            _queued.discard(pid)
+        if _enqueue(pid, do_enrich=False, do_scan=True, refresh=refresh):
+            msg = "已刷新入队" if refresh else "已入队"
+            if not new_status.get("unlimited"):
+                msg = f"{msg} · 今日 {new_status['used']}/{new_status['daily_limit']}"
+            return {
+                "ok": True,
+                "enqueued": 1,
+                "product_ids": [pid],
+                "message": msg,
+                "quota": new_status,
+                "product_id": pid,
+                "refresh": bool(refresh),
+            }
+        return {
+            "ok": True,
+            "enqueued": 0,
+            "product_ids": [pid],
+            "message": "扫描中",
+            "quota": get_alt_scan_quota_status(),
+            "product_id": pid,
+        }
+
+    try:
+        scan_result = scan_product_alternatives(pid, refresh=refresh)
+    finally:
+        with _lock:
+            _queued.discard(pid)
+
+    msg = "扫描完成" if scan_result.get("ok") else (scan_result.get("error") or "扫描失败")
+    if scan_result.get("ok") and not new_status.get("unlimited"):
+        msg = f"已找到 {scan_result.get('alternatives', 0)} 个 · 今日 {new_status['used']}/{new_status['daily_limit']}"
     return {
-        "ok": True,
+        "ok": bool(scan_result.get("ok")),
         "enqueued": 1,
         "product_ids": [pid],
         "message": msg,
         "quota": new_status,
         "product_id": pid,
         "refresh": bool(refresh),
+        "product": scan_result.get("product"),
+        "alternatives": scan_result.get("alternatives"),
+        "error": scan_result.get("error"),
     }
 
 

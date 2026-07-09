@@ -208,4 +208,44 @@ def apply_mapping_record(product: dict[str, Any], record: dict[str, Any]) -> dic
     hs = record.get("suggested_hs") or record.get("corrected_hs") or {}
     if not isinstance(hs, dict) or not is_valid_hs_mapping(hs):
         raise ValueError("映射结果无效，请重新运行品类映射")
-    return confirm_product_mapping(product, hs)
+
+    updated = confirm_product_mapping(product, hs)
+    mapping = dict(updated.get("mapping_record") or {})
+
+    for key in (
+        "match_method",
+        "match_detail",
+        "decision",
+        "history_hit",
+        "agent_confidence",
+        "semantic_candidates",
+        "signal_scores",
+        "matched_keywords",
+        "vision_summary",
+        "title_image_agreement_keywords",
+        "vision_keywords",
+        "skip_fusion",
+        "match_candidates",
+        "source_title_original",
+        "checks",
+        "auto_resolved",
+        "mapped_at",
+        "suggested_category_id",
+    ):
+        if key in record and record[key] is not None:
+            mapping[key] = record[key]
+
+    category_path = record.get("suggested_category_path")
+    if category_path:
+        mapping["suggested_category_path"] = category_path
+    mapping["suggested_hs"] = hs
+
+    if record.get("review_status"):
+        mapping["review_status"] = record["review_status"]
+    if record.get("auto_resolved") is False:
+        updated["category_status"] = "needs_review"
+    if record.get("agent_confidence") is not None:
+        updated["mapping_confidence"] = record["agent_confidence"]
+
+    updated["mapping_record"] = mapping
+    return updated

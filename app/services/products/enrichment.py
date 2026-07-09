@@ -31,6 +31,16 @@ def _parse_shop_item_id_from_url(url: str) -> Optional[str]:
     return None
 
 
+def _build_1688_detail_url(product: dict[str, Any]) -> Optional[str]:
+    source_url = str(product.get("source_url") or "").strip()
+    if "detail.1688.com" in source_url:
+        return source_url.split("?")[0] if source_url else source_url
+    offer_id = str(product.get("source_product_id") or "").strip()
+    if offer_id.isdigit():
+        return f"https://detail.1688.com/offer/{offer_id}.html"
+    return None
+
+
 def tangbuy_shop_item_id(product: dict[str, Any]) -> Optional[str]:
     """Admin A 的 tangGoodsId → 宽表 item_id，入库后为 tangbuy_product_id。"""
     from_url = _parse_shop_item_id_from_url(str(product.get("source_url") or ""))
@@ -58,13 +68,41 @@ def should_portal_enrich(product: dict[str, Any]) -> bool:
     return tangbuy_shop_item_id(product) is not None
 
 
-def resolve_item_get_url(product: dict[str, Any]) -> Optional[str]:
+def resolve_item_get_urls(product: dict[str, Any]) -> list[str]:
+    """itemGet 候选 URL（按命中率排序）。"""
     if not should_portal_enrich(product):
-        return None
+        return []
+
+    urls: list[str] = []
+    seen: set[str] = set()
+
+    def add(url: Optional[str]) -> None:
+        u = (url or "").strip()
+        if u and u not in seen:
+            seen.add(u)
+            urls.append(u)
+
+    tang_url = str(product.get("tang_item_url") or "").strip()
+    source_url = str(product.get("source_url") or "").strip()
+    for u in (tang_url, source_url):
+        if "tangbuy.cc/product" in u:
+            add(u)
+
+    # 订单货源：1688 详情页在 Portal 上最稳
+    add(_build_1688_detail_url(product))
+
     item_id = tangbuy_shop_item_id(product)
-    if not item_id:
-        return None
-    return build_shop_item_get_url(item_id)
+    if item_id:
+        if len(item_id) <= 14:
+            add(f"https://www.tangbuy.cc/product?dataSource=PREFERRED&id={item_id}")
+        add(build_shop_item_get_url(item_id))
+
+    return urls
+
+
+def resolve_item_get_url(product: dict[str, Any]) -> Optional[str]:
+    urls = resolve_item_get_urls(product)
+    return urls[0] if urls else None
 
 
 def mark_pending_match(product_id: str, *, reason: Optional[str] = None) -> Optional[dict[str, Any]]:
@@ -214,6 +252,11 @@ def map_item_to_product_patch(item: dict[str, Any], *, default_city: str) -> dic
             patch["tangbuy_shipping"] = base_tier.get("tangbuy_shipping")
             patch["shipping_source"] = "api"
             patch["shipping_quoted_at"] = patch["detail_enriched_at"]
+    elif shipping is not None:
+        patch["original_shipping"] = shipping
+        patch["tangbuy_shipping"] = round(shipping * markup, 2)
+        patch["shipping_source"] = "api"
+        patch["shipping_quoted_at"] = patch["detail_enriched_at"]
 
     sold = item.get("soldOut")
     if sold is not None:
@@ -247,26 +290,35 @@ def enrich_product_by_id(product_id: str) -> dict[str, Any]:
             "message": "1688 选品线路：跳过 Portal 详情，待匹配",
         }
 
-    page_url = resolve_item_get_url(product)
-    if not page_url:
-        updated = mark_pending_match(product_id, reason="Admin 子单无 tangGoodsId")
+    page_urls = resolve_item_get_urls(product)
+    if not page_urls:
+        updated = mark_pending_match(product_id, reason="无可用 itemGet URL")
         return {
             "ok": False,
             "product_id": product_id,
             "product": updated,
             "enrichment_status": "pending_match",
-            "error": "无 Tangbuy 商品 ID，无法匹配 Portal 详情",
+            "error": "无商品链接，无法拉取运费",
         }
 
     update_product(product_id, lambda p: {**p, "enrichment_status": "running"})
 
-    try:
-        item = item_get(product_page_url=page_url)
-    except TangbuyPortalError as exc:
-        updated = mark_pending_match(product_id, reason=str(exc))
+    item: Optional[dict[str, Any]] = None
+    page_url = page_urls[0]
+    last_err: Optional[TangbuyPortalError] = None
+    for candidate_url in page_urls:
+        try:
+            item = item_get(product_page_url=candidate_url)
+            page_url = candidate_url
+            break
+        except TangbuyPortalError as exc:
+            last_err = exc
+    if item is None:
+        err_msg = str(last_err) if last_err else "itemGet 失败"
+        updated = mark_pending_match(product_id, reason=err_msg)
         return {
             "ok": False,
-            "error": str(exc),
+            "error": err_msg,
             "product_id": product_id,
             "product": updated,
             "enrichment_status": "pending_match",
@@ -274,7 +326,23 @@ def enrich_product_by_id(product_id: str) -> dict[str, Any]:
 
     a_item_id = tangbuy_shop_item_id(product)
     b_item_id = str(item.get("itemId") or "").strip()
-    if a_item_id and b_item_id and a_item_id != b_item_id:
+    splr_id = str(product.get("source_product_id") or "").strip()
+    via_1688 = "1688.com" in page_url
+
+    if via_1688:
+        if splr_id and b_item_id and splr_id != b_item_id:
+            updated = mark_pending_match(
+                product_id,
+                reason=f"1688 offer 不一致：{splr_id} vs {b_item_id}",
+            )
+            return {
+                "ok": False,
+                "product_id": product_id,
+                "product": updated,
+                "enrichment_status": "pending_match",
+                "error": "1688 商品 ID 不匹配",
+            }
+    elif a_item_id and b_item_id and a_item_id != b_item_id:
         updated = mark_pending_match(
             product_id,
             reason=f"A/B item_id 不一致：{a_item_id} vs {b_item_id}",
@@ -288,7 +356,7 @@ def enrich_product_by_id(product_id: str) -> dict[str, Any]:
         }
 
     patch = map_item_to_product_patch(item, default_city=settings.tangbuy_default_shipping_city)
-    if b_item_id:
+    if b_item_id and not via_1688:
         patch["tangbuy_product_id"] = b_item_id
 
     def merge(p: dict[str, Any]) -> dict[str, Any]:

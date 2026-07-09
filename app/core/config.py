@@ -50,6 +50,8 @@ class Settings(BaseSettings):
     # 备选图搜日上限；0=不限制
     product_alt_scan_daily_limit: int = 0
     product_alt_scan_batch_size: int = 3
+    # true=单商品点击同步扫完再返回（本地测试）；false=后台队列（线上防超时）
+    product_alt_scan_sync: bool = False
 
     @property
     def tangbuy_portal_configured(self) -> bool:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import socket
+import threading
 from contextlib import contextmanager
 from typing import Any, Optional
 from urllib.parse import urlparse
@@ -10,11 +11,15 @@ from urllib.parse import urlparse
 import httpx
 
 _ORIGINAL_GETADDRINFO = socket.getaddrinfo
+_PATCH_LOCK = threading.Lock()
+_PATCH_REFCOUNT = 0
 
 
 @contextmanager
 def _resolve_host_to_ip(hostname: str, ip: str):
     """将指定域名解析到固定 IP（Render 等环境 DNS 不可用时），TLS 仍校验原域名证书。"""
+    global _PATCH_REFCOUNT
+
     target = (hostname or "").strip()
     addr = (ip or "").strip()
     if not target or not addr:
@@ -26,11 +31,17 @@ def _resolve_host_to_ip(hostname: str, ip: str):
             return _ORIGINAL_GETADDRINFO(addr, port, family, type, proto, flags)
         return _ORIGINAL_GETADDRINFO(host, port, family, type, proto, flags)
 
-    socket.getaddrinfo = patched  # type: ignore[assignment]
+    with _PATCH_LOCK:
+        _PATCH_REFCOUNT += 1
+        if _PATCH_REFCOUNT == 1:
+            socket.getaddrinfo = patched  # type: ignore[assignment]
     try:
         yield
     finally:
-        socket.getaddrinfo = _ORIGINAL_GETADDRINFO
+        with _PATCH_LOCK:
+            _PATCH_REFCOUNT -= 1
+            if _PATCH_REFCOUNT == 0:
+                socket.getaddrinfo = _ORIGINAL_GETADDRINFO
 
 
 def request_json(
