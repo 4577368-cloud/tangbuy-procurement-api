@@ -1,0 +1,53 @@
+# Render Blueprint — Tangbuy Procurement API
+# 文档：docs/deploy-render.md
+# 在 Render Dashboard → New → Blueprint → 连接本仓库 即可一键创建服务。
+
+services:
+  - type: web
+    name: tangbuy-procurement-api
+    runtime: python
+    plan: starter
+    region: singapore
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.11"
+      # 与 Vercel 前端共用，部署后两边填同一随机串
+      - key: AUTH_SESSION_SECRET
+        generateValue: true
+      # 部署 Vercel 后把实际域名填进来（逗号分隔多个）
+      - key: BACKEND_CORS_ORIGINS
+        value: https://your-app.vercel.app
+      - key: TANGBUY_ADMIN_BASE_URL
+        value: https://admin.tangbuy.cc/prod-api
+      - key: TANGBUY_ADMIN_STORAGE_NO
+        value: "1"
+      - key: TANGBUY_ADMIN_EVENT_TYPE_PENDING
+        value: "5888"
+      - key: TANGBUY_PORTAL_BASE_URL
+        value: https://www.tangbuy.cc/gateway
+      - key: TANGBUY_PORTAL_CURRENCY
+        value: CNY
+      - key: TANGBUY_DEFAULT_SHIPPING_CITY
+        value: 广东惠州市
+      - key: PRODUCT_AUTO_PIPELINE
+        value: "true"
+      - key: PRODUCT_AUTO_SCAN_MS
+        value: "0"
+      - key: PRODUCT_AUTO_SCAN_ON_CREATE
+        value: "false"
+      # 以下在 Render 控制台手动填写（Secret）
+      - key: TANGBUY_ADMIN_TOKEN
+        sync: false
+      - key: TANGBUY_PORTAL_TOKEN
+        sync: false
+      - key: LLM_MODEL_BASE_URL
+        sync: false
+      - key: LLM_MODEL_API_KEY
+        sync: false
+      - key: LLM_MODEL_MODEL_ID
+        sync: false

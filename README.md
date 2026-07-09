@@ -48,14 +48,21 @@ cp .env.example .env.local   # 配置 LLM、1688、CORS
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+## 线上部署（Render）
+
+- Blueprint：仓库根目录 [`render.yaml`](../render.yaml)
+- 步骤与环境变量：[`docs/deploy-render.md`](docs/deploy-render.md)
+- 前端（Vercel）通过 `API_PROXY_TARGET` 指向 Render 服务 URL
+
 ## 环境变量
 
 | 变量 | 说明 |
 |------|------|
 | `AUTH_SESSION_SECRET` | 与前端共享的 Cookie 签名密钥 |
-| `BACKEND_CORS_ORIGINS` | 前端源，如 `http://localhost:3000` |
+| `BACKEND_CORS_ORIGINS` | 前端源（Vercel 域名），逗号分隔 |
+| `TANGBUY_ADMIN_TOKEN` | Admin 订单读接口 Token |
+| `TANGBUY_PORTAL_TOKEN` | Portal 商品详情 Token |
 | `LLM_MODEL_*` | 采购助手 LLM |
-| `ALIBABA_NEWTON_APIKEY` | 牛顿云 |
 | `AGENT_WORK_ROOT` | 数据根目录（默认项目根） |
 
 ## API 清单
@@ -69,6 +76,8 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - `/api/config` — 配置中心
 - `/api/data-center` — 指标聚合
 - `/api/integrations/alibaba-open/*` — 1688 OAuth / 推送
+- `/api/orders/*` — 订单中心、处置、补款
+- `/api/evolution/*` — AI 自进化引擎
 
 ## 接正式环境
 
