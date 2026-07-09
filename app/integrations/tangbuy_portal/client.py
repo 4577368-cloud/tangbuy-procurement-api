@@ -6,7 +6,9 @@ import json
 from typing import Any, Optional
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
-from urllib.request import Request, urlopen
+from urllib.request import Request
+
+from app.core.http_client import urlopen_direct
 
 from app.core.config import get_settings
 
@@ -44,7 +46,7 @@ def item_get(*, product_page_url: str, timeout: int = 45) -> dict[str, Any]:
         method="GET",
     )
     try:
-        with urlopen(req, timeout=timeout) as resp:
+        with urlopen_direct(req, timeout=timeout) as resp:
             raw = json.loads(resp.read().decode("utf-8"))
     except HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")[:500]

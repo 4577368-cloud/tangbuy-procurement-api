@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 from typing import Any, Optional
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.request import Request
+
+from app.core.http_client import urlopen_direct
 
 from app.core.config import get_settings
 from app.integrations.tangbuy_admin.token_store import resolve_admin_token
@@ -45,7 +47,7 @@ def admin_post(path: str, body: dict[str, Any], *, timeout: int = 45) -> dict[st
         method="POST",
     )
     try:
-        with urlopen(req, timeout=timeout) as resp:
+        with urlopen_direct(req, timeout=timeout) as resp:
             raw = json.loads(resp.read().decode("utf-8"))
     except HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")[:500]
@@ -81,7 +83,7 @@ def list_order_detail(body: dict[str, Any], *, timeout: int = 90) -> dict[str, A
         method="POST",
     )
     try:
-        with urlopen(req, timeout=timeout) as resp:
+        with urlopen_direct(req, timeout=timeout) as resp:
             raw = json.loads(resp.read().decode("utf-8"))
     except HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")[:500]
