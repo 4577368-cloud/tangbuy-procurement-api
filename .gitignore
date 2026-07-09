@@ -4,7 +4,6 @@ __pycache__/
 .DS_Store
 .env.local
 data/config/config-center.json
-data/products/center.json
 data/products/*.tmp
 data/products/*.bak*
 data/agent/tasks.json
