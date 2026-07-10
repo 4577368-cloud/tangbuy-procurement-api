@@ -33,10 +33,13 @@ UNIFIED_SYSTEM_PROMPT = """你是采购助手（Tangbuy 统一对话入口），
 | 已下单催发货 | order_inquiry_send |
 | 查订单数量/状态/队列 | procurement_stats |
 | 查具体订单 / 按条件列订单 | order_query |
+| 不确定可筛哪些字段 | order_query_capabilities |
 | HS 品类映射 | category_map_suggest / category_map_confirm |
 
 ## 数据查询铁律
 - 问「多少单」「各状态分布」「某订单状态」→ **必须**调用 procurement_stats 或 order_query，不得凭记忆回答数字。
+- 带时间（今天/昨天/本周）或 BD/客户时，传 time_preset + time_field（昨天支付 → yesterday + pay_time）。
+- 时间筛选默认含正常与异常订单，除非用户另指定 health 或 queue。
 - order_query lookup 返回的订单卡片可点击跳转订单中心。
 
 ## 回复风格
@@ -56,6 +59,7 @@ TOOL_PERMISSION: dict[str, tuple[str, str]] = {
     "order_inquiry_send": ("assistant.order_followup", "edit"),
     "procurement_stats": ("order.data", "view"),
     "order_query": ("order.data", "view"),
+    "order_query_capabilities": ("order.data", "view"),
     "category_map_suggest": ("product.category_mapping", "edit"),
     "category_map_confirm": ("product.category_mapping", "edit"),
 }
@@ -74,9 +78,31 @@ TOOL_OWNER_SKILL: dict[str, str] = {
     "order_inquiry_send": "order-followup",
     "procurement_stats": "order-data-query",
     "order_query": "order-data-query",
+    "order_query_capabilities": "order-data-query",
     "category_map_suggest": "category-mapping",
     "category_map_confirm": "category-mapping",
 }
+
+_QUERY_FILTER_PROPERTIES: dict[str, Any] = {
+    "time_preset": {
+        "type": "string",
+        "description": "today/yesterday/this_week/last_week/this_month/last_month/all",
+    },
+    "time_field": {
+        "type": "string",
+        "description": "pay_time(支付)/pur_time(订购)/wh_stock_in_time(入仓)/pkg_snd_time(发货)/crt_time(创建)",
+    },
+    "time_from": {"type": "string", "description": "自定义起始时间 ISO"},
+    "time_to": {"type": "string", "description": "自定义结束时间 ISO"},
+    "bd_owner": {"type": "string", "description": "BD 对接人，如 jody_zeng"},
+    "user_keyword": {"type": "string", "description": "客户昵称或邮箱关键词"},
+    "health": {
+        "type": "string",
+        "description": "all(默认)/needs_action/normal",
+    },
+    "count_only": {"type": "string", "description": "1=仅返回统计数"},
+}
+
 
 UNIFIED_TOOLS: list[dict[str, Any]] = [
     {
@@ -191,34 +217,41 @@ UNIFIED_TOOLS: list[dict[str, Any]] = [
     },
     {
         "name": "procurement_stats",
-        "description": "查询采购系统订单队列统计、异常信号、系统概览。scope: orders(默认)/signals/overview。",
+        "description": "查询订单统计。支持时间/BD/客户/队列组合筛选；scope: orders/signals/overview。",
         "parameters": {
             "type": "object",
             "properties": {
                 "scope": {
                     "type": "string",
-                    "description": "orders=队列分布, signals=指挥中心异常信号, overview=订单+任务概览",
+                    "description": "orders=队列分布, signals=异常信号, overview=订单+任务概览",
                 },
                 "queue": {
                     "type": "string",
-                    "description": "可选队列：pending_procurement/pending_payment/ordered/shipped/in_warehouse/dispatched/exception/reverse",
+                    "description": "当前履约队列筛选",
                 },
+                **_QUERY_FILTER_PROPERTIES,
             },
         },
     },
     {
         "name": "order_query",
-        "description": "查询具体订单或按条件列出订单。lookup=按单号查，list=按队列/关键词列单。",
+        "description": "查单或列单。lookup=单号；list=按时间/BD/客户/队列组合筛选（含正常+异常）。",
         "parameters": {
             "type": "object",
             "properties": {
-                "mode": {"type": "string", "description": "lookup 或 list，默认 lookup"},
-                "order_id": {"type": "string", "description": "lookup 时：子单号/主单号/1688采购单号"},
-                "queue": {"type": "string", "description": "list 时：队列筛选"},
-                "keyword": {"type": "string", "description": "list 时：商品名/用户/店铺关键词"},
-                "limit": {"type": "string", "description": "list 时返回条数，默认 5，最大 20"},
+                "mode": {"type": "string", "description": "lookup 或 list"},
+                "order_id": {"type": "string", "description": "lookup：子单/主单/1688采购单号"},
+                "queue": {"type": "string", "description": "list：当前履约队列"},
+                "keyword": {"type": "string", "description": "list：商品/店铺/单号关键词"},
+                "limit": {"type": "string", "description": "list 返回条数，默认 5，最大 20"},
+                **_QUERY_FILTER_PROPERTIES,
             },
         },
+    },
+    {
+        "name": "order_query_capabilities",
+        "description": "返回订单查询可用的时间字段、时间范围、维度组合说明（不确定参数时先调用）。",
+        "parameters": {"type": "object", "properties": {}},
     },
     {
         "name": "category_map_suggest",
@@ -303,12 +336,7 @@ LEGACY_SKILLS: list[dict[str, Any]] = [
         "toolCount": 0,
     },
     {
-        "id": "order-data-query",
-        "name": "订单数据查询",
-        "description": "自然语言查询订单队列统计、具体订单状态、按条件列单（只读）",
-        "status": "ready",
-        "welcomeMessage": "问订单数量、各状态分布，或粘贴单号查详情。",
-        "toolCount": 2,
+        "toolCount": 3,
     },
     {
         "id": "order-followup",

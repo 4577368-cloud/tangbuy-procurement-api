@@ -29,7 +29,13 @@ ORDER_LOOKUP_RE = re.compile(
     re.I,
 )
 ORDER_LIST_RE = re.compile(
-    r"列.*订单|列出|最近.*订单|看.*订单|异常.*订单|待下单.*订单|待发货.*订单",
+    r"列.*订单|列出|最近.*订单|看.*订单|异常.*订单|待下单.*订单|待发货.*订单|"
+    r"同步.*订单|有哪些|哪些订单|入仓.*订单|支付.*订单",
+    re.I,
+)
+FILTERED_ORDER_RE = re.compile(
+    r"本周|上周|本月|上月|昨天|昨日|今天|今日|前天|累计|"
+    r"支付|付款|入仓|入库|到仓|发货|的客户|BD\s*\w+",
     re.I,
 )
 SIGNAL_STATS_RE = re.compile(
@@ -187,6 +193,10 @@ def build_merchant_consult_message(user_text: str, context: Optional[dict[str, A
     return "\n".join(lines)
 
 
+def looks_like_filtered_order_query(text: str) -> bool:
+    return bool(FILTERED_ORDER_RE.search(text))
+
+
 def resolve_order_data_route(
     user_text: str,
     allowed: set[str],
@@ -199,6 +209,42 @@ def resolve_order_data_route(
 
     if looks_like_order_followup(text):
         return None
+
+    from app.services.agent.query_semantics import build_query_filters_from_text
+
+    semantic = build_query_filters_from_text(text)
+    has_semantic = bool(
+        semantic.get("time_preset")
+        or semantic.get("time_field")
+        or semantic.get("bd_owner")
+        or semantic.get("user_keyword")
+    )
+
+    if has_semantic or looks_like_filtered_order_query(text):
+        base = {
+            k: v
+            for k, v in semantic.items()
+            if k not in ("mode", "count_only") and v
+        }
+        wants_list = bool(
+            semantic.get("mode") == "list"
+            or looks_like_order_list(text)
+            or re.search(r"同步|列出|有哪些|哪些", text)
+        )
+        wants_count = bool(
+            semantic.get("count_only") == "1"
+            or (looks_like_order_stats(text) and not wants_list)
+        )
+        if wants_count and "procurement_stats" in allowed:
+            return {
+                "tool": "procurement_stats",
+                "args": {**base, "scope": "orders"},
+            }
+        if "order_query" in allowed:
+            return {
+                "tool": "order_query",
+                "args": {**base, "mode": "list", "limit": "10"},
+            }
 
     if looks_like_signal_stats(text) and "procurement_stats" in allowed:
         return {"tool": "procurement_stats", "args": {"scope": "signals"}}

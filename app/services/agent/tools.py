@@ -275,6 +275,11 @@ def execute_tool(
     if tool_name == "order_query":
         return execute_order_query(args)
 
+    if tool_name == "order_query_capabilities":
+        from app.services.agent.data_query import execute_order_query_capabilities
+
+        return execute_order_query_capabilities(args)
+
     if tool_name == "order_inquiry_send":
         order_id = resolve_followup_order_id(args.get("order_id") or "", order_context) or (
             args.get("order_id") or ""

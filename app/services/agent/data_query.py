@@ -5,6 +5,14 @@ from __future__ import annotations
 import re
 from typing import Any, Optional
 
+from app.services.agent.query_semantics import (
+    capabilities_markdown,
+    filter_ord_lines,
+    filters_summary,
+    get_order_query_capabilities,
+    load_ord_lines_pool,
+    normalize_query_args,
+)
 from app.services.command_center.briefing import get_command_center_stats
 from app.services.data_center import QUEUE_LABELS, get_data_center_snapshot
 from app.services.orders import service as order_service
@@ -61,8 +69,8 @@ def _row_card(row: dict[str, Any]) -> dict[str, Any]:
     product_amt = _num(row.get("pur_amt"), _num(row.get("pur_prc")) * _num(row.get("ord_cnt"), 1))
     shipping = _num(row.get("post_fee"))
     customer_paid = _num(row.get("ds_ord_amt"), product_amt + shipping)
-    abn = int(row.get("abn_type_cd") or 0)
-    health = "needs_action" if abn or queue in ("exception", "pending_procurement", "pending_payment") else "normal"
+    from app.services.agent.query_semantics import row_health
+
     return {
         "ord_line_no": row.get("ord_line_no") or "",
         "ord_no": row.get("ord_no") or row.get("out_ord_no") or "",
@@ -75,10 +83,13 @@ def _row_card(row: dict[str, Any]) -> dict[str, Any]:
         "ord_line_stat_nm": row.get("ord_line_stat_nm") or "",
         "ord_stat_nm": row.get("ord_stat_nm") or row.get("ds_ord_stat_nm") or "",
         "usr_nm": row.get("usr_nm") or "",
+        "bd_usr_nm": row.get("bd_usr_nm") or "",
         "splr_shop_nm": row.get("splr_shop_nm") or "",
         "pay_time": row.get("pay_time") or "",
+        "pur_time": row.get("pur_time") or "",
+        "wh_stock_in_time": row.get("wh_stock_in_time") or "",
         "customer_paid_amount": round(customer_paid, 2),
-        "health": health,
+        "health": row_health(row),
     }
 
 
@@ -173,13 +184,111 @@ def execute_procurement_stats(args: dict[str, str]) -> dict[str, Any]:
     scope = (args.get("scope") or "orders").strip().lower()
     queue_filter = (args.get("queue") or "").strip() or None
 
+    filters = normalize_query_args(args)
+    has_slice = bool(
+        filters.get("time_field")
+        or filters.get("bd_owner")
+        or filters.get("user_keyword")
+        or filters.get("keyword")
+        or (filters.get("health") and filters.get("health") != "all")
+    )
+
     if scope in ("overview", "all", "system"):
+        if has_slice:
+            return _build_filtered_stats(filters, scope_label="概览")
         return _build_overview_stats(queue_filter)
 
     if scope in ("signals", "command", "risk"):
         return _build_signal_stats()
 
+    if has_slice or queue_filter:
+        return _build_filtered_stats(filters, queue_fallback=queue_filter)
+
     return _build_order_stats(queue_filter)
+
+
+def _query_pool_or_error() -> tuple[list[dict[str, Any]], str] | dict[str, Any]:
+    rows, source = load_ord_lines_pool()
+    if not rows:
+        return {
+            "success": False,
+            "error": "订单缓存为空",
+            "markdown": "❌ 订单缓存为空。请先在**订单中心**点「拉取最新」同步订单后再查询。",
+        }
+    return rows, source
+
+
+def _build_filtered_stats(
+    filters: dict[str, Any],
+    *,
+    scope_label: str = "订单",
+    queue_fallback: Optional[str] = None,
+) -> dict[str, Any]:
+    pool = _query_pool_or_error()
+    if isinstance(pool, dict):
+        return pool
+    rows, source = pool
+    if queue_fallback and not filters.get("queue"):
+        filters = {**filters, "queue": queue_fallback}
+
+    matched = filter_ord_lines(rows, filters)
+    summary_ctx = filters_summary(filters)
+    by_queue: dict[str, int] = {}
+    for row in matched:
+        q = resolve_order_queue(row) or "pending_procurement"
+        by_queue[q] = by_queue.get(q, 0) + 1
+
+    breakdown = [
+        {
+            "label": QUEUE_LABELS.get(q, q),
+            "value": n,
+            "tone": "rose" if q == "exception" else "amber" if q in ("pending_procurement", "pending_payment") else "default",
+        }
+        for q, n in sorted(by_queue.items(), key=lambda x: -x[1])
+    ][:8]
+
+    groups = [
+        {
+            "label": summary_ctx,
+            "value": len(matched),
+            "highlight": True,
+            "breakdown": breakdown or [{"label": "无匹配", "value": 0}],
+        }
+    ]
+
+    summary = f"{summary_ctx} 共 {len(matched)} 单"
+    md_lines = [f"**{summary_ctx}**", "", f"- 合计：**{len(matched)}** 单（数据源 {source}）"]
+    if breakdown:
+        md_lines.append("")
+        md_lines.extend(f"- {b['label']}：{b['value']}" for b in breakdown)
+
+    return {
+        "success": True,
+        "summary": summary,
+        "markdown": "\n".join(md_lines),
+        "data": {
+            "kind": "stats",
+            "scope": "filtered",
+            "groups": groups,
+            "filters": _filters_payload(filters),
+            "total": len(matched),
+            "source": source,
+        },
+    }
+
+
+def _filters_payload(filters: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "summary": filters_summary(filters),
+        "time_field": filters.get("time_field"),
+        "time_field_label": filters.get("time_field_label"),
+        "time_range_label": filters.get("time_range_label"),
+        "queue": filters.get("queue"),
+        "bd_owner": filters.get("bd_owner"),
+        "user_keyword": filters.get("user_keyword"),
+        "keyword": filters.get("keyword"),
+        "health": filters.get("health"),
+    }
 
 
 def _build_order_stats(queue_filter: Optional[str]) -> dict[str, Any]:
@@ -331,6 +440,15 @@ def _build_overview_stats(queue_filter: Optional[str]) -> dict[str, Any]:
     }
 
 
+def execute_order_query_capabilities(args: dict[str, str]) -> dict[str, Any]:
+    return {
+        "success": True,
+        "summary": "订单查询字段说明",
+        "markdown": capabilities_markdown(),
+        "data": {"kind": "capabilities", **get_order_query_capabilities()},
+    }
+
+
 def execute_order_query(args: dict[str, str]) -> dict[str, Any]:
     mode = (args.get("mode") or "lookup").strip().lower()
     if mode == "list":
@@ -386,45 +504,52 @@ def _execute_order_lookup(args: dict[str, str]) -> dict[str, Any]:
 
 
 def _execute_order_list(args: dict[str, str]) -> dict[str, Any]:
-    queue = (args.get("queue") or "").strip() or None
-    keyword = (args.get("keyword") or "").strip()
+    filters = normalize_query_args(args)
     limit = _int(args.get("limit"), 5)
 
-    if queue == "all":
-        queue = None
+    pool = _query_pool_or_error()
+    if isinstance(pool, dict):
+        return pool
+    rows, source = pool
 
-    result = order_service.list_ord_lines(
-        queue=queue,
-        page=1,
-        page_size=max(limit * 4, 20),
-    )
-    if result.get("error"):
-        return {
-            "success": False,
-            "error": result.get("error"),
-            "markdown": f"❌ 订单列表不可用：{result.get('error')}",
-        }
+    matched = filter_ord_lines(rows, filters)
+    total = len(matched)
 
-    items = result.get("items") or []
-    if keyword:
-        items = [r for r in items if _match_keyword(r, keyword)]
+    if filters.get("count_only"):
+        stats = _build_filtered_stats(filters)
+        stats["data"]["kind"] = "stats"
+        return stats
 
-    items = items[:limit]
+    items = matched[:limit]
     cards = [_row_card(r) for r in items]
-    total = int(result.get("total") or len(cards))
-    queue_label = QUEUE_LABELS.get(queue, "全部") if queue else "全部"
+    queue = filters.get("queue")
+    keyword = filters.get("keyword")
+    summary_ctx = filters_summary(filters)
 
     if not cards:
-        hint = f"{queue_label}队列" + (f" · 关键词「{keyword}」" if keyword else "")
         return {
             "success": True,
-            "summary": f"{hint}无匹配",
-            "markdown": f"{hint}暂无匹配订单。",
-            "data": {"kind": "orders", "rows": [], "total": 0, "queue": queue, "keyword": keyword},
+            "summary": f"{summary_ctx} 无匹配",
+            "markdown": f"**{summary_ctx}** 暂无匹配订单。",
+            "data": {
+                "kind": "orders",
+                "rows": [],
+                "total": 0,
+                "queue": queue,
+                "keyword": keyword,
+                "filters": _filters_payload(filters),
+                "source": source,
+            },
         }
 
-    summary = f"{queue_label} {len(cards)} 条" + (f"（共约 {total} 单）" if total > len(cards) else "")
-    markdown = f"**{queue_label}** 共约 {total} 单，展示 {len(cards)} 条。点击卡片跳转订单详情。"
+    summary = f"{summary_ctx} {total} 单"
+    if len(cards) < total:
+        summary += f"（展示 {len(cards)} 条）"
+    markdown = (
+        f"**{summary_ctx}** 共 **{total}** 单"
+        + (f"，展示 {len(cards)} 条" if len(cards) < total else "")
+        + "。点击卡片跳转订单详情。"
+    )
 
     return {
         "success": True,
@@ -435,6 +560,8 @@ def _execute_order_list(args: dict[str, str]) -> dict[str, Any]:
             "rows": cards,
             "total": total,
             "queue": queue,
-            "keyword": keyword or None,
+            "keyword": keyword,
+            "filters": _filters_payload(filters),
+            "source": source,
         },
     }
