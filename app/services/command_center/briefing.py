@@ -10,9 +10,12 @@ from zoneinfo import ZoneInfo
 
 from app.core.paths import data_dir
 from app.services.agent.llm import chat_completion_stream
+from app.services.command_center.briefing_fallback import render_briefing_fallback
 from app.services.command_center.briefing_prompt import build_briefing_messages
 from app.services.command_center.signal_scan import (
+    BRIEFING_MAX_PER_QUEUE,
     REASON_TO_SIGNAL,
+    _BRIEFING_SCAN_TIMEOUT_SEC,
     aggregate_signal_stats,
     scan_ord_lines_for_signals,
 )
@@ -245,12 +248,46 @@ def compute_delta(
     }
 
 
-def build_briefing_facts() -> dict[str, Any]:
-    summary = order_service.queue_summary()
-    if summary.get("error"):
-        raise RuntimeError(str(summary.get("error")))
+def _queue_counts_from_cache() -> dict[str, int] | None:
+    from app.services.orders.line_cache import load_all_lines
+    from app.services.orders.queue_filters import resolve_order_queue
 
-    counts = summary.get("counts") if isinstance(summary.get("counts"), dict) else {}
+    all_lines = load_all_lines()
+    if not all_lines:
+        return None
+    keys = (
+        "pending_procurement",
+        "pending_payment",
+        "ordered",
+        "shipped",
+        "in_warehouse",
+        "dispatched",
+        "exception",
+        "reverse",
+    )
+    counts = {k: 0 for k in keys}
+    for row in all_lines.values():
+        q = resolve_order_queue(row)
+        if q and q in counts:
+            counts[q] += 1
+    counts["all"] = sum(counts[k] for k in keys)
+    return counts
+
+
+def build_briefing_facts() -> dict[str, Any]:
+    cached = _queue_counts_from_cache()
+    if cached:
+        counts = cached
+        orders_source = "line_cache"
+    else:
+        summary = order_service.queue_summary()
+        counts = summary.get("counts") if isinstance(summary.get("counts"), dict) else {}
+        orders_source = summary.get("source")
+        if summary.get("error") or not counts:
+            if summary.get("error"):
+                raise RuntimeError(str(summary.get("error")))
+            counts = {}
+
     queue_counts = {
         k: int(counts.get(k) or 0)
         for k in (
@@ -266,7 +303,11 @@ def build_briefing_facts() -> dict[str, Any]:
         )
     }
 
-    rows, per_queue_scan = scan_ord_lines_for_signals(queue_counts)
+    rows, per_queue_scan = scan_ord_lines_for_signals(
+        queue_counts,
+        max_per_queue=BRIEFING_MAX_PER_QUEUE,
+        admin_timeout_sec=_BRIEFING_SCAN_TIMEOUT_SEC,
+    )
     scan_stats = aggregate_signal_stats(rows)
 
     from app.services.tasks.store import get_agent_operation_stats
@@ -276,7 +317,7 @@ def build_briefing_facts() -> dict[str, Any]:
     facts: dict[str, Any] = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "timezone": "Asia/Shanghai",
-        "orders_source": summary.get("source"),
+        "orders_source": orders_source,
         "queue_counts": queue_counts,
         "exception_bands": scan_stats["exception_bands"],
         "signal_counts": scan_stats["signal_counts"],
@@ -332,47 +373,80 @@ def get_briefing_payload(*, force: bool = False) -> dict[str, Any]:
     return {"facts": facts, "delta": delta, "snapshot_at": snapshot.get("generated_at") if snapshot else None}
 
 
+def _stream_text_chunks(text: str, *, chunk_size: int = 48) -> Iterator[str]:
+    for i in range(0, len(text), chunk_size):
+        yield text[i : i + chunk_size]
+
+
 def stream_briefing(*, force: bool = False) -> Iterator[str]:
     """SSE 事件流：phase / t / error，结束 [DONE]。"""
-    from app.core.config import get_settings
+    import threading
+    from queue import Empty, Queue
 
-    if not get_settings().llm_configured:
-        yield 'data: {"error":"LLM 未配置"}\n\n'
-        yield "data: [DONE]\n\n"
-        return
+    from app.core.config import get_settings
 
     yield f'data: {json.dumps({"phase": "facts"}, ensure_ascii=False)}\n\n'
 
-    try:
-        snapshot = _load_snapshot()
-        facts = _get_facts_cached(force=force)
-        delta = compute_delta(facts, snapshot)
-        payload = {"facts": facts, "delta": delta}
-    except Exception as exc:  # noqa: BLE001
-        err = json.dumps({"error": str(exc)}, ensure_ascii=False)
-        yield f"data: {err}\n\n"
-        yield "data: [DONE]\n\n"
-        return
+    facts_queue: Queue[tuple[str, Any]] = Queue(maxsize=1)
 
-    yield f'data: {json.dumps({"phase": "llm"}, ensure_ascii=False)}\n\n'
+    def _build() -> None:
+        try:
+            snapshot = _load_snapshot()
+            facts = _get_facts_cached(force=force)
+            delta = compute_delta(facts, snapshot)
+            facts_queue.put(("ok", {"facts": facts, "delta": delta}))
+        except Exception as exc:  # noqa: BLE001
+            facts_queue.put(("err", exc))
 
-    messages = build_briefing_messages(facts=payload["facts"], delta=payload["delta"])
+    worker = threading.Thread(target=_build, daemon=True)
+    worker.start()
 
+    payload: dict[str, Any] | None = None
+    while payload is None:
+        try:
+            kind, value = facts_queue.get(timeout=5)
+            if kind == "err":
+                err = json.dumps({"error": str(value)}, ensure_ascii=False)
+                yield f"data: {err}\n\n"
+                yield "data: [DONE]\n\n"
+                return
+            payload = value
+        except Empty:
+            yield ": keepalive\n\n"
+            if not worker.is_alive() and facts_queue.empty():
+                err = json.dumps({"error": "简报数据汇总超时"}, ensure_ascii=False)
+                yield f"data: {err}\n\n"
+                yield "data: [DONE]\n\n"
+                return
+
+    settings = get_settings()
+    use_llm = settings.llm_configured
     full_text: list[str] = []
-    try:
-        for chunk in chat_completion_stream(
-            messages, temperature=0.2, max_tokens=1200
-        ):
-            if not chunk:
-                continue
-            full_text.append(chunk)
+
+    if use_llm:
+        yield f'data: {json.dumps({"phase": "llm"}, ensure_ascii=False)}\n\n'
+        messages = build_briefing_messages(facts=payload["facts"], delta=payload["delta"])
+        try:
+            for chunk in chat_completion_stream(
+                messages, temperature=0.2, max_tokens=1200
+            ):
+                if not chunk:
+                    continue
+                full_text.append(chunk)
+                event = json.dumps({"t": chunk}, ensure_ascii=False)
+                yield f"data: {event}\n\n"
+        except Exception:
+            use_llm = False
+            full_text.clear()
+
+    if not use_llm or not full_text:
+        if not full_text:
+            yield f'data: {json.dumps({"phase": "llm"}, ensure_ascii=False)}\n\n'
+        fallback = render_briefing_fallback(facts=payload["facts"], delta=payload["delta"])
+        full_text = [fallback]
+        for chunk in _stream_text_chunks(fallback):
             event = json.dumps({"t": chunk}, ensure_ascii=False)
             yield f"data: {event}\n\n"
-    except Exception as exc:  # noqa: BLE001
-        err = json.dumps({"error": str(exc)}, ensure_ascii=False)
-        yield f"data: {err}\n\n"
-        yield "data: [DONE]\n\n"
-        return
 
     if full_text:
         save_briefing_snapshot(payload["facts"])

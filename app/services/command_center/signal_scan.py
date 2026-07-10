@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -22,6 +22,8 @@ SIGNAL_SCAN_QUEUES = (
     "reverse",
 )
 MAX_PER_QUEUE = 150
+BRIEFING_MAX_PER_QUEUE = 40
+_BRIEFING_SCAN_TIMEOUT_SEC = 45
 _SHIP_OVERDUE_HOURS = 48
 
 REASON_TO_SIGNAL: dict[str, str] = {
@@ -53,24 +55,50 @@ def _parse_iso(value: Any) -> datetime | None:
         return None
 
 
-def _page_size_for_queue(queue: str, queue_counts: dict[str, int]) -> int:
+def _page_size_for_queue(
+    queue: str, queue_counts: dict[str, int], *, max_per_queue: int = MAX_PER_QUEUE
+) -> int:
     total = int(queue_counts.get(queue) or 0)
     if total <= 0:
         return 0
-    return min(total, MAX_PER_QUEUE)
+    return min(total, max_per_queue)
 
 
 def scan_ord_lines_for_signals(
     queue_counts: dict[str, int] | None = None,
+    *,
+    max_per_queue: int = MAX_PER_QUEUE,
+    admin_timeout_sec: float | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, int]]:
     """按队列总量拉取样本（每队列最多 MAX_PER_QUEUE），去重后返回行与每队列实扫条数。"""
+    from app.services.orders.line_cache import list_cached_lines, load_all_lines
+
     counts = queue_counts or {}
     per_queue_scan: dict[str, int] = {}
     rows: list[dict[str, Any]] = []
     seen: set[str] = set()
 
+    if load_all_lines():
+        for queue in SIGNAL_SCAN_QUEUES:
+            size = _page_size_for_queue(queue, counts, max_per_queue=max_per_queue)
+            if size <= 0:
+                per_queue_scan[queue] = 0
+                continue
+            batch = list_cached_lines(queue=queue)[:size]
+            per_queue_scan[queue] = len(batch)
+            for row in batch:
+                if not is_in_procurement_scope(row):
+                    continue
+                key = str(row.get("ord_line_no") or "")
+                if key and key in seen:
+                    continue
+                if key:
+                    seen.add(key)
+                rows.append(row)
+        return rows, per_queue_scan
+
     def _fetch(queue: str) -> tuple[str, list[dict[str, Any]]]:
-        size = _page_size_for_queue(queue, counts)
+        size = _page_size_for_queue(queue, counts, max_per_queue=max_per_queue)
         if size <= 0:
             return queue, []
         result = order_service.list_ord_lines(queue=queue, page=1, page_size=size)
@@ -79,8 +107,15 @@ def scan_ord_lines_for_signals(
 
     with ThreadPoolExecutor(max_workers=len(SIGNAL_SCAN_QUEUES)) as pool:
         futures = [pool.submit(_fetch, q) for q in SIGNAL_SCAN_QUEUES]
-        for fut in futures:
-            queue, batch = fut.result()
+        try:
+            iterator = as_completed(futures, timeout=admin_timeout_sec)
+        except TypeError:
+            iterator = as_completed(futures)
+        for fut in iterator:
+            try:
+                queue, batch = fut.result(timeout=admin_timeout_sec or 120)
+            except Exception:
+                continue
             per_queue_scan[queue] = len(batch)
             for row in batch:
                 if not is_in_procurement_scope(row):
