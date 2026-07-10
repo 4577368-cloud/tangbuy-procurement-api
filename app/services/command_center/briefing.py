@@ -293,11 +293,7 @@ def ensure_order_cache_for_briefing(*, force: bool = False) -> dict[str, Any]:
     from app.services.orders import line_cache, order_line_sync
 
     if not _briefing_cache_needs_sync(force=force):
-        state = line_cache.load_sync_state()
-        return {
-            "skipped": True,
-            "cache_total": int(state.get("cached_total") or len(line_cache.load_all_lines())),
-        }
+        return _orders_sync_meta(skipped=True)
 
     pages = 2 if force else 1
     result = order_line_sync.sync_orders_incremental(pages=pages)
@@ -306,7 +302,27 @@ def ensure_order_cache_for_briefing(*, force: bool = False) -> dict[str, Any]:
         errors = result.get("errors") if isinstance(result.get("errors"), list) else []
         detail = str(errors[0]) if errors else "订单同步失败"
         raise RuntimeError(detail)
-    return {"skipped": False, "cache_total": cache_total, **result}
+    return _orders_sync_meta(skipped=False, sync_result=result)
+
+
+def _orders_sync_meta(
+    *,
+    skipped: bool,
+    sync_result: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    from app.services.orders.line_cache import load_all_lines, load_sync_state
+
+    state = load_sync_state()
+    meta: dict[str, Any] = {
+        "orders_sync": "cached" if skipped else "fresh",
+        "orders_synced_at": state.get("last_incremental_at"),
+        "cache_total": int(state.get("cached_total") or len(load_all_lines())),
+    }
+    if not skipped and sync_result:
+        stats = sync_result.get("stats") if isinstance(sync_result.get("stats"), dict) else {}
+        meta["sync_added"] = int(stats.get("added") or 0)
+        meta["sync_updated"] = int(stats.get("updated") or 0)
+    return meta
 
 
 def build_briefing_facts() -> dict[str, Any]:
@@ -440,9 +456,10 @@ def _iter_bg_task(
 
 
 def stream_briefing(*, force: bool = False) -> Iterator[str]:
-    """SSE 事件流：sync → facts → llm / t / error，结束 [DONE]。"""
+    """SSE 事件流：sync → meta → facts → llm / t / error，结束 [DONE]。"""
     from app.core.config import get_settings
 
+    orders_meta: dict[str, Any] | None = None
     if _briefing_cache_needs_sync(force=force):
         yield f'data: {json.dumps({"phase": "sync"}, ensure_ascii=False)}\n\n'
         for item in _iter_bg_task(
@@ -458,6 +475,12 @@ def stream_briefing(*, force: bool = False) -> Iterator[str]:
                 yield f"data: {err}\n\n"
                 yield "data: [DONE]\n\n"
                 return
+            orders_meta = value if isinstance(value, dict) else None
+    else:
+        orders_meta = ensure_order_cache_for_briefing(force=force)
+
+    if orders_meta:
+        yield f'data: {json.dumps({"meta": orders_meta}, ensure_ascii=False)}\n\n'
 
     yield f'data: {json.dumps({"phase": "facts"}, ensure_ascii=False)}\n\n'
 
