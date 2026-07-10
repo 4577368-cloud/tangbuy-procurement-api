@@ -202,4 +202,28 @@ def register_task_from_tool(
     if not task:
         return None
 
-    return persistence.append_runtime_task(task)
+    return persistence.upsert_runtime_task(task)
+
+
+def reconcile_tasks_from_traces(
+    traces: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """从对话 toolTrace 回填任务（刷新后幂等）。"""
+    registered: list[dict[str, Any]] = []
+    for trace in traces:
+        if not isinstance(trace, dict):
+            continue
+        tool = str(trace.get("tool") or "").strip()
+        args = trace.get("arguments") if isinstance(trace.get("arguments"), dict) else {}
+        result = trace.get("result") if isinstance(trace.get("result"), dict) else {}
+        if not tool or not result:
+            continue
+        skill_id = trace.get("skill_id")
+        if not skill_id:
+            from app.services.agent.skills import resolve_skill_id_for_tool
+
+            skill_id = resolve_skill_id_for_tool(tool)
+        task = register_task_from_tool(str(skill_id), tool, {str(k): str(v) for k, v in args.items()}, result)
+        if task:
+            registered.append(task)
+    return registered

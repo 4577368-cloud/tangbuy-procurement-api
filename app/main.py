@@ -17,6 +17,7 @@ from app.routers import (
     agent,
     auth,
     category_mapping,
+    command_center,
     config,
     data_center,
     evolution,
@@ -79,6 +80,7 @@ def create_app() -> FastAPI:
     app.include_router(category_mapping.router)
     app.include_router(config.router)
     app.include_router(data_center.router)
+    app.include_router(command_center.router)
     app.include_router(skill_audit.router)
     app.include_router(evolution.router)
     app.include_router(integrations.router)

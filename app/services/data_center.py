@@ -88,7 +88,11 @@ def _scan_order_exception_rows() -> list[dict[str, Any]]:
 def get_data_center_snapshot() -> dict[str, Any]:
     nowmono = _time.monotonic()
     cached = _snapshot_cache.get("value")
-    if cached and nowmono - float(_snapshot_cache["at"] or 0.0) < _SNAPSHOT_TTL_SECONDS:
+    if (
+        cached
+        and nowmono - float(_snapshot_cache["at"] or 0.0) < _SNAPSHOT_TTL_SECONDS
+        and not cached.get("ordersError")
+    ):
         return cached  # type: ignore[return-value]
 
     snapshot = _build_data_center_snapshot()
@@ -108,6 +112,10 @@ def _build_data_center_snapshot() -> dict[str, Any]:
 
     summary = order_service.queue_summary()
     counts = summary.get("counts") if isinstance(summary.get("counts"), dict) else {}
+    orders_source = str(summary.get("source") or "unknown")
+    orders_error = summary.get("error")
+    if orders_error is not None:
+        orders_error = str(orders_error)
     forward_total = sum(int(counts.get(q) or 0) for q in FORWARD_QUEUES)
     reverse_total = int(counts.get("reverse") or 0)
     in_transit = sum(int(counts.get(q) or 0) for q in IN_TRANSIT_QUEUES)
@@ -143,6 +151,8 @@ def _build_data_center_snapshot() -> dict[str, Any]:
             "overdue": 0,
         },
         "orderCounts": counts,
+        "ordersSource": orders_source,
+        "ordersError": orders_error,
         "orderDistribution": order_distribution,
         "aftersaleBreakdown": aftersale_breakdown,
         "channelDistribution": channel_distribution,

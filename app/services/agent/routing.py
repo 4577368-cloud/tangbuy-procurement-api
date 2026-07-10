@@ -20,6 +20,22 @@ PRODUCT_COMPARE_RE = re.compile(r"比价|比一下|哪个便宜|哪家便宜|对
 ORDER_FOLLOWUP_RE = re.compile(
     r"催|发货|物流|改价|提醒商家|什么时候发|到货|追踪|催一下|跟进订单", re.I
 )
+ORDER_STATS_RE = re.compile(
+    r"多少|几个|统计|汇总|分布|占比|总共|合计|各.*状态|订单.*(数|量|概况|情况)|待处理.*单|有几个",
+    re.I,
+)
+ORDER_LOOKUP_RE = re.compile(
+    r"查.*订单|订单.*(状态|情况|详情|进度|在哪)|怎么样|哪一单|子单|这条单|这个单|单号",
+    re.I,
+)
+ORDER_LIST_RE = re.compile(
+    r"列.*订单|列出|最近.*订单|看.*订单|异常.*订单|待下单.*订单|待发货.*订单",
+    re.I,
+)
+SIGNAL_STATS_RE = re.compile(
+    r"信号|异常.*(统计|多少|几个)|超时.*发|补款|SKU|备注风险|指挥中心",
+    re.I,
+)
 FUZZY_SOURCING_RE = re.compile(
     r"采购|要买|进货|备货|订(?:货|购)|拿(?:货|一批)|需要\s*\d+\s*[件个套批箱]", re.I
 )
@@ -57,6 +73,30 @@ def extract_1688_offer_urls(text: str) -> list[str]:
 
 def looks_like_order_followup(text: str) -> bool:
     return bool(ORDER_FOLLOWUP_RE.search(text))
+
+
+def looks_like_order_stats(text: str) -> bool:
+    return bool(ORDER_STATS_RE.search(text))
+
+
+def looks_like_order_lookup(text: str) -> bool:
+    if extract_lookup_ids_from_text(text):
+        return True
+    return bool(ORDER_LOOKUP_RE.search(text))
+
+
+def looks_like_order_list(text: str) -> bool:
+    return bool(ORDER_LIST_RE.search(text))
+
+
+def looks_like_signal_stats(text: str) -> bool:
+    return bool(SIGNAL_STATS_RE.search(text))
+
+
+def extract_lookup_ids_from_text(text: str) -> list[str]:
+    from app.services.agent.data_query import extract_lookup_ids
+
+    return extract_lookup_ids(text)
 
 
 def looks_like_fuzzy_sourcing(text: str) -> bool:
@@ -145,6 +185,59 @@ def build_merchant_consult_message(user_text: str, context: Optional[dict[str, A
             lines.append(f"商品名：{context['item_nm']}")
     lines.append(f"采购员问题：{user_text.strip()}")
     return "\n".join(lines)
+
+
+def resolve_order_data_route(
+    user_text: str,
+    allowed: set[str],
+    context: Optional[dict[str, Any]] = None,
+) -> Optional[dict[str, Any]]:
+    """订单/系统数据只读查询（优先于催单，当用户是在查状态而非催发货）。"""
+    text = user_text.strip()
+    if not text:
+        return None
+
+    if looks_like_order_followup(text):
+        return None
+
+    if looks_like_signal_stats(text) and "procurement_stats" in allowed:
+        return {"tool": "procurement_stats", "args": {"scope": "signals"}}
+
+    if looks_like_order_stats(text) and "procurement_stats" in allowed:
+        from app.services.agent.data_query import resolve_queue_from_text
+
+        queue = resolve_queue_from_text(text)
+        args: dict[str, str] = {"scope": "orders"}
+        if queue:
+            args["queue"] = queue
+        if re.search(r"概览|整体|系统|全部", text):
+            args["scope"] = "overview"
+        return {"tool": "procurement_stats", "args": args}
+
+    ids = extract_lookup_ids_from_text(text)
+    ctx_id = None
+    if context:
+        ctx_id = (
+            str(context.get("ord_line_no") or "").strip()
+            or str(context.get("pur_no") or "").strip()
+            or str(context.get("ord_no") or "").strip()
+        )
+    if "order_query" in allowed:
+        if ids or (looks_like_order_lookup(text) and ctx_id):
+            oid = ids[0] if ids else ctx_id or ""
+            if oid:
+                return {"tool": "order_query", "args": {"mode": "lookup", "order_id": oid}}
+        if looks_like_order_list(text):
+            from app.services.agent.data_query import resolve_queue_from_text
+
+            queue = resolve_queue_from_text(text) or "exception"
+            args = {"mode": "list", "queue": queue, "limit": "5"}
+            kw = re.search(r"[「\"']([^」\"']+)[」\"']", text)
+            if kw:
+                args["keyword"] = kw.group(1).strip()
+            return {"tool": "order_query", "args": args}
+
+    return None
 
 
 def resolve_order_followup_route(
@@ -321,6 +414,10 @@ def resolve_deterministic_route(
                 "user_question": user_text.strip(),
             },
         }
+
+    data_route = resolve_order_data_route(user_text, allowed, context)
+    if data_route:
+        return data_route
 
     followup = resolve_order_followup_route(user_text, allowed, context)
     if followup:

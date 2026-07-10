@@ -165,6 +165,7 @@ def run_category_suggest(
     hint: Optional[str] = None,
     goods_id: Optional[str] = None,
     image_url: Optional[str] = None,
+    vision_keywords: Optional[list[str]] = None,
 ) -> dict[str, Any]:
     cmd = ["suggest", "--title", title]
     if hint:
@@ -173,7 +174,27 @@ def run_category_suggest(
         cmd.extend(["--goods-id", goods_id])
     if image_url:
         cmd.extend(["--image-url", image_url])
+    if vision_keywords:
+        cmd.extend(["--vision-keywords", json.dumps(vision_keywords, ensure_ascii=False)])
     return unwrap_category_suggest_result(run_python_cli(category_mapper_path(), cmd, timeout=120))
+
+
+def run_category_lookup(category_id: int) -> dict[str, Any]:
+    raw = run_python_cli(category_mapper_path(), ["lookup", "--cid", str(category_id)], timeout=60)
+    data = raw.get("data")
+    if isinstance(data, dict) and data.get("cid"):
+        cat = data
+        return {
+            "success": True,
+            "category_id": cat.get("cid"),
+            "category_cn_name": cat.get("cn_name"),
+            "category_en_name": cat.get("en_name"),
+            "hs_code": cat.get("hs_code"),
+            "declare_cn_name": cat.get("dec_cn_name"),
+            "declare_en_name": cat.get("dec_en_name"),
+            "tariff": cat.get("tariff"),
+        }
+    return {"success": False, "error": "类目不存在"}
 
 
 def unwrap_category_suggest_result(result: dict[str, Any]) -> dict[str, Any]:

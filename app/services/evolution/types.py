@@ -268,3 +268,89 @@ class EvolutionEngineConfig:
     shadow_hallucination_tolerance: float = 2.0
     deploy_gradual_percentages: list[int] = field(default_factory=lambda: [5, 20, 50, 100])
     global_max_active_patches: int = 20
+
+
+# ─── 被动复盘（推理回溯 + 诊断摘要） ───
+
+
+class ReplayFindingType(str, Enum):
+    RANKING_FAILURE = "ranking_failure"      # 正确答案在候选池但排序过低
+    MISSING_SIGNAL = "missing_signal"        # 缺少关键信号导致正确答案未被选中
+    NOISE_INTERFERENCE = "noise_interference"  # 非商品/干扰词渗入候选池
+    OVER_WEIGHT = "over_weight"              # 某维度权重过高导致错误推荐
+    UNDER_WEIGHT = "under_weight"            # 某维度权重不足导致正确候选被压低
+
+
+class ReplayFindingSeverity(str, Enum):
+    CRITICAL = "critical"
+    MAJOR = "major"
+    MINOR = "minor"
+
+
+class ReplayOptimizationType(str, Enum):
+    RULE_BOOST = "rule_boost"                # 规则加成（品类词→类目 boost）
+    NOISE_FILTER = "noise_filter"            # 噪声过滤（非品类词移除）
+    THRESHOLD_ADJUST = "threshold_adjust"    # 阈值调整
+    DOMAIN_SIGNAL = "domain_signal"          # 新增领域信号
+
+
+REPLAY_FINDING_TYPE_LABELS: dict[ReplayFindingType, str] = {
+    ReplayFindingType.RANKING_FAILURE: "排序失误",
+    ReplayFindingType.MISSING_SIGNAL: "信号缺失",
+    ReplayFindingType.NOISE_INTERFERENCE: "噪声干扰",
+    ReplayFindingType.OVER_WEIGHT: "权重过高",
+    ReplayFindingType.UNDER_WEIGHT: "权重不足",
+}
+
+REPLAY_OPTIMIZATION_TYPE_LABELS: dict[ReplayOptimizationType, str] = {
+    ReplayOptimizationType.RULE_BOOST: "规则增强",
+    ReplayOptimizationType.NOISE_FILTER: "噪声过滤",
+    ReplayOptimizationType.THRESHOLD_ADJUST: "阈值调整",
+    ReplayOptimizationType.DOMAIN_SIGNAL: "领域信号",
+}
+
+
+@dataclass
+class ReplayFinding:
+    type: ReplayFindingType
+    severity: ReplayFindingSeverity
+    description: str
+
+    def to_public(self) -> dict[str, Any]:
+        return {
+            "type": self.type.value,
+            "severity": self.severity.value,
+            "description": self.description,
+        }
+
+
+@dataclass
+class ReplayOptimization:
+    type: ReplayOptimizationType
+    description: str
+
+    def to_public(self) -> dict[str, Any]:
+        return {
+            "type": self.type.value,
+            "description": self.description,
+        }
+
+
+@dataclass
+class ReplayResult:
+    correction_summary: str
+    findings: list[ReplayFinding] = field(default_factory=list)
+    optimizations: list[ReplayOptimization] = field(default_factory=list)
+    patch_generated: bool = False
+    patch_id: Optional[str] = None
+    learned_rule: Optional[str] = None        # 自动提取的学习规则（如"标题含T恤/上衣→优先匹配上衣类目"）
+
+    def to_public(self) -> dict[str, Any]:
+        return {
+            "correction_summary": self.correction_summary,
+            "findings": [f.to_public() for f in self.findings],
+            "optimizations": [o.to_public() for o in self.optimizations],
+            "patch_generated": self.patch_generated,
+            "patch_id": self.patch_id,
+            "learned_rule": self.learned_rule,
+        }

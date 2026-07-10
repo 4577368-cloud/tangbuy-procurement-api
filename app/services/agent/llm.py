@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 import uuid
-from typing import Any, Optional
+from typing import Any, Iterator, Optional
 
 import httpx
 
@@ -87,6 +87,53 @@ def chat_completion(
     return LlmResponse(message.get("content"), tool_calls)
 
 
+def chat_completion_stream(
+    messages: list[dict[str, Any]],
+    *,
+    temperature: float = 0.2,
+    max_tokens: int = 1200,
+) -> Iterator[str]:
+    """流式文本增量（OpenAI 兼容 SSE 解析）。"""
+    base, key, model = _llm_config()
+    body: dict[str, Any] = {
+        "model": model,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stream": True,
+    }
+
+    with httpx.Client(timeout=120.0) as client:
+        with client.stream(
+            "POST",
+            f"{base}/chat/completions",
+            headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+            json=body,
+        ) as res:
+            if res.status_code >= 400:
+                raise RuntimeError(f"LLM 请求失败 ({res.status_code}): {res.read().decode()[:300]}")
+            for line in res.iter_lines():
+                if not line:
+                    continue
+                text = line.decode("utf-8") if isinstance(line, bytes) else line
+                if not text.startswith("data:"):
+                    continue
+                payload = text[5:].strip()
+                if payload == "[DONE]":
+                    break
+                try:
+                    data = json.loads(payload)
+                except json.JSONDecodeError:
+                    continue
+                choices = data.get("choices") or []
+                if not choices:
+                    continue
+                delta = choices[0].get("delta") or {}
+                content = delta.get("content")
+                if content:
+                    yield str(content)
+
+
 def build_assistant_tool_call_message(tool_calls: list[ToolCall]) -> dict[str, Any]:
     return {
         "role": "assistant",
@@ -104,3 +151,71 @@ def build_assistant_tool_call_message(tool_calls: list[ToolCall]) -> dict[str, A
 
 def new_tool_call_id() -> str:
     return f"call-{uuid.uuid4().hex[:12]}"
+
+
+def _parse_json_object(text: str) -> Optional[dict[str, Any]]:
+    trimmed = (text or "").strip()
+    start = trimmed.find("{")
+    end = trimmed.rfind("}")
+    if start == -1 or end <= start:
+        return None
+    try:
+        parsed = json.loads(trimmed[start : end + 1])
+        return parsed if isinstance(parsed, dict) else None
+    except json.JSONDecodeError:
+        return None
+
+
+def vision_chat_completion(
+    text: str,
+    image_url: str,
+    *,
+    temperature: float = 0.2,
+    max_tokens: int = 800,
+) -> str:
+    """多模态 LLM：文本 + 商品主图 URL。"""
+    import base64
+
+    base, key, model = _llm_config()
+    image_ref = (image_url or "").strip()
+    if image_ref and not image_ref.startswith("data:"):
+        try:
+            with httpx.Client(timeout=20.0, follow_redirects=True) as client:
+                res = client.get(
+                    image_ref,
+                    headers={"User-Agent": "Mozilla/5.0 tangbuy-procurement"},
+                )
+            if res.status_code < 400:
+                ct = (res.headers.get("content-type") or "image/jpeg").split(";")[0]
+                if ct.startswith("image/") and len(res.content) <= 4 * 1024 * 1024:
+                    image_ref = f"data:{ct};base64,{base64.b64encode(res.content).decode('ascii')}"
+        except Exception:
+            pass
+
+    content: list[dict[str, Any]] = [{"type": "text", "text": text}]
+    if image_ref:
+        content.append({"type": "image_url", "image_url": {"url": image_ref}})
+
+    body = {
+        "model": model,
+        "messages": [{"role": "user", "content": content}],
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+
+    with httpx.Client(timeout=120.0) as client:
+        res = client.post(
+            f"{base}/chat/completions",
+            headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+            json=body,
+        )
+    if res.status_code >= 400:
+        raise RuntimeError(f"视觉模型请求失败 ({res.status_code}): {res.text[:300]}")
+
+    data = res.json()
+    message = (data.get("choices") or [{}])[0].get("message") or {}
+    return str(message.get("content") or "").strip()
+
+
+def parse_json_from_llm(text: str) -> Optional[dict[str, Any]]:
+    return _parse_json_object(text)

@@ -32,5 +32,33 @@
     "supplier_switched_at": "2026-07-08T13:24:36.489Z",
     "supplier_switched_from": "38498958869",
     "supplier_switched_from_product_id": "123674394361888"
+  },
+  "TI26040000042": {
+    "splr_item_id": "878717259145",
+    "item_url": "https://detail.1688.com/offer/878717259145.html?&object_id=878717259145",
+    "item_img": "https://cbu01.alicdn.com/img/ibank/O1CN01RQdX811oBhQFyQNQr_!!3823835187-0-cib.jpg",
+    "item_nm": "2026性感纯欲风挂脖吊带裙夏新款气质百搭连衣裙女复古包臀短裙",
+    "splr_shop_nm": "广州花间婷服装制造有限公司",
+    "pur_prc": 8.9,
+    "sku_id": "5721553517899",
+    "min_order_qty": 1,
+    "tangbuy_product_id": "178359800634980363",
+    "supplier_switched_at": "2026-07-09T11:53:26.410Z",
+    "supplier_switched_from": "703881912974",
+    "supplier_switched_from_product_id": "30492513124384"
+  },
+  "TI26040000041": {
+    "splr_item_id": "878717259145",
+    "item_url": "https://detail.1688.com/offer/878717259145.html?&object_id=878717259145",
+    "item_img": "https://cbu01.alicdn.com/img/ibank/O1CN01RQdX811oBhQFyQNQr_!!3823835187-0-cib.jpg",
+    "item_nm": "2026性感纯欲风挂脖吊带裙夏新款气质百搭连衣裙女复古包臀短裙",
+    "splr_shop_nm": "广州花间婷服装制造有限公司",
+    "pur_prc": 8.9,
+    "sku_id": "5721553517899",
+    "min_order_qty": 1,
+    "tangbuy_product_id": "178359800634980363",
+    "supplier_switched_at": "2026-07-09T11:53:26.410Z",
+    "supplier_switched_from": "703881912974",
+    "supplier_switched_from_product_id": "30492513124384"
   }
 }

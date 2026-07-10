@@ -5,6 +5,10 @@ from __future__ import annotations
 from typing import Any, Literal, Optional
 
 from app.services.orders.purchase_cost import resolve_purchase_cost_basis
+from app.services.orders.procurement_scope import (
+    allows_finance_reason,
+    is_in_procurement_scope,
+)
 from app.services.orders.queue_filters import resolve_order_queue
 
 EPS = 0.02
@@ -52,15 +56,16 @@ def resolve_customer_paid(row: dict[str, Any]) -> float:
         return payable
     if abs(raw - payable) < EPS:
         return payable
-    if raw >= payable - EPS:
-        return raw
-    return payable
+    return raw
 
 
 def classify_exception_reason(
     row: dict[str, Any],
 ) -> Optional[tuple[ExceptionBand, str]]:
     """返回 (异常档位, 原因标签)；非异常返回 None。band 与 classify_exception 一致。"""
+    if not is_in_procurement_scope(row):
+        return None
+
     queue = resolve_order_queue(row) or "pending_procurement"
     health = resolve_health(row)
 
@@ -85,16 +90,23 @@ def classify_exception_reason(
     margin_pct = (margin / customer_paid * 100) if customer_paid > 0 else 0.0
 
     if customer_paid + EPS < purchase_payable:
-        return "action", "成本倒挂"
-    if abs(margin) < EPS:
-        return "action", "零毛利"
-    if margin < -EPS:
-        return "action", "利润为负"
-    if margin_pct + EPS < MARGIN_THRESHOLD:
-        return "attention", "低毛利"
+        if allows_finance_reason(queue, "成本倒挂"):
+            return "action", "成本倒挂"
+    elif abs(margin) < EPS:
+        if allows_finance_reason(queue, "零毛利"):
+            return "action", "零毛利"
+    elif margin_pct + EPS < MARGIN_THRESHOLD:
+        if allows_finance_reason(queue, "低毛利"):
+            return "attention", "低毛利"
 
     if queue == "reverse":
-        return "action", "逆向售后"
+        if _num(row.get("apply_refund_stat")) != 0:
+            return "action", "退款申请"
+        if _num(row.get("rtn_stat")) != 0:
+            return "action", "退换货"
+        if _num(row.get("abn_type_cd")) != 0:
+            return "action", "订单异常"
+        return None
     if health == "needs_action" or queue == "exception":
         if _num(row.get("abn_type_cd")) != 0:
             return "action", "订单异常"

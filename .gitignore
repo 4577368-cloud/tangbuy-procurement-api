@@ -7,6 +7,8 @@ data/config/config-center.json
 data/products/*.tmp
 data/products/*.bak*
 data/agent/tasks.json
+data/orders/line-cache.json
+data/orders/sync-state.json
 data/integrations/
 workspace/
 *.egg-info/

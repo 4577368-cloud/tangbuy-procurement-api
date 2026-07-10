@@ -283,10 +283,18 @@ def evidence_multiplier(
 
     anchors = cn_specialty_tokens(cn_name, dec_cn_name)
     missing = [a for a in anchors if a not in blob]
+
+    # 标题/识图已直接命中申报名或类目名核心词 → 不应对替代锚点缺失过度惩罚
+    title_hits_core = bool(
+        (dec_cn_name and len(dec_cn_name) >= 2 and dec_cn_name in blob)
+        or (cn_name and len(cn_name) >= 2 and cn_name in blob)
+    )
+
     if anchors and len(missing) == len(anchors):
-        mult = min(mult, 0.18)
+        # 全缺失：若命中核心则放宽到 0.55，否则严厉 0.18
+        mult = min(mult, 0.55 if title_hits_core else 0.18)
     elif missing and len(missing) >= 2:
-        mult = min(mult, 0.35)
+        mult = min(mult, 0.75 if title_hits_core else 0.35)
 
     learned = learned_anchors or {}
     for anchor in anchors:

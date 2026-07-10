@@ -16,12 +16,17 @@ from app.integrations.skill_cli import (
     run_procurement_inquiry,
     run_supplychain_inquiry,
 )
+from app.services.agent.data_query import execute_order_query, execute_procurement_stats
 from app.services.agent.followup import (
     execute_order_followup_send,
     resolve_followup_order_id,
     resolve_followup_question,
 )
 from app.services.agent.routing import looks_like_merchant_inquiry
+from app.services.products.find_cache import (
+    extract_products_from_tool_result,
+    upsert_find_cache_items,
+)
 from app.services.products.store import confirm_product_mapping, find_by_source_product_id, update_product
 from app.services.tasks.supplychain import create_supplychain_inquiry_task, parse_supplychain_query
 
@@ -37,6 +42,32 @@ def _int_arg(val: Optional[str], default: int) -> int:
         return int(val) if val else default
     except ValueError:
         return default
+
+
+def _cache_product_find_result(tool_name: str, args: dict[str, str], result: dict[str, Any]) -> None:
+    if not result.get("success"):
+        return
+    products = extract_products_from_tool_result(result)
+    if not products:
+        return
+    data = result.get("data") if isinstance(result.get("data"), dict) else {}
+    upsert_find_cache_items(
+        products,
+        tool=tool_name,
+        query=(args.get("query") or data.get("query") or "").strip() or None,
+        image_url=(args.get("image_url") or data.get("image_url") or "").strip() or None,
+        source_url=(args.get("url") or data.get("source_url") or "").strip() or None,
+        search_type=str(data.get("search_type") or "").strip() or None,
+    )
+
+
+def _run_product_find(tool_name: str, args: dict[str, str], runner) -> dict[str, Any]:
+    result = runner()
+    try:
+        _cache_product_find_result(tool_name, args, result)
+    except Exception:
+        pass
+    return result
 
 
 def _build_suggest_markdown(result: dict[str, Any]) -> str:
@@ -72,31 +103,47 @@ def execute_tool(
         q = (args.get("query") or "").strip()
         if not q:
             return {"success": False, "markdown": "❌ 需要搜索关键词 query"}
-        return newton_cli.search_text(q, _int_arg(args.get("limit"), 10), args.get("sort"))
+        return _run_product_find(
+            tool_name,
+            args,
+            lambda: newton_cli.search_text(q, _int_arg(args.get("limit"), 10), args.get("sort")),
+        )
 
     if tool_name == "product_image_search":
         url = (args.get("image_url") or "").strip()
         if not url:
             return {"success": False, "markdown": "❌ 需要商品主图 URL image_url"}
-        return newton_cli.search_image(url, _int_arg(args.get("limit"), 10), args.get("sort"))
+        return _run_product_find(
+            tool_name,
+            args,
+            lambda: newton_cli.search_image(url, _int_arg(args.get("limit"), 10), args.get("sort")),
+        )
 
     if tool_name == "product_link_search":
         url = (args.get("url") or "").strip()
         if not url:
             return {"success": False, "markdown": "❌ 需要 1688 商品链接 url"}
-        return newton_cli.search_link(
-            url,
-            (args.get("image_url") or "").strip() or None,
-            _int_arg(args.get("limit"), 10),
-            args.get("sort"),
+        return _run_product_find(
+            tool_name,
+            args,
+            lambda: newton_cli.search_link(
+                url,
+                (args.get("image_url") or "").strip() or None,
+                _int_arg(args.get("limit"), 10),
+                args.get("sort"),
+            ),
         )
 
     if tool_name == "product_compare":
-        return newton_cli.compare_products(
-            (args.get("url") or "").strip() or None,
-            (args.get("image_url") or "").strip() or None,
-            (args.get("query") or "").strip() or None,
-            _int_arg(args.get("limit"), 3),
+        return _run_product_find(
+            tool_name,
+            args,
+            lambda: newton_cli.compare_products(
+                (args.get("url") or "").strip() or None,
+                (args.get("image_url") or "").strip() or None,
+                (args.get("query") or "").strip() or None,
+                _int_arg(args.get("limit"), 3),
+            ),
         )
 
     if tool_name == "procurement_inquiry":
@@ -221,6 +268,12 @@ def execute_tool(
         if not task_id:
             return {"success": False, "markdown": "❌ 需要 taskId"}
         return run_inquiry_query(task_id)
+
+    if tool_name == "procurement_stats":
+        return execute_procurement_stats(args)
+
+    if tool_name == "order_query":
+        return execute_order_query(args)
 
     if tool_name == "order_inquiry_send":
         order_id = resolve_followup_order_id(args.get("order_id") or "", order_context) or (

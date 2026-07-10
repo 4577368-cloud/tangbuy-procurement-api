@@ -94,6 +94,9 @@ def add_product_from_find_item(
     if source_id:
         existing = find_by_source_product_id(source_id)
         if existing:
+            from app.services.products.find_cache import mark_find_cache_promoted
+
+            mark_find_cache_promoted(source_id)
             return {"item": existing, "created": False}
 
     unit = _parse_price(product.get("price"))
@@ -124,6 +127,10 @@ def add_product_from_find_item(
     items = load_products()
     items.insert(0, record)
     save_products(items)
+    from app.services.products.find_cache import mark_find_cache_promoted
+
+    if source_id:
+        mark_find_cache_promoted(source_id)
     return {"item": record, "created": True}
 
 
@@ -166,6 +173,79 @@ def _hs_from_suggest_payload(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+_MAPPING_META_KEYS = (
+    "match_method",
+    "match_detail",
+    "decision",
+    "history_hit",
+    "agent_confidence",
+    "semantic_candidates",
+    "signal_scores",
+    "matched_keywords",
+    "vision_summary",
+    "title_image_agreement_keywords",
+    "vision_keywords",
+    "skip_fusion",
+    "match_candidates",
+    "source_title_original",
+    "checks",
+    "auto_resolved",
+    "mapped_at",
+    "suggested_category_id",
+)
+
+
+def _merge_suggest_into_mapping(mapping: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    next_map = dict(mapping)
+    for key in _MAPPING_META_KEYS:
+        if key in payload and payload[key] is not None:
+            next_map[key] = payload[key]
+    hs = _hs_from_suggest_payload(payload)
+    if is_valid_hs_mapping(hs):
+        next_map["suggested_hs"] = hs
+        next_map["suggested_category_path"] = (
+            f"{hs.get('category_cn_name', '')} / {hs.get('declare_cn_name', '')} · HS {hs.get('hs_code', '')}"
+        )
+        next_map["suggested_category_id"] = str(hs.get("category_id", ""))
+    if payload.get("confidence") is not None and next_map.get("agent_confidence") is None:
+        next_map["agent_confidence"] = payload["confidence"]
+    return next_map
+
+
+def save_mapping_draft(product: dict[str, Any], record: dict[str, Any]) -> dict[str, Any]:
+    """写入 Agent 映射结果（含图片理解），不自动确认商品品类。"""
+    mapping = _merge_suggest_into_mapping(dict(product.get("mapping_record") or {}), record)
+    mapping["review_status"] = record.get("review_status") or "pending"
+    product["mapping_record"] = mapping
+    conf = record.get("agent_confidence")
+    if conf is None:
+        conf = record.get("confidence")
+    if conf is not None:
+        product["mapping_confidence"] = conf
+    if record.get("mapped_at"):
+        product["mapping_mapped_at"] = record["mapped_at"]
+    product["category_status"] = "needs_review"
+    hs = mapping.get("suggested_hs")
+    if record.get("auto_resolved") and is_valid_hs_mapping(hs):
+        product = confirm_product_mapping(product, hs)
+        product["mapping_record"] = _merge_suggest_into_mapping(
+            dict(product.get("mapping_record") or {}),
+            record,
+        )
+    return product
+
+
+def save_mapping_draft_from_payload(product: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    now = _now_iso()
+    record = dict(payload)
+    record.setdefault("mapped_at", now)
+    record.setdefault("review_status", "pending")
+    decision = str(payload.get("decision") or "")
+    conf = float(payload.get("confidence") or 0)
+    record["auto_resolved"] = decision in ("semantic_agreement", "history_hit") and conf >= 0.85
+    return save_mapping_draft(product, record)
+
+
 def map_product_category_by_id(pid: str) -> Optional[dict[str, Any]]:
     product = store_get_product_by_id(pid)
     if not product:
@@ -201,7 +281,7 @@ def map_product_category_by_id(pid: str) -> Optional[dict[str, Any]]:
     hs = _hs_from_suggest_payload(payload)
     if not is_valid_hs_mapping(hs):
         return update_product(pid, lambda p: {**p, "category_status": "failed"})
-    return update_product(pid, lambda p: confirm_product_mapping(p, hs))
+    return update_product(pid, lambda p: save_mapping_draft_from_payload(p, payload))
 
 
 def apply_mapping_record(product: dict[str, Any], record: dict[str, Any]) -> dict[str, Any]:
@@ -210,31 +290,7 @@ def apply_mapping_record(product: dict[str, Any], record: dict[str, Any]) -> dic
         raise ValueError("映射结果无效，请重新运行品类映射")
 
     updated = confirm_product_mapping(product, hs)
-    mapping = dict(updated.get("mapping_record") or {})
-
-    for key in (
-        "match_method",
-        "match_detail",
-        "decision",
-        "history_hit",
-        "agent_confidence",
-        "semantic_candidates",
-        "signal_scores",
-        "matched_keywords",
-        "vision_summary",
-        "title_image_agreement_keywords",
-        "vision_keywords",
-        "skip_fusion",
-        "match_candidates",
-        "source_title_original",
-        "checks",
-        "auto_resolved",
-        "mapped_at",
-        "suggested_category_id",
-    ):
-        if key in record and record[key] is not None:
-            mapping[key] = record[key]
-
+    mapping = _merge_suggest_into_mapping(dict(updated.get("mapping_record") or {}), record)
     category_path = record.get("suggested_category_path")
     if category_path:
         mapping["suggested_category_path"] = category_path

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from app.integrations.skill_cli import run_category_suggest
+from app.services.category_mapping.vision_pipeline import run_category_mapping_suggest_with_vision
 from app.services.category_mapping.title_translate import prepare_title_for_mapping
 
 
@@ -17,7 +17,7 @@ def run_category_mapping_suggest(
 ) -> dict[str, Any]:
     prep = prepare_title_for_mapping(title, hint=hint)
     result = dict(
-        run_category_suggest(
+        run_category_mapping_suggest_with_vision(
             prep.title,
             hint=prep.hint,
             goods_id=goods_id,

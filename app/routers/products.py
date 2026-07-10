@@ -12,7 +12,12 @@ from app.auth.permissions import grants_allow
 from app.config.store import get_role_grants
 from app.services.products import service as product_service
 from app.services.products.product_jobs import schedule_product_pipeline
-from app.services.products.service import apply_mapping_record, map_product_category_by_id, set_product_shipping
+from app.services.products.service import (
+    apply_mapping_record,
+    map_product_category_by_id,
+    save_mapping_draft,
+    set_product_shipping,
+)
 from app.services.products.store import confirm_product_mapping, update_product
 
 router = APIRouter(prefix="/api/products", tags=["products"])
@@ -107,6 +112,8 @@ class SyncFromOrdersBody(BaseModel):
     page: Optional[int] = 1
     page_size: Optional[int] = 200
     auto_map: Optional[bool] = True
+    all_pages: Optional[bool] = False
+    max_pages: Optional[int] = 100
 
 
 class ProductPushBody(BaseModel):
@@ -114,6 +121,15 @@ class ProductPushBody(BaseModel):
     user_id: Optional[str] = None
     user_email: Optional[str] = None
     bd_name: Optional[str] = None
+
+
+@router.get("/find-cache")
+def list_find_cache(request: Request, q: Optional[str] = None, limit: int = 100) -> dict[str, Any]:
+    require_auth(request)
+    from app.services.products.find_cache import list_find_cache as load_cached
+
+    items = load_cached(limit=limit, q=q)
+    return {"items": items, "total": len(items)}
 
 
 @router.post("/sync-from-orders")
@@ -126,6 +142,8 @@ def sync_from_orders(request: Request, body: SyncFromOrdersBody) -> dict[str, An
         page=max(1, int(body.page or 1)),
         page_size=max(1, min(500, int(body.page_size or 200))),
         auto_map=body.auto_map is not False,
+        all_pages=body.all_pages is True,
+        max_pages=max(1, min(200, int(body.max_pages or 100))),
     )
     stats = dict(result.get("stats") or {})
     stats["products_total"] = product_service.get_product_stats().get("total", 0)
@@ -263,6 +281,11 @@ def patch_product(request: Request, product_id: str, body: PatchProductBody) -> 
     if action == "set_shipping":
         val = body.shipping
         product = set_product_shipping(product_id, val, to_city=body.to_city) or existing
+    elif action == "save_mapping_draft" and body.record:
+        product = update_product(
+            product_id,
+            lambda p: save_mapping_draft(p, body.record or {}),
+        ) or existing
     elif action == "apply_mapping" and body.record:
         try:
             product = update_product(

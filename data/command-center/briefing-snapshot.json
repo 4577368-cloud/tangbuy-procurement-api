@@ -1,0 +1,114 @@
+{
+  "generated_at": "2026-07-09T17:16:38.668371+00:00",
+  "facts": {
+    "generated_at": "2026-07-09T17:16:35.016056+00:00",
+    "timezone": "Asia/Shanghai",
+    "orders_source": "tangbuy_admin",
+    "queue_counts": {
+      "pending_procurement": 597,
+      "pending_payment": 2,
+      "ordered": 23,
+      "shipped": 4,
+      "in_warehouse": 190,
+      "dispatched": 15,
+      "exception": 0,
+      "reverse": 1420,
+      "all": 2251
+    },
+    "exception_bands": {
+      "action_required": 67,
+      "needs_attention": 0,
+      "watch_list": 0,
+      "blocking": 67
+    },
+    "signal_counts": {
+      "PAY_AMOUNT_GAP": 39,
+      "SKU_MISMATCH": 25,
+      "ZERO_MARGIN": 3,
+      "SHIP_OVERDUE": 28
+    },
+    "ship_overdue_estimated": 28,
+    "scanned_rows": 183,
+    "per_queue_scan": {
+      "pending_procurement": 148,
+      "pending_payment": 2,
+      "ordered": 28,
+      "shipped": 5,
+      "exception": 0,
+      "reverse": 167
+    },
+    "agent_active": 13,
+    "agent_ops_by_type": [
+      {
+        "type": "order_followup",
+        "total": 3,
+        "active": 2,
+        "completed": 1,
+        "failed": 0
+      },
+      {
+        "type": "newton_agent",
+        "total": 3,
+        "active": 2,
+        "completed": 1,
+        "failed": 0
+      },
+      {
+        "type": "supplychain_inquiry",
+        "total": 0,
+        "active": 0,
+        "completed": 0,
+        "failed": 0
+      },
+      {
+        "type": "inquiry_1688",
+        "total": 2,
+        "active": 2,
+        "completed": 0,
+        "failed": 0
+      },
+      {
+        "type": "sourcing_inquiry",
+        "total": 1,
+        "active": 1,
+        "completed": 0,
+        "failed": 0
+      },
+      {
+        "type": "auto_release",
+        "total": 9,
+        "active": 6,
+        "completed": 3,
+        "failed": 0
+      },
+      {
+        "type": "category_mapping",
+        "total": 88,
+        "active": 0,
+        "completed": 88,
+        "failed": 0
+      }
+    ],
+    "disposition_today": {},
+    "tasks_completed_today": {
+      "order_followup": 1,
+      "newton_agent": 1,
+      "supplychain_inquiry": 0,
+      "inquiry_1688": 0,
+      "sourcing_inquiry": 0,
+      "auto_release": 0,
+      "category_mapping": 0
+    },
+    "category_mapping": {
+      "pending_review": 2,
+      "today_mapped": 0,
+      "auto_resolved": 88
+    },
+    "yesterday_carryover": {
+      "PAY_AMOUNT_GAP": 37,
+      "SKU_MISMATCH": 25,
+      "ZERO_MARGIN": 3,
+      "SHIP_OVERDUE": 2
+    }
+  }
+}

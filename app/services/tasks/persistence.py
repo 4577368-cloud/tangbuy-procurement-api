@@ -138,7 +138,51 @@ def append_runtime_task(task: dict[str, Any]) -> list[dict[str, Any]]:
     if not is_runtime_task(task):
         return load_and_repair()
 
+    external_ref = str(task.get("external_ref") or "").strip()
+    newton_id = str((task.get("payload") or {}).get("newton_task_id") or "").strip()
+    alphashop_id = str((task.get("payload") or {}).get("alphashop_task_id") or "").strip()
+
     def mutator(tasks: list[dict[str, Any]]) -> None:
+        for existing in tasks:
+            ex_ref = str(existing.get("external_ref") or "").strip()
+            ex_payload = existing.get("payload") or {}
+            if external_ref and ex_ref == external_ref:
+                return
+            if newton_id and str(ex_payload.get("newton_task_id") or "") == newton_id:
+                return
+            if alphashop_id and str(ex_payload.get("alphashop_task_id") or "") == alphashop_id:
+                return
         tasks.insert(0, task)
 
     return with_runtime_tasks(mutator)
+
+
+def upsert_runtime_task(task: dict[str, Any]) -> dict[str, Any]:
+    """按 external_ref / newton_task_id / alphashop_task_id 幂等写入。"""
+    if not is_runtime_task(task):
+        return task
+
+    external_ref = str(task.get("external_ref") or "").strip()
+    newton_id = str((task.get("payload") or {}).get("newton_task_id") or "").strip()
+    alphashop_id = str((task.get("payload") or {}).get("alphashop_task_id") or "").strip()
+    matched: dict[str, Any] | None = None
+
+    def mutator(tasks: list[dict[str, Any]]) -> None:
+        nonlocal matched
+        for i, existing in enumerate(tasks):
+            ex_ref = str(existing.get("external_ref") or "").strip()
+            ex_payload = existing.get("payload") or {}
+            if external_ref and ex_ref == external_ref:
+                matched = existing
+                return
+            if newton_id and str(ex_payload.get("newton_task_id") or "") == newton_id:
+                matched = existing
+                return
+            if alphashop_id and str(ex_payload.get("alphashop_task_id") or "") == alphashop_id:
+                matched = existing
+                return
+        tasks.insert(0, task)
+        matched = task
+
+    with_runtime_tasks(mutator)
+    return matched or task

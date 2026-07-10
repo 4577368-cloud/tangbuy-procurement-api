@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from app.core.paths import data_dir
+from app.services.skill_audit.evolution_bridge import bridge_badcase_to_evolution
 
 INVOCATIONS_PATH = data_dir() / "agent" / "skill-invocations.jsonl"
 TUNING_PATH = data_dir() / "agent" / "skill-tuning.jsonl"
@@ -209,7 +210,13 @@ def audit_invocation_badcase(
         }
         _append_jsonl(TUNING_PATH, entry)
 
-    return {"invocation": inv, "entry": entry}
+    evolution = bridge_badcase_to_evolution(inv, note=clean_note, issue="badcase")
+    if evolution.get("diagnosis"):
+        inv["evolution_diagnosis"] = evolution["diagnosis"]
+        inv["evolution_feedback_id"] = evolution.get("feedback_id")
+        _persist_invocations(records)
+
+    return {"invocation": inv, "entry": entry, "evolution": evolution}
 
 
 def audit_invocation_with_patch(
@@ -244,7 +251,21 @@ def audit_invocation_with_patch(
         "active": True,
     }
     _append_jsonl(TUNING_PATH, entry)
-    return {"invocation": inv, "entry": entry}
+
+    evolution: Optional[dict[str, Any]] = None
+    if issue == "badcase":
+        evolution = bridge_badcase_to_evolution(
+            inv,
+            note=agent_instruction.strip(),
+            issue=issue,
+            run_analysis=True,
+        )
+        if evolution.get("diagnosis"):
+            inv["evolution_diagnosis"] = evolution["diagnosis"]
+            inv["evolution_feedback_id"] = evolution.get("feedback_id")
+            _persist_invocations(records)
+
+    return {"invocation": inv, "entry": entry, "evolution": evolution}
 
 
 def deactivate_tuning_entry(entry_id: str) -> bool:
@@ -257,3 +278,25 @@ def deactivate_tuning_entry(entry_id: str) -> bool:
     if changed:
         _write_jsonl(TUNING_PATH, entries)
     return changed
+
+
+def get_active_skill_tuning_instructions(limit: int = 10) -> list[str]:
+    """返回活跃中的审计补丁文案，供 orchestrator 注入 system prompt。"""
+    entries = sorted(
+        _read_jsonl(TUNING_PATH),
+        key=lambda t: str(t.get("created_at") or ""),
+        reverse=True,
+    )
+    seen: set[str] = set()
+    out: list[str] = []
+    for e in entries:
+        if not e.get("active", True):
+            continue
+        text = str(e.get("agent_instruction") or "").strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        out.append(text)
+        if len(out) >= limit:
+            break
+    return out

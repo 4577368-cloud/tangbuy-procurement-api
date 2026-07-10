@@ -174,5 +174,38 @@
     "reason": "备注内容为无意义字符",
     "confidence": 0.95,
     "source": "llm"
+  },
+  "4f69485dc4128bd0eda2eb65": {
+    "tier": "low",
+    "topics": [
+      "other"
+    ],
+    "block_procurement": false,
+    "signal_type": null,
+    "reason": "备注内容为无意义乱码/情绪化表达，无法识别具体采购需求",
+    "confidence": 0.95,
+    "source": "llm"
+  },
+  "796af081d48eb47573436bfa": {
+    "tier": "low",
+    "topics": [
+      "other"
+    ],
+    "block_procurement": false,
+    "signal_type": null,
+    "reason": "乱码，无实际含义",
+    "confidence": 0.95,
+    "source": "llm"
+  },
+  "18c573edfdff2eaf0d026d58": {
+    "tier": "low",
+    "topics": [
+      "other"
+    ],
+    "block_procurement": false,
+    "signal_type": null,
+    "reason": "输入内容为无意义字符，无法识别意图",
+    "confidence": 0.95,
+    "source": "llm"
   }
 }

@@ -25,13 +25,24 @@ def _read_token_file() -> Optional[str]:
 
 
 def resolve_admin_token() -> str:
-    """优先 TANGBUY_ADMIN_TOKEN，其次 data/integrations/tangbuy-admin-token.json。"""
-    from_env = os.environ.get("TANGBUY_ADMIN_TOKEN", "").strip()
-    if from_env and from_env != "your-admin-bearer-token":
-        return from_env
+    """优先 .env.local（Settings），其次 token 文件，最后 os.environ。
+
+    避免 uvicorn reload 后子进程继承过期 os.environ，导致改了 .env.local 仍报 Token 失效。
+    """
+    try:
+        from app.core.config import get_settings
+
+        from_settings = get_settings().tangbuy_admin_token.strip()
+        if from_settings and from_settings != "your-admin-bearer-token":
+            return from_settings
+    except Exception:  # noqa: BLE001
+        pass
     from_file = _read_token_file()
     if from_file:
         return from_file
+    from_env = os.environ.get("TANGBUY_ADMIN_TOKEN", "").strip()
+    if from_env and from_env != "your-admin-bearer-token":
+        return from_env
     return from_env
 
 

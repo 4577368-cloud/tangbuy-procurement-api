@@ -31,7 +31,13 @@ UNIFIED_SYSTEM_PROMPT = """你是采购助手（Tangbuy 统一对话入口），
 | 模糊寻源（1688 平台报价） | procurement_inquiry |
 | 问商家 / 智能咨询 | newton_consult |
 | 已下单催发货 | order_inquiry_send |
+| 查订单数量/状态/队列 | procurement_stats |
+| 查具体订单 / 按条件列订单 | order_query |
 | HS 品类映射 | category_map_suggest / category_map_confirm |
+
+## 数据查询铁律
+- 问「多少单」「各状态分布」「某订单状态」→ **必须**调用 procurement_stats 或 order_query，不得凭记忆回答数字。
+- order_query lookup 返回的订单卡片可点击跳转订单中心。
 
 ## 回复风格
 - 中文、简洁、面向采购员。"""
@@ -48,6 +54,8 @@ TOOL_PERMISSION: dict[str, tuple[str, str]] = {
     "inquiry_query": ("assistant.sourcing", "edit"),
     "newton_consult": ("assistant.consult", "edit"),
     "order_inquiry_send": ("assistant.order_followup", "edit"),
+    "procurement_stats": ("order.data", "view"),
+    "order_query": ("order.data", "view"),
     "category_map_suggest": ("product.category_mapping", "edit"),
     "category_map_confirm": ("product.category_mapping", "edit"),
 }
@@ -64,6 +72,8 @@ TOOL_OWNER_SKILL: dict[str, str] = {
     "inquiry_query": "inquiry-1688",
     "newton_consult": "newton-cloud",
     "order_inquiry_send": "order-followup",
+    "procurement_stats": "order-data-query",
+    "order_query": "order-data-query",
     "category_map_suggest": "category-mapping",
     "category_map_confirm": "category-mapping",
 }
@@ -180,6 +190,37 @@ UNIFIED_TOOLS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "procurement_stats",
+        "description": "查询采购系统订单队列统计、异常信号、系统概览。scope: orders(默认)/signals/overview。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "scope": {
+                    "type": "string",
+                    "description": "orders=队列分布, signals=指挥中心异常信号, overview=订单+任务概览",
+                },
+                "queue": {
+                    "type": "string",
+                    "description": "可选队列：pending_procurement/pending_payment/ordered/shipped/in_warehouse/dispatched/exception/reverse",
+                },
+            },
+        },
+    },
+    {
+        "name": "order_query",
+        "description": "查询具体订单或按条件列出订单。lookup=按单号查，list=按队列/关键词列单。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "mode": {"type": "string", "description": "lookup 或 list，默认 lookup"},
+                "order_id": {"type": "string", "description": "lookup 时：子单号/主单号/1688采购单号"},
+                "queue": {"type": "string", "description": "list 时：队列筛选"},
+                "keyword": {"type": "string", "description": "list 时：商品名/用户/店铺关键词"},
+                "limit": {"type": "string", "description": "list 时返回条数，默认 5，最大 20"},
+            },
+        },
+    },
+    {
         "name": "category_map_suggest",
         "description": "建议 HS 品类映射字段。",
         "parameters": {
@@ -260,6 +301,14 @@ LEGACY_SKILLS: list[dict[str, Any]] = [
         "status": "placeholder",
         "welcomeMessage": "本能力将改用牛顿云长程任务，接入前暂不可用。",
         "toolCount": 0,
+    },
+    {
+        "id": "order-data-query",
+        "name": "订单数据查询",
+        "description": "自然语言查询订单队列统计、具体订单状态、按条件列单（只读）",
+        "status": "ready",
+        "welcomeMessage": "问订单数量、各状态分布，或粘贴单号查详情。",
+        "toolCount": 2,
     },
     {
         "id": "order-followup",

@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
+
+from app.api.deps import require_auth
 
 from app.services.orders import disposition as disposition_service
 from app.services.orders import service as order_service
@@ -13,6 +15,54 @@ from app.services.orders.disposition import DispositionError
 from app.services.orders.topup_message import TOPUP_LANG_META, translate_topup_message
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
+
+
+@router.get("/cached")
+def list_cached_orders(
+    queue: Optional[str] = Query(None, description="队列筛选"),
+) -> dict:
+    from app.services.orders import line_cache
+
+    items = line_cache.list_cached_lines(queue=queue)
+    state = line_cache.load_sync_state()
+    return {
+        "items": items,
+        "total": len(items),
+        "cache_total": state.get("cached_total", len(items)),
+        "sync_state": {
+            "last_incremental_at": state.get("last_incremental_at"),
+            "last_backfill_at": state.get("last_backfill_at"),
+            "backfill_complete": state.get("backfill_complete"),
+        },
+        "source": "cache",
+    }
+
+
+class OrderSyncBody(BaseModel):
+    mode: str = "incremental"
+    queue: Optional[str] = None
+    page_size: Optional[int] = 200
+    pages: Optional[int] = 2
+    batches: Optional[int] = 1
+
+
+@router.post("/sync")
+def sync_orders(request: Request, body: OrderSyncBody) -> dict:
+    require_auth(request)
+    from app.services.orders import order_line_sync
+
+    page_size = max(1, min(200, int(body.page_size or 200)))
+    mode = (body.mode or "incremental").strip().lower()
+    if mode == "backfill":
+        return order_line_sync.sync_orders_backfill_batch(
+            page_size=page_size,
+            batches=max(1, min(20, int(body.batches or 1))),
+        )
+    return order_line_sync.sync_orders_incremental(
+        queue=body.queue,
+        page_size=page_size,
+        pages=max(1, min(10, int(body.pages or 2))),
+    )
 
 
 @router.get("")

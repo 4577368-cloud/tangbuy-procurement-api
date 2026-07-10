@@ -140,6 +140,32 @@ def sync_products_from_orders(
     page: int = 1,
     page_size: int = 200,
     auto_map: bool = True,
+    all_pages: bool = False,
+    max_pages: int = 100,
+) -> dict[str, Any]:
+    if all_pages:
+        return _sync_products_all_pages(
+            queue=queue,
+            page_size=page_size,
+            auto_map=auto_map,
+            max_pages=max_pages,
+        )
+
+    return _sync_products_single_page(
+        queue=queue,
+        page=page,
+        page_size=page_size,
+        auto_map=auto_map,
+    )
+
+
+def _sync_products_single_page(
+    *,
+    queue: str,
+    page: int,
+    page_size: int,
+    auto_map: bool,
+    seen_for_map: set[str] | None = None,
 ) -> dict[str, Any]:
     order_res = order_service.list_ord_lines(queue=queue, page=page, page_size=page_size)
     lines = order_res.get("items") or []
@@ -160,7 +186,7 @@ def sync_products_from_orders(
     mapped_reused = 0
     map_failed = 0
     map_skipped = 0
-    seen_for_map: set[str] = set()
+    seen = seen_for_map if seen_for_map is not None else set()
 
     for row in lines:
         if not isinstance(row, dict):
@@ -185,6 +211,9 @@ def sync_products_from_orders(
         if product.get("source") != "order":
             map_skipped += 1
             continue
+        if not is_new:
+            map_skipped += 1
+            continue
 
         pid = str(product.get("tangbuy_product_id") or "")
         if not pid:
@@ -192,7 +221,7 @@ def sync_products_from_orders(
 
         # 同一批订单里同 SKU 只跑一次 Agent，后续子单走复用
         sku_key = str(product.get("source_product_id") or "").strip() or pid
-        if sku_key in seen_for_map:
+        if sku_key in seen:
             reused = find_reusable_hs_mapping(product, exclude_id=pid)
             if reused:
                 result = map_product_category_by_id(pid)
@@ -203,7 +232,7 @@ def sync_products_from_orders(
             else:
                 map_failed += 1
             continue
-        seen_for_map.add(sku_key)
+        seen.add(sku_key)
 
         had_reuse = bool(find_reusable_hs_mapping(product, exclude_id=pid))
         result = map_product_category_by_id(pid)
@@ -227,5 +256,57 @@ def sync_products_from_orders(
             "map_skipped": map_skipped,
             "queue": queue,
         },
+        "products": load_products(),
+    }
+
+
+def _sync_products_all_pages(
+    *,
+    queue: str,
+    page_size: int,
+    auto_map: bool,
+    max_pages: int,
+) -> dict[str, Any]:
+    totals = {
+        "order_lines_scanned": 0,
+        "created": 0,
+        "updated": 0,
+        "mapped": 0,
+        "mapped_reused": 0,
+        "map_failed": 0,
+        "map_skipped": 0,
+        "pages_scanned": 0,
+        "queue": queue,
+    }
+    seen_for_map: set[str] = set()
+    last_error: str | None = None
+
+    for page in range(1, max(1, max_pages) + 1):
+        batch = _sync_products_single_page(
+            queue=queue,
+            page=page,
+            page_size=page_size,
+            auto_map=auto_map,
+            seen_for_map=seen_for_map,
+        )
+        if not batch.get("ok"):
+            last_error = str(batch.get("error") or "sync failed")
+            break
+
+        stats = batch.get("stats") or {}
+        lines_n = int(stats.get("order_lines_scanned") or 0)
+        totals["pages_scanned"] += 1
+        totals["order_lines_scanned"] += lines_n
+        for key in ("created", "updated", "mapped", "mapped_reused", "map_failed", "map_skipped"):
+            totals[key] += int(stats.get(key) or 0)
+
+        if lines_n < page_size:
+            break
+
+    ok = last_error is None
+    return {
+        "ok": ok,
+        **({"error": last_error} if last_error else {}),
+        "stats": totals,
         "products": load_products(),
     }

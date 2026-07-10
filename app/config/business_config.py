@@ -17,6 +17,8 @@ DEFAULT_BUSINESS_CONFIG: dict[str, Any] = {
         "auto_order_followup": False,
         "block_negative_margin": True,
     },
+    # True=每次进入指挥中心重新生成简报；False=10 分钟内用缓存
+    "briefing_always_refresh": True,
 }
 
 RULE_KEYS = (
@@ -56,6 +58,9 @@ def normalize_business_config(raw: dict[str, Any] | None) -> dict[str, Any]:
         "ai_confidence_threshold": max(0, min(1, float(conf) if conf is not None else 0.85)),
         "price_markup": max(1.0, min(5.0, round(markup, 4))),
         "rules": rules,
+        "briefing_always_refresh": bool(
+            raw.get("briefing_always_refresh", base["briefing_always_refresh"])
+        ),
     }
 
 

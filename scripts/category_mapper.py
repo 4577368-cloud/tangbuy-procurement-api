@@ -94,6 +94,17 @@ TITLE_SEMANTIC_NOISE = {
     "经典",
     "简约",
     "大容量",
+    # 非商品词/营销词，不参与品类语义
+    "测试",
+    "形象",
+    "模特",
+    "代言",
+    "广告",
+    "展示",
+    "样品",
+    "样衣",
+    "参考",
+    "图片",
     # 人群/场景修饰，不是申报品类本身
     "孕妇",
     "产妇",
@@ -238,6 +249,23 @@ def term_specificity_bonus(term: str, all_terms: list[str]) -> float:
     return 1.0
 
 
+def term_position_bonus(term: str, title: str) -> float:
+    """标题越靠前出现，越可能是主商品词（中文电商标题惯例）。"""
+    if not term or not title:
+        return 1.0
+    pos = title.find(term)
+    if pos < 0:
+        return 1.0
+    # 前 6 个字符为黄金位置；越靠后递减
+    if pos == 0:
+        return 1.12
+    if pos <= 3:
+        return 1.08
+    if pos <= 6:
+        return 1.04
+    return 1.0
+
+
 def compute_candidate_dimensions(
     term: str,
     title: str,
@@ -255,20 +283,48 @@ def compute_candidate_dimensions(
     domain = domain_conflict_multiplier(title, cn, dec, vision_keywords)
     catalog_fit = min(1.0, catalog_fit * domain)
     spec = {"specific": 1.0, "generic": 0.35, "attribute": 0.15}.get(kind, 0.5)
+    # 制服/演出领域：即使语义词被归为泛词，只要类目属于该领域且标题有强信号，就按具体品类对待
+    uniform_bonus = uniform_domain_bonus(title, cn, dec)
+    if uniform_bonus > 1.0 and kind == "generic":
+        spec = min(1.0, spec + 0.35)
+
     term_in_title = term in (title or "")
     term_in_cat = term in cn or term in dec
     freq = term_frequency_score(term, title, hint)
     return {
         "term_match": round(1.0 if term_in_title else (0.65 if term_in_cat else 0.0), 3),
         "term_frequency": freq,
-        "label_fit": round(category_label_fit(term, cn, dec), 3),
-        "catalog_fit": round(catalog_fit, 3),
+        "label_fit": round(category_label_fit(term, cn, dec) * term_position_bonus(term, title), 3),
+        "catalog_fit": round(min(1.0, catalog_fit * uniform_bonus), 3),
         "term_specificity": round(term_specificity_bonus(term, all_terms or []), 3),
         "vision": round(1.0 if term in vision_keywords else 0.0, 3),
         "hint": round(1.0 if hint and term == hint else 0.0, 3),
         "specificity": round(spec, 3),
         "feedback": round(clamp_conf(max(0.0, boost) / 0.4), 3),
     }
+
+
+def uniform_domain_bonus(title: str, cn_name: str, dec_cn_name: str = "") -> float:
+    """标题含制服/职业装/演出等强领域信号时，对齐该类目的候选加分；
+    西装/正装等词与制服场景冲突时降权。
+    """
+    if not title:
+        return 1.0
+    cat = f"{cn_name} {dec_cn_name}"
+    uniform_indicators = {"制服", "工作服", "演出服", "舞台服装", "职业套装", "校服", "商务服", "工装"}
+    occupation_indicators = {"海员", "演出", "保安", "护士", "医生", "厨师", "警察", "消防员", "空乘"}
+    title_uniform = any(s in title for s in uniform_indicators | occupation_indicators)
+    if not title_uniform:
+        return 1.0
+
+    cat_is_uniform = any(s in cat for s in uniform_indicators)
+    cat_is_suit_only = ("西装" in cat or "西服" in cat or "正装" in cat) and not cat_is_uniform
+
+    if cat_is_uniform:
+        return 1.35
+    if cat_is_suit_only:
+        return 0.55
+    return 1.0
 
 
 def confidence_from_dimensions(dims: dict[str, float]) -> float:
@@ -692,6 +748,17 @@ def rank_semantic_candidates(
             }
         )
 
+    # 无有效 HS 编码的候选显著降权（避免推荐到 junk 叶子类目）
+    for item in raw:
+        if not valid_hs(item.get("hs_code")):
+            dims = dict(item.get("dimensions") or {})
+            dims["catalog_fit"] = round(float(dims.get("catalog_fit", 0.0)) * 0.35, 3)
+            dims["label_fit"] = round(float(dims.get("label_fit", 0.0)) * 0.55, 3)
+            item["dimensions"] = dims
+            item["confidence"] = confidence_from_dimensions(dims)
+            item["score"] = round(float(item["score"]) * 0.45, 3)
+            item["reason"] = "该候选类目缺少有效 HS 编码，已降权"
+
     raw.sort(key=lambda x: float(x.get("confidence") or 0), reverse=True)
     by_label: dict[str, dict] = {}
     for item in raw:
@@ -727,7 +794,7 @@ def rank_semantic_candidates(
                     if not item.get("reason"):
                         item["reason"] = f"与标题主商品「{top_term}」不一致，已降权"
 
-    pool = _primary_pool(list(by_label.values()))
+    pool = _primary_pool(list(by_label.values()), title)
     ranked = sorted(pool, key=lambda x: float(x.get("confidence") or 0), reverse=True)[:3]
     for item in ranked:
         penalty = domain_conflict_multiplier(
@@ -749,17 +816,53 @@ def rank_semantic_candidates(
     return ranked
 
 
-def _primary_pool(cands: list[dict]) -> list[dict]:
+UNIFORM_DOMAIN_SIGNALS = {
+    "制服", "工作服", "演出服", "舞台服装", "职业套装", "校服", "商务服",
+    "工装", "工作制服", "海员", "演出", "保安", "护士", "医生", "厨师",
+    "警察", "消防员", "空乘",
+}
+
+
+def _primary_pool(cands: list[dict], title: str = "") -> list[dict]:
     """只保留「真正的具体品类」参与竞争：
     - 有具体品类时，剔除属性词与泛父类词；
     - 只有泛父类时，用泛父类；
     - 只有属性词时（商品本身就是该属性品类，如蕾丝面料），才用属性词。
+
+    特殊处理：标题含制服/职业装/演出等强领域信号时，即使存在其它具体品类，
+    也保留映射到制服/演出领域的泛词候选（如 工作服 → 工作服/校服/商务服定制），
+    避免「西装」等词因出现位置靠前而误胜真正的制服/演出商品。
     """
     non_attr = [c for c in cands if not c.get("is_attribute")]
     if not non_attr:
         return cands
     specifics = [c for c in non_attr if not c.get("is_generic")]
-    return specifics if specifics else non_attr
+    if not specifics:
+        return non_attr
+
+    title_has_uniform_signal = any(s in title for s in UNIFORM_DOMAIN_SIGNALS)
+    if title_has_uniform_signal:
+        uniform_generics = [
+            c for c in non_attr if c.get("is_generic") and _is_uniform_category(c)
+        ]
+        if uniform_generics:
+            # 只取置信度最高的一个制服类泛词，避免泛词过多稀释排序
+            best_generic = max(uniform_generics, key=lambda x: float(x.get("confidence") or 0))
+            return sorted([*specifics, best_generic], key=lambda x: float(x.get("confidence") or 0), reverse=True)
+
+    return specifics
+
+
+def _is_uniform_category(cand: dict) -> bool:
+    """候选类目是否属于制服/演出/职业装领域。"""
+    cn = str(cand.get("category_cn_name", ""))
+    dec = str(cand.get("declare_cn_name", ""))
+    blob = f"{cn} {dec}"
+    uniform_cat_signals = {
+        "制服", "工作服", "演出服", "舞台服装", "职业套装", "校服",
+        "商务服", "工装", "工作制服", "演出", "舞台装", "cosplay",
+    }
+    return any(s in blob for s in uniform_cat_signals)
 
 
 def infer_decision(

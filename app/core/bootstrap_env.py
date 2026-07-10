@@ -7,6 +7,10 @@ import os
 from app.core.paths import PROJECT_ROOT
 
 
+# 这些键以 .env.local 为准，避免 reload 后子进程仍用父进程注入的旧值
+_ALWAYS_REFRESH_KEYS = frozenset({"TANGBUY_ADMIN_TOKEN"})
+
+
 def load_env_local() -> None:
     for name in (".env.local", ".env"):
         path = PROJECT_ROOT / name
@@ -22,6 +26,8 @@ def load_env_local() -> None:
                 continue
             key, _, value = stripped.partition("=")
             key = key.strip()
-            if key and key not in os.environ:
+            if not key:
+                continue
+            if key in _ALWAYS_REFRESH_KEYS or key not in os.environ:
                 os.environ[key] = value.strip()
         return

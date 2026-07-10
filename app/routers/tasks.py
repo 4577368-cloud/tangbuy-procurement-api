@@ -25,6 +25,33 @@ class SupplychainInquiryBody(BaseModel):
     image_urls: Optional[list[str]] = None
 
 
+class ToolTraceEntry(BaseModel):
+    tool: str
+    arguments: dict[str, Any] = Field(default_factory=dict)
+    result: dict[str, Any] = Field(default_factory=dict)
+    skill_id: Optional[str] = None
+
+
+class ReconcileTasksBody(BaseModel):
+    traces: list[ToolTraceEntry] = Field(default_factory=list)
+
+
+@router.post("/reconcile")
+def reconcile_tasks(request: Request, body: ReconcileTasksBody) -> dict[str, Any]:
+    """从对话 toolTrace 幂等登记催单/询盘等到 tasks.json。"""
+    require_auth(request)
+    from app.services.tasks.register import reconcile_tasks_from_traces
+
+    traces = [t.model_dump() for t in body.traces]
+    registered = reconcile_tasks_from_traces(traces)
+    return {
+        "ok": True,
+        "registered": registered,
+        "count": len(registered),
+        "stats": store.get_task_stats(),
+    }
+
+
 @router.get("")
 def list_tasks_endpoint(
     request: Request,

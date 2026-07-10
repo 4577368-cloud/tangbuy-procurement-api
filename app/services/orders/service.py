@@ -253,11 +253,33 @@ def queue_summary() -> dict[str, Any]:
             return q, 0
 
     counts: dict[str, int] = {}
+    auth_error: str | None = None
     with ThreadPoolExecutor(max_workers=len(queues)) as pool:
         futures = [pool.submit(_count_one, q) for q in queues]
         for fut in as_completed(futures):
             q, n = fut.result()
             counts[q] = n
+
+    # 探测 Admin 认证：全 0 时可能是 Token 失效，避免与本地覆盖叠加后误导
+    probe_body = build_list_body(
+        page=1,
+        page_size=1,
+        storage_no=settings.tangbuy_admin_storage_no,
+        queue="all",
+        event_type_pending=settings.tangbuy_admin_event_type_pending,
+    )
+    try:
+        list_order_detail(probe_body)
+    except TangbuyAdminError as exc:
+        if exc.status == 401 or "Token" in str(exc):
+            auth_error = str(exc)
+
+    if auth_error and sum(counts.get(q, 0) for q in queues) == 0:
+        return {
+            "counts": {},
+            "source": "tangbuy_admin",
+            "error": auth_error,
+        }
 
     counts["all"] = sum(counts[q] for q in queues)
     for key, delta in disposition_store.summary_adjustments().items():

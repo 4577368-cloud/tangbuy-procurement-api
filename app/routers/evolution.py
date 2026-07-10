@@ -24,6 +24,7 @@ from app.services.evolution.store import (
     get_report_by_id,
 )
 from app.services.evolution.skill_registry import get_all_evolution_skills  # 【问题1修复】技能列表由 Python 后端提供
+from app.services.evolution.replay import replay_skill  # 被动复盘：推理回溯 + 诊断
 
 router = APIRouter(prefix="/api/evolution", tags=["evolution"])
 
@@ -57,6 +58,17 @@ class PatchApproveBody(BaseModel):
 
 class PatchActionBody(BaseModel):
     patch_id: str
+
+
+class ReplayBody(BaseModel):
+    """被动复盘请求体。"""
+    skill_id: str
+    title: str
+    ai_suggestion: str
+    human_correction: str
+    correction_value: Optional[str] = None
+    context_ref: Optional[str] = None
+    reviewer_note: Optional[str] = None         # 用户纠正备注（核心教材信号）
 
 
 # ─── 总览 ───
@@ -106,6 +118,28 @@ def list_feedback(
         offset=offset,
     )
     return {"records": records, "count": len(records)}
+
+
+# ─── 被动复盘 ───
+
+
+@router.post("/replay")
+def run_replay(request: Request, body: ReplayBody) -> dict[str, Any]:
+    """被动复盘：用户覆盖 AI 建议后，回溯推理路径并生成诊断摘要。
+
+    轻量复盘（纯 Python），< 100ms。
+    """
+    require_auth(request)
+    result = replay_skill(
+        skill_id=body.skill_id,
+        title=body.title,
+        ai_suggestion=body.ai_suggestion,
+        human_correction=body.human_correction,
+        correction_value=body.correction_value,
+        context_ref=body.context_ref,
+        reviewer_note=body.reviewer_note,
+    )
+    return {"ok": True, "result": result.to_public()}
 
 
 # ─── 分析 ───
