@@ -15,11 +15,9 @@ from app.services.command_center.briefing_prompt import build_briefing_messages
 from app.services.command_center.signal_scan import (
     BRIEFING_MAX_PER_QUEUE,
     REASON_TO_SIGNAL,
-    _BRIEFING_SCAN_TIMEOUT_SEC,
     aggregate_signal_stats,
     scan_ord_lines_for_signals,
 )
-from app.services.orders import service as order_service
 from app.services.orders.exception_rules import (
     classify_exception,
     classify_exception_reason,
@@ -31,6 +29,7 @@ _SH_TZ = ZoneInfo("Asia/Shanghai")
 _SNAPSHOT_PATH = data_dir() / "command-center" / "briefing-snapshot.json"
 _SHIP_OVERDUE_HOURS = 48
 _FACTS_CACHE_TTL = 90.0
+_BRIEFING_SYNC_STALE_SEC = 600.0
 _facts_cache: dict[str, Any] = {"at": 0.0, "value": None}
 
 
@@ -274,19 +273,49 @@ def _queue_counts_from_cache() -> dict[str, int] | None:
     return counts
 
 
+def _briefing_cache_needs_sync(*, force: bool) -> bool:
+    from app.services.orders.line_cache import load_all_lines, load_sync_state
+
+    if not load_all_lines():
+        return True
+    if force:
+        return True
+    state = load_sync_state()
+    at = _parse_iso(state.get("last_incremental_at"))
+    if not at:
+        return True
+    age = (datetime.now(timezone.utc) - at).total_seconds()
+    return age > _BRIEFING_SYNC_STALE_SEC
+
+
+def ensure_order_cache_for_briefing(*, force: bool = False) -> dict[str, Any]:
+    """简报前置：增量拉 Admin 订单写入 line_cache，与汇总解耦。"""
+    from app.services.orders import line_cache, order_line_sync
+
+    if not _briefing_cache_needs_sync(force=force):
+        state = line_cache.load_sync_state()
+        return {
+            "skipped": True,
+            "cache_total": int(state.get("cached_total") or len(line_cache.load_all_lines())),
+        }
+
+    pages = 2 if force else 1
+    result = order_line_sync.sync_orders_incremental(pages=pages)
+    cache_total = int(result.get("cache_total") or len(line_cache.load_all_lines()))
+    if cache_total <= 0:
+        errors = result.get("errors") if isinstance(result.get("errors"), list) else []
+        detail = str(errors[0]) if errors else "订单同步失败"
+        raise RuntimeError(detail)
+    return {"skipped": False, "cache_total": cache_total, **result}
+
+
 def build_briefing_facts() -> dict[str, Any]:
     cached = _queue_counts_from_cache()
-    if cached:
-        counts = cached
-        orders_source = "line_cache"
-    else:
-        summary = order_service.queue_summary()
-        counts = summary.get("counts") if isinstance(summary.get("counts"), dict) else {}
-        orders_source = summary.get("source")
-        if summary.get("error") or not counts:
-            if summary.get("error"):
-                raise RuntimeError(str(summary.get("error")))
-            counts = {}
+    if not cached:
+        raise RuntimeError("订单缓存为空，请稍后重试")
+
+    counts = cached
+    orders_source = "line_cache"
 
     queue_counts = {
         k: int(counts.get(k) or 0)
@@ -306,7 +335,6 @@ def build_briefing_facts() -> dict[str, Any]:
     rows, per_queue_scan = scan_ord_lines_for_signals(
         queue_counts,
         max_per_queue=BRIEFING_MAX_PER_QUEUE,
-        admin_timeout_sec=_BRIEFING_SCAN_TIMEOUT_SEC,
     )
     scan_stats = aggregate_signal_stats(rows)
 
@@ -334,7 +362,7 @@ def build_briefing_facts() -> dict[str, Any]:
     return facts
 
 
-def _get_facts_cached(*, force: bool = False) -> dict[str, Any]:
+def _get_facts_cached(*, force: bool = False, assume_cache_ready: bool = False) -> dict[str, Any]:
     if not force:
         cached = _facts_cache.get("value")
         if (
@@ -342,6 +370,8 @@ def _get_facts_cached(*, force: bool = False) -> dict[str, Any]:
             and _time.monotonic() - float(_facts_cache.get("at") or 0.0) < _FACTS_CACHE_TTL
         ):
             return cached  # type: ignore[return-value]
+    if not assume_cache_ready:
+        ensure_order_cache_for_briefing(force=force)
     facts = build_briefing_facts()
     _facts_cache["value"] = facts
     _facts_cache["at"] = _time.monotonic()
@@ -378,46 +408,82 @@ def _stream_text_chunks(text: str, *, chunk_size: int = 48) -> Iterator[str]:
         yield text[i : i + chunk_size]
 
 
-def stream_briefing(*, force: bool = False) -> Iterator[str]:
-    """SSE 事件流：phase / t / error，结束 [DONE]。"""
+def _iter_bg_task(
+    fn,
+    *,
+    timeout_error: str,
+) -> Iterator[tuple[str, Any] | str]:
+    """后台跑 fn，期间 yield keepalive；结束时 yield ('ok', value) 或 ('err', exc)。"""
     import threading
     from queue import Empty, Queue
 
-    from app.core.config import get_settings
+    result_queue: Queue[tuple[str, Any]] = Queue(maxsize=1)
 
-    yield f'data: {json.dumps({"phase": "facts"}, ensure_ascii=False)}\n\n'
-
-    facts_queue: Queue[tuple[str, Any]] = Queue(maxsize=1)
-
-    def _build() -> None:
+    def _run() -> None:
         try:
-            snapshot = _load_snapshot()
-            facts = _get_facts_cached(force=force)
-            delta = compute_delta(facts, snapshot)
-            facts_queue.put(("ok", {"facts": facts, "delta": delta}))
+            result_queue.put(("ok", fn()))
         except Exception as exc:  # noqa: BLE001
-            facts_queue.put(("err", exc))
+            result_queue.put(("err", exc))
 
-    worker = threading.Thread(target=_build, daemon=True)
+    worker = threading.Thread(target=_run, daemon=True)
     worker.start()
 
-    payload: dict[str, Any] | None = None
-    while payload is None:
+    while True:
         try:
-            kind, value = facts_queue.get(timeout=5)
+            yield result_queue.get(timeout=5)
+            return
+        except Empty:
+            yield ": keepalive\n\n"
+            if not worker.is_alive() and result_queue.empty():
+                yield ("err", RuntimeError(timeout_error))
+                return
+
+
+def stream_briefing(*, force: bool = False) -> Iterator[str]:
+    """SSE 事件流：sync → facts → llm / t / error，结束 [DONE]。"""
+    from app.core.config import get_settings
+
+    if _briefing_cache_needs_sync(force=force):
+        yield f'data: {json.dumps({"phase": "sync"}, ensure_ascii=False)}\n\n'
+        for item in _iter_bg_task(
+            lambda: ensure_order_cache_for_briefing(force=force),
+            timeout_error="订单同步超时",
+        ):
+            if isinstance(item, str):
+                yield item
+                continue
+            kind, value = item
             if kind == "err":
                 err = json.dumps({"error": str(value)}, ensure_ascii=False)
                 yield f"data: {err}\n\n"
                 yield "data: [DONE]\n\n"
                 return
-            payload = value
-        except Empty:
-            yield ": keepalive\n\n"
-            if not worker.is_alive() and facts_queue.empty():
-                err = json.dumps({"error": "简报数据汇总超时"}, ensure_ascii=False)
-                yield f"data: {err}\n\n"
-                yield "data: [DONE]\n\n"
-                return
+
+    yield f'data: {json.dumps({"phase": "facts"}, ensure_ascii=False)}\n\n'
+
+    def _build_payload() -> dict[str, Any]:
+        snapshot = _load_snapshot()
+        facts = _get_facts_cached(force=force, assume_cache_ready=True)
+        return {"facts": facts, "delta": compute_delta(facts, snapshot)}
+
+    payload: dict[str, Any] | None = None
+    for item in _iter_bg_task(_build_payload, timeout_error="简报数据汇总超时"):
+        if isinstance(item, str):
+            yield item
+            continue
+        kind, value = item
+        if kind == "err":
+            err = json.dumps({"error": str(value)}, ensure_ascii=False)
+            yield f"data: {err}\n\n"
+            yield "data: [DONE]\n\n"
+            return
+        payload = value
+
+    if payload is None:
+        err = json.dumps({"error": "简报数据汇总超时"}, ensure_ascii=False)
+        yield f"data: {err}\n\n"
+        yield "data: [DONE]\n\n"
+        return
 
     settings = get_settings()
     use_llm = settings.llm_configured
