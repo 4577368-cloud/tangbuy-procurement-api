@@ -16,7 +16,7 @@ QUEUE_LABELS: dict[str, str] = {
 }
 
 SIGNAL_LABELS: dict[str, str] = {
-    "PAY_AMOUNT_GAP": "金额不足",
+    "PAY_AMOUNT_GAP": "负毛利",
     "ZERO_MARGIN": "零毛利",
     "LOW_MARGIN": "低毛利",
     "SKU_MISMATCH": "规格不符",
@@ -114,7 +114,7 @@ def render_briefing_fallback(*, facts: dict[str, Any], delta: dict[str, Any]) ->
     pay_gap = int(sc.get("PAY_AMOUNT_GAP") or 0)
     ship_over = int(sc.get("SHIP_OVERDUE") or 0) or int(facts.get("ship_overdue_estimated") or 0)
     if pay_gap > 0:
-        focus_lines.append(f"- 金额不足 {pay_gap}件，建议优先复核补款与放行")
+        focus_lines.append(f"- 负毛利 {pay_gap}件，建议优先复核补款与放行")
     if ship_over > 0:
         focus_lines.append(f"- 超时发货 {ship_over}件，建议跟进催单")
     for key, label in SIGNAL_LABELS.items():

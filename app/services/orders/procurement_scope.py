@@ -42,7 +42,7 @@ def allows_finance_reason(queue: str, reason: str) -> bool:
     if mode == "full":
         return True
     if mode == "pay_gap_only":
-        return reason in ("成本倒挂", "利润为负")
+        return reason in ("负毛利", "成本倒挂", "利润为负")
     return False
 
 

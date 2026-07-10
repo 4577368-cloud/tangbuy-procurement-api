@@ -27,9 +27,10 @@ _BRIEFING_SCAN_TIMEOUT_SEC = 45
 _SHIP_OVERDUE_HOURS = 48
 
 REASON_TO_SIGNAL: dict[str, str] = {
+    "负毛利": "PAY_AMOUNT_GAP",
     "成本倒挂": "PAY_AMOUNT_GAP",
-    "零毛利": "ZERO_MARGIN",
     "利润为负": "PAY_AMOUNT_GAP",
+    "零毛利": "ZERO_MARGIN",
     "低毛利": "LOW_MARGIN",
     "规格不符": "SKU_MISMATCH",
     "备注-规格变更": "SKU_MISMATCH",

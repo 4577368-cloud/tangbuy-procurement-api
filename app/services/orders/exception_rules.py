@@ -90,8 +90,8 @@ def classify_exception_reason(
     margin_pct = (margin / customer_paid * 100) if customer_paid > 0 else 0.0
 
     if customer_paid + EPS < purchase_payable:
-        if allows_finance_reason(queue, "成本倒挂"):
-            return "action", "成本倒挂"
+        if allows_finance_reason(queue, "负毛利"):
+            return "action", "负毛利"
     elif abs(margin) < EPS:
         if allows_finance_reason(queue, "零毛利"):
             return "action", "零毛利"

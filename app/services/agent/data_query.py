@@ -31,7 +31,7 @@ QUEUE_ALIASES: dict[str, str] = {
 }
 
 SIGNAL_LABELS: dict[str, str] = {
-    "PAY_AMOUNT_GAP": "补款",
+    "PAY_AMOUNT_GAP": "负毛利",
     "SKU_MISMATCH": "SKU 不符",
     "NOTE_RISK": "备注风险",
     "SHIP_OVERDUE": "超时未发",
