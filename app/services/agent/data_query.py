@@ -7,6 +7,7 @@ from typing import Any, Optional
 
 from app.services.agent.query_semantics import (
     capabilities_markdown,
+    describe_normalized_filters,
     filter_ord_lines,
     filters_summary,
     get_order_query_capabilities,
@@ -270,19 +271,21 @@ def _build_filtered_stats(
             "kind": "stats",
             "scope": "filtered",
             "groups": groups,
-            "filters": _filters_payload(filters),
+            "filters": _filters_payload(filters, output_mode="count"),
             "total": len(matched),
             "source": source,
         },
     }
 
 
-def _filters_payload(filters: dict[str, Any]) -> dict[str, Any]:
+def _filters_payload(filters: dict[str, Any], *, output_mode: str = "list") -> dict[str, Any]:
     return {
         "summary": filters_summary(filters),
+        "interpretation": describe_normalized_filters(filters, output_mode),
         "time_field": filters.get("time_field"),
         "time_field_label": filters.get("time_field_label"),
         "time_range_label": filters.get("time_range_label"),
+        "time_preset": filters.get("time_preset"),
         "queue": filters.get("queue"),
         "bd_owner": filters.get("bd_owner"),
         "user_keyword": filters.get("user_keyword"),
@@ -537,7 +540,7 @@ def _execute_order_list(args: dict[str, str]) -> dict[str, Any]:
                 "total": 0,
                 "queue": queue,
                 "keyword": keyword,
-                "filters": _filters_payload(filters),
+                "filters": _filters_payload(filters, output_mode="list"),
                 "source": source,
             },
         }
@@ -561,7 +564,7 @@ def _execute_order_list(args: dict[str, str]) -> dict[str, Any]:
             "total": total,
             "queue": queue,
             "keyword": keyword,
-            "filters": _filters_payload(filters),
+            "filters": _filters_payload(filters, output_mode="list"),
             "source": source,
         },
     }

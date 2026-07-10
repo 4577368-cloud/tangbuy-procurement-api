@@ -443,6 +443,11 @@ def switch_supplier(
     if skus and isinstance(skus[0], dict):
         sku_id = skus[0].get("sku_id")
 
+    # ─── 记录原商品 A 的完整信息（用于换供标记展示） ───
+    from_product_name = str(product_a.get("product_name") or "")
+    from_shop_name = str(product_a.get("shop_name") or "")
+    from_unit_price = product_a.get("original_unit_price")
+
     for line in linked:
         disposition_store.merge_override(
             line,
@@ -459,6 +464,13 @@ def switch_supplier(
                 "supplier_switched_at": now,
                 "supplier_switched_from": old_offer,
                 "supplier_switched_from_product_id": a_id,
+                "supplier_switched_from_name": from_product_name,
+                "supplier_switched_from_shop": from_shop_name,
+                "supplier_switched_from_price": from_unit_price,
+                "supplier_switched_to_name": str(product_b.get("product_name") or ""),
+                "supplier_switched_to_shop": str(product_b.get("shop_name") or ""),
+                "supplier_switched_to_price": product_b.get("original_unit_price"),
+                "supplier_switched_reason": note or "",
             },
         )
         disposition_store.append_audit(
@@ -473,8 +485,13 @@ def switch_supplier(
                 "to_product_id": b_id,
                 "from_offer_id": old_offer,
                 "to_offer_id": offer,
+                "from_product_name": from_product_name,
+                "from_shop_name": from_shop_name,
+                "from_unit_price": from_unit_price,
                 "to_product_name": product_b.get("product_name"),
+                "to_shop_name": product_b.get("shop_name"),
                 "to_unit_price": product_b.get("original_unit_price"),
+                "switch_reason": note or "",
                 "at": now,
             }
         )

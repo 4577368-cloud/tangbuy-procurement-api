@@ -45,7 +45,8 @@ def load_products() -> list[dict[str, Any]]:
         if not _CENTER_PATH.exists():
             return []
         try:
-            return _parse_products_text(_CENTER_PATH.read_text(encoding="utf-8"))
+            items = _parse_products_text(_CENTER_PATH.read_text(encoding="utf-8"))
+            return [sanitize_product_mapping_state(p) for p in items]
         except OSError:
             return []
 
@@ -231,12 +232,44 @@ def _ensure_catalog_cid(hs: dict[str, Any]) -> dict[str, Any]:
     return merged
 
 
+def repair_stuck_mapping_products() -> int:
+    """持久化修复：mapping 且无 HS → pending。"""
+    with _io_lock:
+        if not _CENTER_PATH.exists():
+            return 0
+        try:
+            items = _parse_products_text(_CENTER_PATH.read_text(encoding="utf-8"))
+        except OSError:
+            return 0
+        changed = 0
+        for i, p in enumerate(items):
+            if p.get("category_status") == "mapping" and not is_valid_hs_mapping(p.get("hs_mapping")):
+                items[i] = {**p, "category_status": "pending"}
+                changed += 1
+        if changed:
+            payload = json.dumps(items, ensure_ascii=False, indent=2) + "\n"
+            _CENTER_PATH.parent.mkdir(parents=True, exist_ok=True)
+            _CENTER_PATH.write_text(payload, encoding="utf-8")
+        return changed
+
+
+def sanitize_product_mapping_state(product: dict[str, Any]) -> dict[str, Any]:
+    """卡住的 mapping（无 HS）恢复为 pending，便于商品中心重新映射。"""
+    if product.get("category_status") != "mapping":
+        return product
+    if is_valid_hs_mapping(product.get("hs_mapping")):
+        return product
+    return {**product, "category_status": "pending"}
+
+
 def confirm_product_mapping(
     product: dict[str, Any],
     hs: dict[str, Any],
     reviewer_note: Optional[str] = None,
     *,
     manual: bool = False,
+    resolution: Optional[str] = None,
+    skip_admin_writeback: bool = False,
 ) -> dict[str, Any]:
     hs = _ensure_catalog_cid(hs)
     now = _now_iso()
@@ -263,4 +296,13 @@ def confirm_product_mapping(
         hs=hs,
         source="correct" if manual else "confirm",
     )
+    pid = str(product.get("tangbuy_product_id") or "").strip()
+    if not skip_admin_writeback and pid:
+        from app.services.category_mapping.admin_writeback import schedule_admin_writeback
+
+        wb_resolution = resolution or ("manual_correct" if manual else "auto")
+        mapping = dict(product.get("mapping_record") or {})
+        mapping["admin_writeback"] = {"status": "writing", "at": now}
+        product["mapping_record"] = mapping
+        schedule_admin_writeback(pid, hs, resolution=wb_resolution)  # type: ignore[arg-type]
     return product

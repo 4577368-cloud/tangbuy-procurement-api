@@ -69,4 +69,29 @@ npm run build:category-data
 
 ## 写回
 
-确认后写入 `data/products/center.json` 与 `data/category/local-mappings.json`；`categoryWriteBackFromHs()` 组装宽表写回 payload（对接真实库前为 stub 日志）。
+### 本地
+
+确认后写入 `data/products/center.json` 与 `data/category/local-mappings.json`。
+
+### Tangbuy Admin（已接入）
+
+复用 `TANGBUY_ADMIN_TOKEN`，与订单读接口相同。
+
+| 步骤 | 接口 | 说明 |
+|------|------|------|
+| 读现状 | `POST /resource/goodsCategory/listByGoodsIds` | body: `{"goodsIds":["1688_offer_id"]}`，返回 `hsCodeDTO` |
+| 写回 | `POST /order/changeItemCategory` | body: `{"ids":["TI…"],"cid":50010159,"updateGoodsCategory":true}` |
+
+**可信判定**（跳过 AI，直接采纳 Admin）：
+
+- `categoryId` / `hsCodeDTO.cid` 有效
+- 类目名**不是**「其它」「其他」「待映射」等占位
+- 订单行 `is_need_cfm = 0`，且 `hsCodeDTO.needConfirm = 0`
+
+**流程**：订单同步 → 需映射 → `listByGoodsIds` → 不可信则 AI 预估 → `confirm_product_mapping` → `changeItemCategory`（`ids` = `ord_line_no`）。
+
+实现：`app/integrations/tangbuy_admin/category_api.py`、`app/services/category_mapping/admin_sync.py`、`admin_writeback.py`。
+
+配置：`rules.admin_category_writeback`（默认 true；false 时仅写本地）。
+
+宽表字段 payload 仍由 `categoryWriteBackFromHs()` 组装；当前真实 WritePort 为 Admin `changeItemCategory`。

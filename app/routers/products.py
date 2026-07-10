@@ -50,6 +50,9 @@ class SwitchSupplierBody(BaseModel):
 
 @router.get("")
 def list_products() -> dict[str, Any]:
+    from app.services.products.store import repair_stuck_mapping_products
+
+    repair_stuck_mapping_products()
     return {
         "products": product_service.list_products(),
         "stats": product_service.get_product_stats(),
@@ -262,6 +265,35 @@ def trigger_mapping(request: Request, product_id: str) -> dict[str, Any]:
     if not product:
         raise HTTPException(status_code=404, detail="商品不存在")
     return {"product": product}
+
+
+@router.post("/{product_id}/admin-writeback")
+def trigger_admin_writeback(request: Request, product_id: str) -> dict[str, Any]:
+    """手动触发 Admin 品类回写（映射已确认后）。"""
+    user = require_auth(request)
+    grants = get_role_grants(user.role)
+    if not grants_allow(grants, "product.category_mapping", "edit"):
+        raise HTTPException(status_code=403, detail="无「品类映射」权限")
+    from app.services.category_mapping.admin_writeback import schedule_admin_writeback
+    from app.services.products.store import get_product_by_id, is_valid_hs_mapping, _now_iso
+
+    product = get_product_by_id(product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="商品不存在")
+    hs = product.get("hs_mapping")
+    if not is_valid_hs_mapping(hs):
+        raise HTTPException(status_code=400, detail="请先完成品类映射")
+
+    def _mark_writing(p: dict[str, Any]) -> dict[str, Any]:
+        mapping = dict(p.get("mapping_record") or {})
+        mapping["admin_writeback"] = {"status": "writing", "at": _now_iso()}
+        p["mapping_record"] = mapping
+        return p
+
+    update_product(product_id, _mark_writing)
+    schedule_admin_writeback(product_id, hs, resolution="manual_confirm")
+    updated = get_product_by_id(product_id)
+    return {"product": updated}
 
 
 @router.patch("/{product_id}")

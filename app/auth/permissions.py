@@ -57,12 +57,13 @@ DEFAULT_MATRIX: PermissionMatrix = {
         "assistant.image_search": {"edit": True},
         "assistant.order_followup": {"edit": True},
         "assistant.consult": {"edit": True},
-        "product.catalog": {"view": True},
+        "product.catalog": {"view": True, "edit": True},
         "product.category_mapping": {"view": True, "edit": True},
         "order.data": {"view": True},
         "order.disposition": {"view": True, "edit": True},
         "task.data": {"view": True},
         "task.control": {"edit": True},
+        "config.business": {"view": True},
     },
 }
 

@@ -35,7 +35,7 @@ def _admin_headers() -> dict[str, str]:
     }
 
 
-def _parse_admin_response(raw: dict[str, Any]) -> dict[str, Any]:
+def _parse_admin_response_data(raw: dict[str, Any]) -> Any:
     code = raw.get("code")
     if code in (401, "401"):
         raise TangbuyAdminError(
@@ -45,8 +45,40 @@ def _parse_admin_response(raw: dict[str, Any]) -> dict[str, Any]:
     if code not in (200, "200", 0, "0"):
         msg = raw.get("msg") or f"Admin 返回 code={code}"
         raise TangbuyAdminError(msg, status=int(code) if str(code).isdigit() else None)
-    data = raw.get("data")
+    return raw.get("data")
+
+
+def _parse_admin_response(raw: dict[str, Any]) -> dict[str, Any]:
+    data = _parse_admin_response_data(raw)
     return data if isinstance(data, dict) else {"raw": raw}
+
+
+def admin_post_any(path: str, body: dict[str, Any], *, timeout: int = 45) -> Any:
+    """POST Admin API，返回 data 字段（可为 list 或 dict）。"""
+    settings = get_settings()
+    normalized = path if path.startswith("/") else f"/{path}"
+    url = f"{settings.tangbuy_admin_base_url.rstrip('/')}{normalized}"
+    try:
+        raw = request_json(
+            "POST",
+            url,
+            headers=_admin_headers(),
+            json_body=body,
+            timeout=timeout,
+            connect_ip=settings.tangbuy_admin_connect_ip,
+        )
+        if not isinstance(raw, dict):
+            raise TangbuyAdminError("Admin 响应格式异常")
+        return _parse_admin_response_data(raw)
+    except TangbuyAdminError:
+        raise
+    except RuntimeError as exc:
+        msg = str(exc)
+        if msg.startswith("HTTP "):
+            parts = msg.split(":", 1)
+            status = int(parts[0].replace("HTTP ", "").split()[0]) if "HTTP " in parts[0] else None
+            raise TangbuyAdminError(f"Admin {msg}", status=status) from exc
+        raise TangbuyAdminError(f"Admin {msg}") from exc
 
 
 def admin_post(path: str, body: dict[str, Any], *, timeout: int = 45) -> dict[str, Any]:

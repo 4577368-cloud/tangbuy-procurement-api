@@ -13,6 +13,7 @@ DEFAULT_BUSINESS_CONFIG: dict[str, Any] = {
     "price_markup": 1.2,
     "rules": {
         "auto_category_mapping": True,
+        "admin_category_writeback": True,
         "auto_add_to_store": False,
         "auto_order_followup": False,
         "block_negative_margin": True,
@@ -23,6 +24,7 @@ DEFAULT_BUSINESS_CONFIG: dict[str, Any] = {
 
 RULE_KEYS = (
     "auto_category_mapping",
+    "admin_category_writeback",
     "auto_add_to_store",
     "auto_order_followup",
     "block_negative_margin",

@@ -246,10 +246,19 @@ def save_mapping_draft_from_payload(product: dict[str, Any], payload: dict[str, 
     return save_mapping_draft(product, record)
 
 
-def map_product_category_by_id(pid: str) -> Optional[dict[str, Any]]:
+def map_product_category_by_id(
+    pid: str,
+    *,
+    ord_row: Optional[dict[str, Any]] = None,
+    admin_cache: Optional[dict[str, dict[str, Any]]] = None,
+) -> Optional[dict[str, Any]]:
     product = store_get_product_by_id(pid)
     if not product:
         return None
+
+    if product.get("category_status") == "mapping" and not is_valid_hs_mapping(product.get("hs_mapping")):
+        update_product(pid, lambda p: {**p, "category_status": "pending"})
+        product = store_get_product_by_id(pid) or product
 
     reused = find_reusable_hs_mapping(product, exclude_id=pid)
     if reused:
@@ -269,19 +278,32 @@ def map_product_category_by_id(pid: str) -> Optional[dict[str, Any]]:
             ),
         )
 
-    update_product(pid, lambda p: {**p, "category_status": "mapping"})
-    payload = run_category_mapping_suggest(
-        product.get("product_name", ""),
-        hint=mapping_hint_for_product(product),
-        goods_id=product.get("source_product_id"),
-        image_url=product.get("image_url"),
+    from app.services.category_mapping.admin_sync import try_adopt_admin_category
+
+    adopted = try_adopt_admin_category(
+        product,
+        ord_row=ord_row,
+        admin_cache=admin_cache,
     )
-    if not payload.get("success"):
+    if adopted:
+        return update_product(pid, lambda _: adopted)
+
+    update_product(pid, lambda p: {**p, "category_status": "mapping"})
+    try:
+        payload = run_category_mapping_suggest(
+            product.get("product_name", ""),
+            hint=mapping_hint_for_product(product),
+            goods_id=product.get("source_product_id"),
+            image_url=product.get("image_url"),
+        )
+        if not payload.get("success"):
+            return update_product(pid, lambda p: {**p, "category_status": "failed"})
+        hs = _hs_from_suggest_payload(payload)
+        if not is_valid_hs_mapping(hs):
+            return update_product(pid, lambda p: {**p, "category_status": "failed"})
+        return update_product(pid, lambda p: save_mapping_draft_from_payload(p, payload))
+    except Exception:
         return update_product(pid, lambda p: {**p, "category_status": "failed"})
-    hs = _hs_from_suggest_payload(payload)
-    if not is_valid_hs_mapping(hs):
-        return update_product(pid, lambda p: {**p, "category_status": "failed"})
-    return update_product(pid, lambda p: save_mapping_draft_from_payload(p, payload))
 
 
 def apply_mapping_record(product: dict[str, Any], record: dict[str, Any]) -> dict[str, Any]:
@@ -289,7 +311,14 @@ def apply_mapping_record(product: dict[str, Any], record: dict[str, Any]) -> dic
     if not isinstance(hs, dict) or not is_valid_hs_mapping(hs):
         raise ValueError("映射结果无效，请重新运行品类映射")
 
-    updated = confirm_product_mapping(product, hs)
+    review = str(record.get("review_status") or "")
+    if review == "corrected":
+        resolution = "manual_correct"
+    elif review in ("confirmed", "pending"):
+        resolution = "manual_confirm"
+    else:
+        resolution = "auto"
+    updated = confirm_product_mapping(product, hs, resolution=resolution)
     mapping = _merge_suggest_into_mapping(dict(updated.get("mapping_record") or {}), record)
     category_path = record.get("suggested_category_path")
     if category_path:

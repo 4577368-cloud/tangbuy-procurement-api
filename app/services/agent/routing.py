@@ -210,41 +210,23 @@ def resolve_order_data_route(
     if looks_like_order_followup(text):
         return None
 
-    from app.services.agent.query_semantics import build_query_filters_from_text
+    from app.services.agent.query_semantics import interpret_user_query
 
-    semantic = build_query_filters_from_text(text)
+    interpreted = interpret_user_query(text)
+    filters = interpreted["filters"]
     has_semantic = bool(
-        semantic.get("time_preset")
-        or semantic.get("time_field")
-        or semantic.get("bd_owner")
-        or semantic.get("user_keyword")
+        filters.get("time_preset")
+        or filters.get("time_field")
+        or filters.get("bd_owner")
+        or filters.get("user_keyword")
+        or filters.get("queue")
+        or filters.get("health")
     )
 
     if has_semantic or looks_like_filtered_order_query(text):
-        base = {
-            k: v
-            for k, v in semantic.items()
-            if k not in ("mode", "count_only") and v
-        }
-        wants_list = bool(
-            semantic.get("mode") == "list"
-            or looks_like_order_list(text)
-            or re.search(r"同步|列出|有哪些|哪些", text)
-        )
-        wants_count = bool(
-            semantic.get("count_only") == "1"
-            or (looks_like_order_stats(text) and not wants_list)
-        )
-        if wants_count and "procurement_stats" in allowed:
-            return {
-                "tool": "procurement_stats",
-                "args": {**base, "scope": "orders"},
-            }
-        if "order_query" in allowed:
-            return {
-                "tool": "order_query",
-                "args": {**base, "mode": "list", "limit": "10"},
-            }
+        tool = interpreted["tool"]
+        if tool in allowed:
+            return {"tool": tool, "args": interpreted["args"]}
 
     if looks_like_signal_stats(text) and "procurement_stats" in allowed:
         return {"tool": "procurement_stats", "args": {"scope": "signals"}}
