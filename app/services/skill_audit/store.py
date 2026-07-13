@@ -128,8 +128,19 @@ def log_skill_invocation(
     user_message_preview: Optional[str] = None,
     response_preview: Optional[str] = None,
     task_id: Optional[str] = None,
+    ord_line_no: Optional[str] = None,
+    workflow_run_id: Optional[str] = None,
+    workflow_stage: Optional[str] = None,
 ) -> dict[str, Any]:
     """记录一次 Skill 工具调用，供 Agent 审计页复核。"""
+    line_key = (ord_line_no or "").strip()
+    if not workflow_stage:
+        try:
+            from app.services.evolution.skill_registry import workflow_stage_for_skill
+
+            workflow_stage = workflow_stage_for_skill(skill_id)
+        except Exception:
+            pass
     record = _normalize_invocation(
         {
             "id": _new_id("inv"),
@@ -141,6 +152,9 @@ def log_skill_invocation(
             "user_message_preview": (user_message_preview or "")[:300] or None,
             "response_preview": (response_preview or "")[:600] or None,
             "task_id": task_id,
+            "ord_line_no": line_key or None,
+            "workflow_run_id": workflow_run_id or (f"wf-{line_key}" if line_key else None),
+            "workflow_stage": workflow_stage,
             "at": datetime.now(timezone.utc).isoformat(),
             "audit_status": "pending",
         }
@@ -354,3 +368,20 @@ def get_active_skill_tuning_instructions(limit: int = 10) -> list[str]:
         if len(out) >= limit:
             break
     return out
+
+
+def list_invocations_for_ord_line(
+    ord_line_no: str,
+    *,
+    limit: int = 50,
+) -> list[dict[str, Any]]:
+    """按子单号聚合 Skill 调用（WorkflowRun 审计）。"""
+    key = (ord_line_no or "").strip()
+    if not key:
+        return []
+    matched = [
+        r
+        for r in _load_invocations()
+        if str(r.get("ord_line_no") or "").strip() == key
+    ]
+    return matched[: max(1, limit)]

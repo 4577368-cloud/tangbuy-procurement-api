@@ -28,6 +28,7 @@ from app.routers import (
     products,
     skill_audit,
     tasks,
+    workflow,
 )
 from app.services.tasks.scheduler import start_task_auto_refresh, stop_task_auto_refresh
 from app.services.products.product_jobs import start_product_auto_scan, stop_product_auto_scan
@@ -103,6 +104,7 @@ def create_app() -> FastAPI:
     app.include_router(integrations.router)
     app.include_router(jobs.router)
     app.include_router(orders.router)
+    app.include_router(workflow.router)
     return app
 
 

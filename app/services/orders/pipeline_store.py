@@ -92,9 +92,23 @@ def save_pipeline_state(state: dict[str, Any]) -> dict[str, Any]:
         from app.db.repositories import PipelineRepository
 
         with db_session() as session:
-            return PipelineRepository(session).save(state)
-    _append_line(_STATE_PATH, state)
-    return state
+            saved = PipelineRepository(session).save(state)
+    else:
+        _append_line(_STATE_PATH, state)
+        saved = state
+    try:
+        from app.services.workflow.hooks import trace_pipeline_advance
+
+        blockers = saved.get("blockers") if isinstance(saved.get("blockers"), list) else saved.get("pipeline_blockers")
+        trace_pipeline_advance(
+            key,
+            pipeline_step=str(saved.get("pipeline_step") or ""),
+            ord_line_stat=saved.get("ord_line_stat"),
+            blockers=blockers if isinstance(blockers, list) else None,
+        )
+    except Exception:
+        pass
+    return saved
 
 
 def list_pipeline_states(*, limit: int = 500) -> list[dict[str, Any]]:

@@ -64,6 +64,7 @@ SKILL_DEFINITIONS: list[SkillEvolutionDescriptor] = [
         skill_name="订单数据查询",
         domain=EvolutionDomain.ORDER_FLOW,
         phase=EvolutionPhase.PASSIVE,
+        workflow_stage="pay_accept",
         feedback_channels=[FeedbackSource.MANUAL_AUDIT, FeedbackSource.MANUAL_RATING],
         eval_criteria=ORDER_FLOW_CRITERIA,
         auto_pass_threshold=0.90,
@@ -132,6 +133,7 @@ SKILL_DEFINITIONS: list[SkillEvolutionDescriptor] = [
         skill_name="订单催单",
         domain=EvolutionDomain.ORDER_FLOW,
         phase=EvolutionPhase.PASSIVE,
+        workflow_stage="pipeline_advance",
         feedback_channels=[FeedbackSource.MANUAL_AUDIT, FeedbackSource.AUTO_OVERRIDE, FeedbackSource.AUTO_ADOPTION, FeedbackSource.MANUAL_RATING],
         eval_criteria=ORDER_FLOW_CRITERIA,
         auto_pass_threshold=0.85,
@@ -146,6 +148,7 @@ SKILL_DEFINITIONS: list[SkillEvolutionDescriptor] = [
         skill_name="品类映射（HS编码）",
         domain=EvolutionDomain.PRODUCT_PROCESSING,
         phase=EvolutionPhase.PASSIVE,
+        workflow_stage="category_map",
         feedback_channels=[FeedbackSource.AUTO_OVERRIDE, FeedbackSource.AUTO_DISMISS, FeedbackSource.AUTO_ADOPTION, FeedbackSource.MANUAL_AUDIT],
         eval_criteria=PRODUCT_PROCESSING_CRITERIA,
         auto_pass_threshold=0.85,
@@ -176,6 +179,7 @@ SKILL_DEFINITIONS: list[SkillEvolutionDescriptor] = [
         skill_name="风险信号识别",
         domain=EvolutionDomain.ORDER_FLOW,
         phase=EvolutionPhase.PASSIVE,
+        workflow_stage="release_gate",
         feedback_channels=[FeedbackSource.AUTO_OVERRIDE, FeedbackSource.AUTO_DISMISS, FeedbackSource.AUTO_ADOPTION, FeedbackSource.MANUAL_AUDIT],
         eval_criteria=ORDER_FLOW_CRITERIA,
         auto_pass_threshold=0.85,
@@ -196,6 +200,7 @@ SKILL_DEFINITIONS: list[SkillEvolutionDescriptor] = [
         skill_name="Agent自动放行",
         domain=EvolutionDomain.ORDER_FLOW,
         phase=EvolutionPhase.PASSIVE,
+        workflow_stage="release_gate",
         feedback_channels=[FeedbackSource.AUTO_OVERRIDE, FeedbackSource.AUTO_DISMISS, FeedbackSource.MANUAL_AUDIT],
         eval_criteria=ORDER_FLOW_CRITERIA,
         auto_pass_threshold=0.90,
@@ -208,6 +213,7 @@ SKILL_DEFINITIONS: list[SkillEvolutionDescriptor] = [
         skill_name="订单备注分类",
         domain=EvolutionDomain.ORDER_FLOW,
         phase=EvolutionPhase.PASSIVE,
+        workflow_stage="pipeline_advance",
         feedback_channels=[FeedbackSource.AUTO_OVERRIDE, FeedbackSource.MANUAL_AUDIT],
         eval_criteria=ORDER_FLOW_CRITERIA,
         auto_pass_threshold=0.85,
@@ -279,6 +285,14 @@ def get_all_evolution_skills() -> list[dict[str, Any]]:
 def get_evolution_skill(skill_id: str) -> Optional[SkillEvolutionDescriptor]:
     """获取指定技能的描述符。"""
     return _registry.get(skill_id)
+
+
+def workflow_stage_for_skill(skill_id: str) -> Optional[str]:
+    """技能对应的 WorkflowRun 步骤（供 audit / trace 聚合）。"""
+    desc = _registry.get(skill_id)
+    if desc and desc.workflow_stage:
+        return desc.workflow_stage
+    return None
 
 
 def get_skills_by_domain(domain: EvolutionDomain) -> list[SkillEvolutionDescriptor]:

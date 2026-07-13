@@ -430,13 +430,27 @@ def persist_product_mapping_side_effects(
     from app.services.category_mapping.admin_writeback import (
         collect_item_nos,
         schedule_admin_writeback,
+        should_skip_admin_writeback,
     )
 
-    wb = (product.get("mapping_record") or {}).get("admin_writeback") or {}
-    if wb.get("status") != "writing":
+    ids = collect_item_nos(product)
+    skip, reason = should_skip_admin_writeback(product, hs, item_nos=ids)
+    if skip and reason in ("already_ok", "in_flight", "admin_already"):
         return
     wb_resolution = resolution or ("manual_correct" if manual else "auto")
-    schedule_admin_writeback(pid, hs, resolution=wb_resolution)  # type: ignore[arg-type]
+    schedule_admin_writeback(pid, hs, resolution=wb_resolution, item_nos=ids or None)  # type: ignore[arg-type]
+    try:
+        from app.services.workflow.hooks import trace_category_map
+
+        trace_category_map(
+            ids,
+            product_id=pid,
+            hs=hs,
+            manual=manual,
+            resolution=wb_resolution,
+        )
+    except Exception:
+        pass
 
 
 def finalize_product_mapping_confirm(

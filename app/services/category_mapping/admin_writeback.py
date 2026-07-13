@@ -29,7 +29,7 @@ AdminWritebackResolution = Literal["auto", "manual_confirm", "manual_correct"]
 WRITEBACK_STALE_SECONDS = 120
 
 _SKIP_REASON_LABELS = {
-    "no_items": "暂无可回写子单",
+    "no_items": "暂无可回写子单（商品未关联 TI）",
     "invalid_cid": "类目无效",
 }
 
@@ -167,9 +167,14 @@ def reconcile_stale_admin_writeback(product: dict[str, Any]) -> tuple[dict[str, 
         )
     else:
         mapping["admin_writeback"] = {
-            **wb,
             "status": "failed",
             "at": _now_iso(),
+            "item_nos": ids,
+            "resolution": resolution,
+            "from_category": wb.get("from_category"),
+            "to_category": wb.get("to_category"),
+            "from_cid": wb.get("from_cid"),
+            "to_cid": wb.get("to_cid") or target_hs_cid(hs or {}),
             "error": "回写未完成（可能服务重启），请重试",
             "needs_retry": True,
             "stale_recovered": True,
@@ -185,16 +190,77 @@ def admin_writeback_enabled() -> bool:
     return bool(rules.get("admin_category_writeback", True))
 
 
-def collect_item_nos(product: dict[str, Any]) -> list[str]:
-    lines = product.get("linked_ord_lines") or []
-    out: list[str] = []
-    seen: set[str] = set()
-    for line in lines:
-        oid = str(line or "").strip()
-        if oid and oid not in seen:
-            seen.add(oid)
-            out.append(oid)
+from app.services.category_mapping.admin_writeback_collect import collect_item_nos
+def collect_global_ok_item_nos_for_cid(
+    cid: int,
+    *,
+    exclude_product_id: Optional[str] = None,
+) -> set[str]:
+    """其它商品已成功写回同 cid 的子单，避免跨商品重复 changeItemCategory。"""
+    try:
+        cid_int = int(cid)
+    except (TypeError, ValueError):
+        return set()
+    if cid_int <= 0:
+        return set()
+    exclude = (exclude_product_id or "").strip()
+    out: set[str] = set()
+    try:
+        from app.services.products.store import load_products
+    except Exception:
+        return out
+    for p in load_products():
+        pid = str(p.get("tangbuy_product_id") or "").strip()
+        if exclude and pid == exclude:
+            continue
+        wb = (p.get("mapping_record") or {}).get("admin_writeback") or {}
+        if wb.get("status") != "ok":
+            continue
+        try:
+            wc = int(wb.get("cid") or wb.get("to_cid") or 0)
+        except (TypeError, ValueError):
+            continue
+        if wc != cid_int:
+            continue
+        for item in wb.get("item_nos") or []:
+            s = str(item or "").strip()
+            if s:
+                out.add(s)
     return out
+
+
+def filter_pending_item_nos(
+    product: dict[str, Any],
+    hs: dict[str, Any],
+    item_nos: list[str],
+) -> list[str]:
+    """仅返回尚未成功写回 Admin 的子单号（本商品记录 + 全局同 cid 成功记录）。"""
+    cid = target_hs_cid(hs)
+    if cid <= 0:
+        return []
+    prev = (product.get("mapping_record") or {}).get("admin_writeback") or {}
+    done: set[str] = set()
+    if prev.get("status") == "ok":
+        try:
+            if int(prev.get("cid") or prev.get("to_cid") or 0) == cid:
+                done.update(str(x).strip() for x in (prev.get("item_nos") or []) if str(x).strip())
+        except (TypeError, ValueError):
+            pass
+    done.update(
+        collect_global_ok_item_nos_for_cid(
+            cid,
+            exclude_product_id=str(product.get("tangbuy_product_id") or ""),
+        )
+    )
+    pending: list[str] = []
+    seen: set[str] = set()
+    for item in item_nos:
+        s = str(item or "").strip()
+        if not s or s in done or s in seen:
+            continue
+        seen.add(s)
+        pending.append(s)
+    return pending
 
 
 def target_hs_cid(hs: dict[str, Any]) -> int:
@@ -232,6 +298,13 @@ def writeback_in_flight_for_same_target(
     """同目标类目已有回写任务进行中，避免并发重复提交。"""
     if prev.get("status") != "writing":
         return False
+    if prev.get("needs_retry"):
+        return False
+    started = _parse_writeback_at(prev.get("at"))
+    if started is not None:
+        age = (datetime.now(timezone.utc) - started.astimezone(timezone.utc)).total_seconds()
+        if age >= WRITEBACK_STALE_SECONDS:
+            return False
     try:
         prev_cid = int(prev.get("to_cid") or prev.get("cid") or 0)
     except (TypeError, ValueError):
@@ -244,6 +317,7 @@ def should_skip_admin_writeback(
     hs: dict[str, Any],
     *,
     item_nos: Optional[list[str]] = None,
+    ignore_in_flight: bool = False,
 ) -> tuple[bool, str]:
     """
     判断是否跳过 Admin 回写。
@@ -257,16 +331,13 @@ def should_skip_admin_writeback(
     if not ids:
         return True, "no_items"
 
-    prev = (product.get("mapping_record") or {}).get("admin_writeback") or {}
-    if local_writeback_covers(prev, cid=cid, item_nos=ids):
+    pending = filter_pending_item_nos(product, hs, ids)
+    if not pending:
         return True, "already_ok"
-    if writeback_in_flight_for_same_target(prev, cid=cid):
-        return True, "in_flight"
 
-    goods_id = str(product.get("source_product_id") or "").strip()
-    from_cid, _ = _fetch_admin_from_category(goods_id)
-    if from_cid > 0 and from_cid == cid:
-        return True, "admin_already"
+    prev = (product.get("mapping_record") or {}).get("admin_writeback") or {}
+    if not ignore_in_flight and writeback_in_flight_for_same_target(prev, cid=cid):
+        return True, "in_flight"
 
     return False, ""
 
@@ -373,7 +444,22 @@ def push_category_to_admin(
     if not ids:
         return {"status": "skipped", "reason": "no linked ord_line_no"}
 
-    skip, skip_reason = should_skip_admin_writeback(product, hs, item_nos=ids)
+    pending = filter_pending_item_nos(product, hs, ids)
+    if not pending:
+        return _build_skip_writeback_result(
+            product,
+            hs,
+            reason="already_ok",
+            item_nos=ids,
+            resolution=resolution,
+        )
+
+    skip, skip_reason = should_skip_admin_writeback(
+        product,
+        hs,
+        item_nos=ids,
+        ignore_in_flight=True,
+    )
     if skip:
         if skip_reason in ("already_ok", "in_flight", "admin_already"):
             return _build_skip_writeback_result(
@@ -404,11 +490,19 @@ def push_category_to_admin(
         to_name = str(pre.get("to_category") or "").strip()
 
     try:
-        change_item_category(item_nos=ids, cid=cid, update_goods_category=True)
+        change_item_category(item_nos=pending, cid=cid, update_goods_category=True)
+        prev_ok = set()
+        if pre.get("status") == "ok":
+            try:
+                if int(pre.get("cid") or pre.get("to_cid") or 0) == cid:
+                    prev_ok.update(str(x).strip() for x in (pre.get("item_nos") or []) if str(x).strip())
+            except (TypeError, ValueError):
+                pass
+        all_written = sorted(prev_ok | set(pending))
         return {
             "status": "ok",
             "at": at,
-            "item_nos": ids,
+            "item_nos": all_written,
             "cid": cid,
             "goods_id": goods_id or None,
             "resolution": resolution,
@@ -416,6 +510,7 @@ def push_category_to_admin(
             "from_category": from_name or None,
             "to_cid": cid,
             "to_category": to_name or None,
+            "written_item_nos": pending,
         }
     except TangbuyAdminError as exc:
         _log.warning(
@@ -504,9 +599,14 @@ def schedule_admin_writeback(
             if not product:
                 return
             ids = item_nos if item_nos is not None else collect_item_nos(product)
-            skip, skip_reason = should_skip_admin_writeback(product, hs, item_nos=ids)
+            skip, skip_reason = should_skip_admin_writeback(
+                product,
+                hs,
+                item_nos=ids,
+                ignore_in_flight=True,
+            )
             if skip:
-                update_product(
+                updated_skip = update_product(
                     pid,
                     lambda p: {
                         **p,
@@ -522,6 +622,13 @@ def schedule_admin_writeback(
                         },
                     },
                 )
+                try:
+                    from app.services.workflow.hooks import trace_admin_writeback
+
+                    wb_skip = (updated_skip or {}).get("mapping_record", {}).get("admin_writeback") or {}
+                    trace_admin_writeback(ids, product_id=pid, wb=wb_skip)
+                except Exception:
+                    pass
                 return
 
             updated = update_product(
@@ -529,6 +636,13 @@ def schedule_admin_writeback(
                 lambda p: attach_admin_writeback(p, hs, resolution=resolution, item_nos=item_nos),
             )
             wb = (updated or {}).get("mapping_record", {}).get("admin_writeback") or {}
+            try:
+                from app.services.workflow.hooks import trace_admin_writeback
+
+                lines_for_trace = item_nos if item_nos is not None else collect_item_nos(updated or product)
+                trace_admin_writeback(lines_for_trace, product_id=pid, wb=wb)
+            except Exception:
+                pass
             if wb.get("status") != "ok" or wb.get("skipped_duplicate"):
                 return
 

@@ -98,6 +98,16 @@ def _preview_tool_result(result: dict[str, Any]) -> Optional[str]:
     return "工具执行成功" if result.get("success") else "工具执行失败"
 
 
+def _resolve_ord_line_from_context(context: Optional[dict[str, Any]]) -> Optional[str]:
+    if not context:
+        return None
+    for key in ("ord_line_no", "order_id"):
+        val = str(context.get(key) or "").strip()
+        if val.upper().startswith("TI"):
+            return val
+    return None
+
+
 def _log_tool_invocation(
     skill_id: str,
     tool: str,
@@ -107,12 +117,14 @@ def _log_tool_invocation(
     *,
     task_id: Optional[str] = None,
     audit_ids: Optional[list[str]] = None,
+    order_context: Optional[dict[str, Any]] = None,
 ) -> str:
     from app.services.skill_audit.store import log_skill_invocation
 
     tid = task_id or result.get("taskId") or (
         result.get("data", {}).get("task_id") if isinstance(result.get("data"), dict) else None
     )
+    ord_line = _resolve_ord_line_from_context(order_context)
     record = log_skill_invocation(
         skill_id=skill_id,
         tool=tool,
@@ -121,6 +133,7 @@ def _log_tool_invocation(
         user_message_preview=user_preview or None,
         response_preview=_preview_tool_result(result),
         task_id=str(tid) if tid else None,
+        ord_line_no=ord_line,
     )
     inv_id = str(record["id"])
     if audit_ids is not None:
@@ -134,6 +147,7 @@ def _log_no_tool_response(
     detail: Optional[str] = None,
     assistant_preview: Optional[str] = None,
     audit_ids: Optional[list[str]] = None,
+    order_context: Optional[dict[str, Any]] = None,
 ) -> str:
     from app.services.agent.skills import UNIFIED_ASSISTANT_ID
     from app.services.skill_audit.store import log_skill_invocation
@@ -152,6 +166,7 @@ def _log_no_tool_response(
         error=detail or "assistant_replied_without_tool",
         user_message_preview=user_preview or None,
         response_preview=(assistant_preview or "")[:600] or None,
+        ord_line_no=_resolve_ord_line_from_context(order_context),
     )
     inv_id = str(record["id"])
     if audit_ids is not None:
@@ -237,6 +252,7 @@ def _run_single_tool(
         user_preview,
         task_id=str(task["id"]) if task else None,
         audit_ids=audit_ids,
+        order_context=order_context,
     )
     tool_trace.append({"tool": tool_name, "arguments": args, "result": result})
 
@@ -421,6 +437,7 @@ def run_agent_chat(
                         detail="fabricated_products",
                         assistant_preview=llm.content,
                         audit_ids=audit_ids,
+                        order_context=context,
                     )
                     return _finalize_response(
                         {
@@ -437,6 +454,7 @@ def run_agent_chat(
                         detail="fabricated_followup",
                         assistant_preview=llm.content,
                         audit_ids=audit_ids,
+                        order_context=context,
                     )
                     return _finalize_response(
                         {
@@ -542,6 +560,7 @@ def run_agent_chat(
                     user_preview,
                     assistant_preview=llm.content,
                     audit_ids=audit_ids,
+                    order_context=context,
                 )
 
             return _finalize_response(
@@ -574,6 +593,7 @@ def run_agent_chat(
                 user_preview,
                 task_id=str(task["id"]) if task else None,
                 audit_ids=audit_ids,
+                order_context=context,
             )
             tool_trace.append({"tool": call.name, "arguments": call.arguments, "result": result})
             tool_content = result.get("markdown") or json.dumps(

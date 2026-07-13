@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Optional, Literal
 
 
 # ─── 基础类型 ───
@@ -61,6 +61,7 @@ class PatchType(str, Enum):
     ROUTE_RULE = "route_rule"
     THRESHOLD_ADJUST = "threshold_adjust"
     CONTEXT_ENRICHMENT = "context_enrichment"
+    KEYWORD_BOOST = "keyword_boost"
 
 
 class EvolutionPatchStatus(str, Enum):
@@ -77,6 +78,16 @@ class PatchInjection(str, Enum):
     SYSTEM_PROMPT_APPEND = "system_prompt_append"
     ROUTE_RULE_INSERT = "route_rule_insert"
     THRESHOLD_CONFIG_UPDATE = "threshold_config_update"
+
+
+# 与 workflow/types.py WorkflowStep 对齐（避免循环 import）
+WorkflowStage = Literal[
+    "pay_accept",
+    "category_map",
+    "admin_writeback",
+    "release_gate",
+    "pipeline_advance",
+]
 
 
 # ─── 数据类 ───
@@ -106,6 +117,7 @@ class SkillEvolutionDescriptor:
     max_active_patches: int = 5
     min_feedback_for_analysis: int = 10           # 【问题4修复】per-skill 独立阈值
     priority_badcase_trigger: bool = False        # 【问题4修复】是否允许单条高优先级 badcase 触发分析
+    workflow_stage: Optional[WorkflowStage] = None  # 采购履约 WorkflowRun 步骤
 
     def to_public(self) -> dict[str, Any]:
         return {
@@ -113,6 +125,7 @@ class SkillEvolutionDescriptor:
             "skill_name": self.skill_name,
             "domain": self.domain.value,
             "phase": self.phase.value,
+            "workflow_stage": self.workflow_stage,
             "feedback_channels": [c.value for c in self.feedback_channels],
             "eval_criteria": [c.to_public() for c in self.eval_criteria],
             "auto_pass_threshold": self.auto_pass_threshold,
@@ -236,6 +249,7 @@ class EvolutionPatch:
     created_at: str = ""
     created_by: str = "auto_generated"
     active: bool = False
+    gray_percent: int = 0
 
     def to_public(self) -> dict[str, Any]:
         return {
@@ -255,6 +269,7 @@ class EvolutionPatch:
             "created_at": self.created_at,
             "created_by": self.created_by,
             "active": self.active,
+            "gray_percent": self.gray_percent,
         }
 
 

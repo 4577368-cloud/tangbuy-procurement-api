@@ -167,6 +167,20 @@ def evaluate_procurement_pass(
     margin = round(customer_paid - payable, 2)
     margin_pct = (margin / customer_paid * 100) if customer_paid > 0 else 0.0
     threshold = float(cfg.get("gross_margin_threshold") or 15)
+    try:
+        from app.services.evolution.patch_generator import get_active_patches
+        from app.services.evolution.policy_apply import resolve_threshold_for_skill
+
+        line_key = str(row.get("ord_line_no") or "")
+        threshold = resolve_threshold_for_skill(
+            "auto-release",
+            threshold,
+            line_key,
+            get_active_patches(),
+            threshold_key="gross_margin_threshold",
+        )
+    except Exception:
+        pass
     block_margin = bool(cfg.get("rules", {}).get("block_negative_margin", True))
     margin_ok = margin_pct >= threshold if customer_paid > 0 else margin >= 0
     if block_margin and margin < -0.02:
@@ -583,7 +597,19 @@ def _persist_release(
         reviewer_note=reviewer_note,
         auto_confirmed=auto_confirmed,
     )
-    return release_store.append_release(record)
+    saved = release_store.append_release(record)
+    try:
+        from app.services.workflow.hooks import trace_release_gate
+
+        trace_release_gate(
+            str(row.get("ord_line_no") or ""),
+            {**evaluation, "ord_no": row.get("ord_no")},
+            result=result,
+            trigger=trigger,
+        )
+    except Exception:
+        pass
+    return saved
 
 
 def _refresh_ord_line(ord_line_no: str) -> Optional[dict[str, Any]]:

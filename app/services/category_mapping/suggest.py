@@ -17,6 +17,8 @@ def run_category_mapping_suggest(
     image_url: Optional[str] = None,
     skip_history: bool = False,
     hint_as_reference: bool = False,
+    ord_line_no: Optional[str] = None,
+    context_key: Optional[str] = None,
 ) -> dict[str, Any]:
     prep = prepare_title_for_mapping(title, hint=hint if not hint_as_reference else None)
     result = dict(
@@ -40,8 +42,47 @@ def run_category_mapping_suggest(
         if not result.get("match_method"):
             result["match_method"] = "title_translated"
 
-    return enrich_suggest_response(
+    out = enrich_suggest_response(
         result,
         title=prep.title,
         hint=hint if not hint_as_reference else None,
     )
+    return _apply_evolution_boost(
+        out,
+        prep.title,
+        gray_context_key=(ord_line_no or context_key or goods_id or prep.title or "").strip(),
+    )
+
+
+def _apply_evolution_boost(
+    result: dict[str, Any],
+    title: str,
+    *,
+    gray_context_key: str,
+) -> dict[str, Any]:
+    try:
+        from app.services.evolution.patch_generator import get_active_keyword_boost_patches
+        from app.services.evolution.policy_apply import apply_keyword_boost_to_candidates
+
+        patches = get_active_keyword_boost_patches()
+        if not patches:
+            return result
+        for key in ("semantic_candidates", "candidates"):
+            rows = result.get(key)
+            if isinstance(rows, list) and rows:
+                result[key] = apply_keyword_boost_to_candidates(
+                    title,
+                    rows,
+                    context_key=gray_context_key or title,
+                    patches=patches,
+                )
+        primary = result.get("hs_mapping") if isinstance(result.get("hs_mapping"), dict) else None
+        if not primary:
+            sem = result.get("semantic_candidates")
+            if isinstance(sem, list) and sem:
+                top = sem[0]
+                if top.get("evolution_boost"):
+                    result["match_method"] = result.get("match_method") or "evolution_boost"
+    except Exception:
+        pass
+    return result

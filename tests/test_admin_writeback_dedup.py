@@ -46,8 +46,56 @@ class AdminWritebackDedupTests(unittest.TestCase):
         hs = {"category_id": 50003509, "category_cn_name": "测试类目"}
         with patch.object(wb, "_fetch_admin_from_category", return_value=(50003509, "测试类目")):
             skip, reason = wb.should_skip_admin_writeback(product, hs)
+        # 商品级类目虽已对齐，子单无本地/全局成功记录时仍应补写一次
+        self.assertFalse(skip)
+
+    def test_should_skip_when_all_items_globally_written(self) -> None:
+        product = {
+            "tangbuy_product_id": "TB002",
+            "source_product_id": "99999",
+            "linked_ord_lines": ["TO26070000100", "TO26070000101"],
+            "mapping_record": {},
+        }
+        hs = {"category_id": 50003509, "category_cn_name": "测试类目"}
+        with (
+            patch.object(wb, "collect_item_nos", return_value=["TO26070000100", "TO26070000101"]),
+            patch.object(
+                wb,
+                "collect_global_ok_item_nos_for_cid",
+                return_value={"TO26070000100", "TO26070000101"},
+            ),
+        ):
+            skip, reason = wb.should_skip_admin_writeback(product, hs)
         self.assertTrue(skip)
-        self.assertEqual(reason, "admin_already")
+        self.assertEqual(reason, "already_ok")
+
+    def test_push_category_writes_only_pending_items(self) -> None:
+        product = {
+            "source_product_id": "12345",
+            "linked_ord_lines": ["TO26070000100", "TO26070000102"],
+            "mapping_record": {
+                "admin_writeback": {
+                    "status": "ok",
+                    "cid": 50003509,
+                    "item_nos": ["TO26070000100"],
+                    "to_category": "测试类目",
+                }
+            },
+        }
+        hs = {"category_id": 50003509, "category_cn_name": "测试类目"}
+        with (
+            patch.object(wb, "collect_item_nos", return_value=["TO26070000100", "TO26070000102"]),
+            patch.object(wb, "change_item_category") as mock_change,
+        ):
+            result = wb.push_category_to_admin(product=product, hs=hs)
+        self.assertEqual(result.get("status"), "ok")
+        mock_change.assert_called_once()
+        args, kwargs = mock_change.call_args
+        self.assertEqual(kwargs.get("item_nos"), ["TO26070000102"])
+        self.assertEqual(
+            set(result.get("item_nos") or []),
+            {"TO26070000100", "TO26070000102"},
+        )
 
     def test_should_skip_when_writeback_in_flight(self) -> None:
         product = {
@@ -101,6 +149,44 @@ class AdminWritebackDedupTests(unittest.TestCase):
             "skipped",
         )
 
+    def test_collect_item_nos_uses_linked_lines(self) -> None:
+        product = {"linked_ord_lines": ["TI26060000099"]}
+        self.assertEqual(wb.collect_item_nos(product), ["TI26060000099"])
+
+    def test_persist_side_effects_schedules_without_writing_status(self) -> None:
+        from app.services.products import store
+
+        product = {
+            "tangbuy_product_id": "TB001",
+            "source_product_id": "12345",
+            "linked_ord_lines": ["TI26060000062"],
+            "hs_mapping": {"category_id": 50003509, "category_cn_name": "测试"},
+            "mapping_record": {
+                "admin_writeback": {"status": "skipped", "skip_reason": "no_items"},
+            },
+        }
+        hs = {"category_id": 50003509, "category_cn_name": "测试"}
+        with (
+            patch.object(store, "upsert_local_mapping"),
+            patch.object(wb, "schedule_admin_writeback") as mock_schedule,
+            patch.object(wb, "should_skip_admin_writeback", return_value=(False, "")),
+            patch.object(wb, "collect_item_nos", return_value=["TI26060000062"]),
+        ):
+            store.persist_product_mapping_side_effects(
+                product,
+                hs,
+                manual=True,
+                resolution="manual_correct",
+            )
+        mock_schedule.assert_called_once()
+
+    def test_collect_item_nos_expands_to_main_order(self) -> None:
+        from app.services.category_mapping import admin_writeback_collect as collect_mod
+
+        with patch.object(collect_mod, "_expand_ord_line_ref", return_value=["TI26030000055"]):
+            product = {"linked_ord_lines": ["TO26030000056"]}
+            self.assertEqual(collect_mod.collect_item_nos(product), ["TI26030000055"])
+
     def test_push_category_skips_duplicate_without_api_call(self) -> None:
         product = {
             "source_product_id": "12345",
@@ -115,7 +201,10 @@ class AdminWritebackDedupTests(unittest.TestCase):
             },
         }
         hs = {"category_id": 50003509, "category_cn_name": "测试类目"}
-        with patch.object(wb, "change_item_category") as mock_change:
+        with (
+            patch.object(wb, "collect_item_nos", return_value=["TO26070000100"]),
+            patch.object(wb, "change_item_category") as mock_change,
+        ):
             result = wb.push_category_to_admin(product=product, hs=hs)
         self.assertEqual(result.get("status"), "ok")
         self.assertTrue(result.get("skipped_duplicate"))

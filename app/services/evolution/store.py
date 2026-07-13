@@ -287,6 +287,41 @@ def get_active_patches(skill_id: Optional[str] = None) -> list[dict[str, Any]]:
     return patches
 
 
+def get_patch_by_id(patch_id: str) -> Optional[dict[str, Any]]:
+    for p in _load_patches():
+        if p.get("id") == patch_id:
+            return p
+    return None
+
+
+def update_patch_eval_result(patch_id: str, eval_result: dict[str, Any]) -> Optional[dict[str, Any]]:
+    patches = _load_patches()
+    for p in patches:
+        if p.get("id") == patch_id:
+            p["eval_result"] = eval_result
+            _persist_patches(patches)
+            return p
+    return None
+
+
+def update_patch_gray(patch_id: str, gray_percent: int) -> Optional[dict[str, Any]]:
+    from datetime import datetime, timezone
+
+    patches = _load_patches()
+    for p in patches:
+        if p.get("id") != patch_id:
+            continue
+        pct = max(0, min(100, int(gray_percent)))
+        p["gray_percent"] = pct
+        p["active"] = p.get("status") == "deployed" and pct > 0
+        if pct >= 100:
+            p["active"] = True
+        p["updated_at"] = datetime.now(timezone.utc).isoformat()
+        _persist_patches(patches)
+        return p
+    return None
+
+
 def update_patch_status(
     patch_id: str,
     new_status: str,
@@ -295,6 +330,9 @@ def update_patch_status(
 ) -> Optional[dict[str, Any]]:
     """更新补丁状态。"""
     from datetime import datetime, timezone
+
+    from app.services.evolution.auto_deploy import first_gray_step
+
     patches = _load_patches()
     for p in patches:
         if p.get("id") == patch_id:
@@ -304,8 +342,12 @@ def update_patch_status(
                 p["approved_at"] = datetime.now(timezone.utc).isoformat()
             if new_status == "deployed":
                 p["deployed_at"] = datetime.now(timezone.utc).isoformat()
+                p["gray_percent"] = first_gray_step()
                 p["active"] = True
             if new_status in ("rolled_back", "discarded"):
+                p["active"] = False
+                p["gray_percent"] = 0
+            if new_status == "shadow":
                 p["active"] = False
             _persist_patches(patches)
             return p
@@ -355,6 +397,12 @@ def get_evolution_overview() -> dict[str, Any]:
 
     pending_patches = [p for p in patches if p.get("status") in ("draft", "pending")]
     approved_patches = [p for p in patches if p.get("status") == "approved"]
+    shadow_patches = [p for p in patches if p.get("status") == "shadow"]
+    gray_patches = [
+        p
+        for p in patches
+        if p.get("status") == "deployed" and int(p.get("gray_percent") or 0) < 100
+    ]
     active_patches = [p for p in patches if p.get("active")]
     deployed_patches = [p for p in patches if p.get("status") == "deployed"]
 
@@ -376,6 +424,8 @@ def get_evolution_overview() -> dict[str, Any]:
         "recent_reports": [r.get("id") for r in reports],
         "pending_patches": len(pending_patches),
         "approved_patches": len(approved_patches),
+        "shadow_patches": len(shadow_patches),
+        "gray_deploying": len(gray_patches),
         "active_patches": len(active_patches),
         "deployed_patches": len(deployed_patches),
         "skill_stats": skill_stats,

@@ -48,6 +48,7 @@ class SuggestBody(BaseModel):
     item_id: Optional[str] = None
     mapping_id: Optional[str] = None
     external_order_no: Optional[str] = None
+    ord_line_no: Optional[str] = None
     remap: bool = False
     hint_as_reference: bool = False
 
@@ -87,6 +88,8 @@ def suggest_run(body: SuggestBody) -> dict[str, Any]:
         image_url=body.image_url,
         skip_history=body.remap,
         hint_as_reference=body.remap or body.hint_as_reference,
+        ord_line_no=body.ord_line_no,
+        context_key=body.ord_line_no or body.goods_id,
     )
     return {
         "result": result,

@@ -369,7 +369,10 @@ def trigger_admin_writeback(request: Request, product_id: str) -> dict[str, Any]
         should_skip_admin_writeback,
     )
 
-    if should_skip_admin_writeback(product, hs, item_nos=collect_item_nos(product))[0]:
+    ids = collect_item_nos(product)
+    skip, reason = should_skip_admin_writeback(product, hs, item_nos=ids)
+    wb = (product.get("mapping_record") or {}).get("admin_writeback") or {}
+    if skip and not wb.get("needs_retry"):
         return {"product": product, "skipped_duplicate": True}
 
     from_name, to_name, from_cid, to_cid = prefetch_writeback_category_labels(product, hs)

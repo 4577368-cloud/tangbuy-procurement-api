@@ -18,6 +18,9 @@ from app.services.evolution.engine import (
     discard_patch,
     revise_patch,
     get_overview,
+    start_shadow_eval,
+    advance_patch_gray,
+    get_metrics,
 )
 from app.services.evolution.store import (
     get_feedback_records,
@@ -46,6 +49,9 @@ class FeedbackBody(BaseModel):
     error_category: Optional[str] = None
     feedback_intent: Optional[str] = "neutral"       # 【问题5修复】correction | enrichment | confirmation | neutral
     is_priority_badcase: Optional[bool] = False       # 【问题4修复】高优先级 badcase 单条可触发分析
+    title: Optional[str] = None
+    product_title: Optional[str] = None
+    context_meta: Optional[dict[str, Any]] = None
 
 
 class AnalysisBody(BaseModel):
@@ -60,7 +66,11 @@ class PatchApproveBody(BaseModel):
 
 class PatchActionBody(BaseModel):
     patch_id: str
+    force: bool = False
 
+
+class PatchEvalBody(BaseModel):
+    patch_id: str
 
 class PatchUpdateBody(BaseModel):
     patch_id: str
@@ -214,12 +224,54 @@ def approve_patch_action(request: Request, body: PatchApproveBody) -> dict[str, 
 @router.post("/patches/deploy")
 def deploy_patch_action(request: Request, body: PatchActionBody) -> dict[str, Any]:
     require_auth(request)
-    result = deploy_patch(body.patch_id)
+    result = deploy_patch(body.patch_id, force=body.force)
     if not result:
+        from app.services.evolution.store import get_patch_by_id
+
+        existing = get_patch_by_id(body.patch_id)
+        if existing and not body.force:
+            ev = existing.get("eval_result") if isinstance(existing.get("eval_result"), dict) else {}
+            if not ev.get("passed"):
+                detail = "需先完成试运行并通过"
+                if ev and not ev.get("passed"):
+                    detail = "Shadow 试运行未通过"
+                raise HTTPException(status_code=400, detail=detail)
         if is_demo_submit_always_success():
             return evolution_patch_stub(body.patch_id, "deployed")
-        raise HTTPException(status_code=404, detail="补丁不存在")
+        raise HTTPException(status_code=404, detail="补丁不存在或状态不允许部署")
     return {"ok": True, "patch": result}
+
+
+@router.post("/patches/shadow-eval")
+def shadow_eval_action(request: Request, body: PatchEvalBody) -> dict[str, Any]:
+    require_auth(request)
+    result = start_shadow_eval(body.patch_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="补丁不存在或无法试运行")
+    return {"ok": True, **result}
+
+
+@router.post("/eval")
+def shadow_eval_alias(request: Request, body: PatchEvalBody) -> dict[str, Any]:
+    return shadow_eval_action(request, body)
+
+
+@router.post("/patches/advance-gray")
+def advance_gray_action(request: Request, body: PatchActionBody) -> dict[str, Any]:
+    require_auth(request)
+    result = advance_patch_gray(body.patch_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="补丁不存在或未在灰度部署中")
+    return {"ok": True, "patch": result}
+
+
+@router.get("/metrics")
+def evolution_metrics(
+    request: Request,
+    patch_id: Optional[str] = None,
+) -> dict[str, Any]:
+    require_auth(request)
+    return get_metrics(patch_id=patch_id)
 
 
 @router.post("/patches/rollback")

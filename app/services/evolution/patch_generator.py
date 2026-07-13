@@ -151,6 +151,33 @@ def _try_extract_payload(content: str, patch_type: PatchType) -> Optional[dict[s
     return None
 
 
+def _build_threshold_payload(
+    descriptor: Any,
+    pattern: dict[str, Any],
+) -> dict[str, Any]:
+    """按技能生成 threshold_adjust 结构化 payload。"""
+    if descriptor.skill_id == "auto-release":
+        from app.config.store import get_business_config
+
+        old_val = float(get_business_config().get("gross_margin_threshold") or 15)
+        new_val = min(100.0, round(old_val + 2.0, 2))
+        return {
+            "skill_id": descriptor.skill_id,
+            "threshold_key": "gross_margin_threshold",
+            "old_value": old_val,
+            "new_value": new_val,
+            "reason": pattern.get("description"),
+        }
+    new_threshold = descriptor.auto_pass_threshold - 0.05
+    return {
+        "skill_id": descriptor.skill_id,
+        "threshold_key": "auto_pass_threshold",
+        "old_value": descriptor.auto_pass_threshold,
+        "new_value": new_threshold,
+        "reason": pattern.get("description"),
+    }
+
+
 def _build_template_patch_content(
     descriptor: Any,
     pattern: dict[str, Any],
@@ -171,20 +198,14 @@ def _build_template_patch_content(
         }, ensure_ascii=False)
 
     if patch_type == PatchType.THRESHOLD_ADJUST:
-        new_threshold = descriptor.auto_pass_threshold - 0.05
-        content = f"建议将 {descriptor.skill_name} 的 auto_pass_threshold 从 {descriptor.auto_pass_threshold} 调整为 {new_threshold}，原因: {pattern.get('description')}"
-        # 【问题3修复】payload 存结构化 JSON，不再依赖正则解析 content
-        payload = {
-            "skill_id": descriptor.skill_id,
-            "threshold_key": "auto_pass_threshold",
-            "old_value": descriptor.auto_pass_threshold,
-            "new_value": new_threshold,
-            "reason": pattern.get('description'),
-        }
-        return json.dumps({
-            "content": content,
-            "payload": payload,
-        }, ensure_ascii=False)
+        payload = _build_threshold_payload(descriptor, pattern)
+        threshold_key = payload["threshold_key"]
+        content = (
+            f"建议将 {descriptor.skill_name} 的 {threshold_key} "
+            f"从 {payload['old_value']} 调整为 {payload['new_value']}，"
+            f"原因: {pattern.get('description')}"
+        )
+        return content
 
     if patch_type == PatchType.CONTEXT_ENRICHMENT:
         return f"建议在 {descriptor.skill_name} 的上下文中补充 order_stage 字段，以帮助区分不同订单阶段的意图路由。"
@@ -199,14 +220,7 @@ def _build_template_patch_payload(
 ) -> Optional[dict[str, Any]]:
     """【问题3修复】为模板生成的补丁创建结构化 payload。"""
     if patch_type == PatchType.THRESHOLD_ADJUST:
-        new_threshold = descriptor.auto_pass_threshold - 0.05
-        return {
-            "skill_id": descriptor.skill_id,
-            "threshold_key": "auto_pass_threshold",
-            "old_value": descriptor.auto_pass_threshold,
-            "new_value": new_threshold,
-            "reason": pattern.get('description'),
-        }
+        return _build_threshold_payload(descriptor, pattern)
     if patch_type == PatchType.ROUTE_RULE:
         keyword = (pattern.get("trigger_keywords") or ["关键词"])[0]
         return {
@@ -261,32 +275,44 @@ def get_active_route_patches() -> list[dict[str, Any]]:
     return result
 
 
-def get_active_threshold_patches() -> dict[str, float]:
-    """获取所有活跃的阈值调整补丁。返回 {skill_id: new_threshold}
-    
-    【问题3修复】从 payload 字段读取结构化数据，不再用正则解析 content。
-    """
+def get_active_threshold_patches(
+    *,
+    context_key: str = "default",
+    threshold_key: str = "gross_margin_threshold",
+) -> dict[str, float]:
+    """已部署阈值补丁（含灰度分桶）。优先使用 resolve_threshold_for_skill。"""
+    from app.config.store import get_business_config
+    from app.services.evolution.policy_apply import resolve_threshold_for_skill
+
     patches = get_active_patches()
-    adjustments: dict[str, float] = {}
-    for p in patches:
-        if p.get("type") != "threshold_adjust":
+    skill_ids = {
+        str(p.get("target_skill_id") or "")
+        for p in patches
+        if str(p.get("type") or "") == "threshold_adjust"
+    }
+    out: dict[str, float] = {}
+    cfg = get_business_config()
+    for sid in skill_ids:
+        if not sid:
             continue
-        # 优先从 payload 读取（新格式）
-        payload = p.get("payload")
-        if payload and isinstance(payload, dict) and "new_value" in payload:
-            adjustments[p.get("target_skill_id")] = float(payload["new_value"])
-        else:
-            # 兼容旧格式：尝试从 content 中提取 JSON
-            content = p.get("content") or ""
-            try:
-                data = json.loads(content)
-                if isinstance(data, dict) and data.get("payload"):
-                    inner_payload = data["payload"]
-                    if "new_value" in inner_payload:
-                        adjustments[p.get("target_skill_id")] = float(inner_payload["new_value"])
-            except (json.JSONDecodeError, TypeError, ValueError):
-                pass
-    return adjustments
+        default = float(cfg.get("gross_margin_threshold") or 15) if sid == "auto-release" else 0.85
+        out[sid] = resolve_threshold_for_skill(
+            sid,
+            default,
+            context_key,
+            patches,
+            threshold_key=threshold_key if sid == "auto-release" else "auto_pass_threshold",
+        )
+    return out
+
+
+def get_active_keyword_boost_patches() -> list[dict[str, Any]]:
+    """已部署的 keyword_boost 补丁（含灰度 percent）。"""
+    return [
+        p
+        for p in get_active_patches()
+        if str(p.get("type") or "") in ("keyword_boost",)
+    ]
 
 
 # ─── 手动创建补丁 ───

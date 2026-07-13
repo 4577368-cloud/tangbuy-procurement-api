@@ -420,8 +420,14 @@ def list_pipeline_states_route(
 def get_order_pipeline(ord_line_no: str, request: Request) -> dict:
     require_auth(request)
     from app.services.orders.procurement_pipeline import get_pipeline_view
+    from app.services.workflow.aggregate import enrich_workflow_run
+    from app.services.workflow.engine import get_workflow_run_for_line
 
-    return get_pipeline_view(ord_line_no)
+    view = get_pipeline_view(ord_line_no)
+    wf = get_workflow_run_for_line(ord_line_no)
+    if wf:
+        view["workflow"] = enrich_workflow_run(wf, include_invocations=False)
+    return view
 
 
 class FlagReleaseBody(BaseModel):

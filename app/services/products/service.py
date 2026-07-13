@@ -19,6 +19,7 @@ from app.services.products.store import (
     is_valid_hs_mapping,
     load_products,
     mapping_hint_for_product,
+    RESOLVED_MAPPING_STATUSES,
     save_products,
     update_product,
 )
@@ -73,14 +74,49 @@ def _build_tier_prices(
 
 
 def _reconcile_product_writeback(product: dict[str, Any]) -> dict[str, Any]:
-    from app.services.category_mapping.admin_writeback import reconcile_stale_admin_writeback
+    from app.services.category_mapping.admin_writeback import (
+        collect_item_nos,
+        reconcile_stale_admin_writeback,
+        schedule_admin_writeback,
+        should_skip_admin_writeback,
+    )
 
     reconciled, changed = reconcile_stale_admin_writeback(product)
-    if not changed:
-        return reconciled
+    if changed:
+        pid = str(reconciled.get("tangbuy_product_id") or "").strip()
+        if pid:
+            update_product(pid, lambda _: reconciled)
+
+    wb = (reconciled.get("mapping_record") or {}).get("admin_writeback") or {}
+    hs = reconciled.get("hs_mapping")
     pid = str(reconciled.get("tangbuy_product_id") or "").strip()
-    if pid:
-        update_product(pid, lambda _: reconciled)
+    if (
+        pid
+        and wb.get("needs_retry")
+        and wb.get("status") in ("failed", "writing")
+        and isinstance(hs, dict)
+        and is_valid_hs_mapping(hs)
+    ):
+        ids = collect_item_nos(reconciled)
+        skip, _ = should_skip_admin_writeback(reconciled, hs, item_nos=ids)
+        if not skip:
+            resolution = wb.get("resolution") if wb.get("resolution") in (
+                "auto",
+                "manual_confirm",
+                "manual_correct",
+            ) else "auto"
+
+            def _mark_retrying(p: dict[str, Any]) -> dict[str, Any]:
+                mapping = dict(p.get("mapping_record") or {})
+                prev_wb = dict(mapping.get("admin_writeback") or {})
+                prev_wb.update({"status": "writing", "at": _now_iso(), "needs_retry": False})
+                mapping["admin_writeback"] = prev_wb
+                p["mapping_record"] = mapping
+                return p
+
+            update_product(pid, _mark_retrying)
+            schedule_admin_writeback(pid, hs, resolution=resolution, item_nos=ids)  # type: ignore[arg-type]
+            reconciled = store_get_product_by_id(pid) or reconciled
     return reconciled
 
 
@@ -291,6 +327,27 @@ def map_product_category_by_id(
     product = store_get_product_by_id(pid)
     if not product:
         return None
+
+    hs_existing = product.get("hs_mapping")
+    if (
+        product.get("category_status") in RESOLVED_MAPPING_STATUSES
+        and is_valid_hs_mapping(hs_existing)
+    ):
+        from app.services.category_mapping.admin_writeback import (
+            collect_item_nos,
+            reconcile_stale_admin_writeback,
+            schedule_admin_writeback,
+            should_skip_admin_writeback,
+        )
+
+        product, _ = reconcile_stale_admin_writeback(product)
+        hs = product.get("hs_mapping") or hs_existing
+        ids = collect_item_nos(product)
+        skip, _ = should_skip_admin_writeback(product, hs, item_nos=ids)
+        if skip:
+            return product
+        schedule_admin_writeback(pid, hs, resolution="auto")  # type: ignore[arg-type]
+        return store_get_product_by_id(pid) or product
 
     if product.get("category_status") == "mapping" and not is_valid_hs_mapping(product.get("hs_mapping")):
         update_product(pid, lambda p: {**p, "category_status": "pending"})

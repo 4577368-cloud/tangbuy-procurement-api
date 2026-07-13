@@ -161,3 +161,15 @@ class CategoryLocalMapping(Base):
     splr_item_id = Column(String(64), nullable=True)
     mapping_json = Column(JSON, nullable=False)
     upd_time = Column(DateTime(timezone=True), nullable=False, default=_utcnow, onupdate=_utcnow)
+
+
+class WorkflowRunRecord(Base):
+    """采购履约 WorkflowRun（ord_line_no 粒度端到端 trace）。"""
+
+    __tablename__ = "workflow_run_record"
+    __table_args__ = (Index("ix_workflow_run_updated", "upd_time"),)
+
+    ord_line_no = Column(String(64), primary_key=True)
+    run_json = Column(JSON, nullable=False)
+    crt_time = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
+    upd_time = Column(DateTime(timezone=True), nullable=False, default=_utcnow, onupdate=_utcnow)
