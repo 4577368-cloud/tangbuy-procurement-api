@@ -80,6 +80,38 @@ def ensure_workflow_run(
     return save_workflow_run(run)
 
 
+def _blocker_fingerprint(blockers: Optional[list[dict[str, Any]]]) -> str:
+    if not blockers:
+        return ""
+    keys: list[str] = []
+    for b in blockers:
+        if not isinstance(b, dict):
+            continue
+        keys.append(
+            "|".join(
+                [
+                    str(b.get("key") or ""),
+                    str(b.get("label") or ""),
+                    str(b.get("detail") or "")[:80],
+                ]
+            )
+        )
+    return ";".join(sorted(keys))
+
+
+def _step_fingerprint(entry: dict[str, Any]) -> str:
+    ev = entry.get("evidence") if isinstance(entry.get("evidence"), dict) else {}
+    return "|".join(
+        [
+            str(entry.get("step") or ""),
+            str(entry.get("status") or ""),
+            str(ev.get("pipeline_step") or ""),
+            str(ev.get("result") or ""),
+            _blocker_fingerprint(entry.get("blockers") if isinstance(entry.get("blockers"), list) else None),
+        ]
+    )
+
+
 def record_workflow_step(
     ord_line_no: str,
     step: WorkflowStep,
@@ -109,23 +141,38 @@ def record_workflow_step(
             entry["evidence"] = evidence
         if linked_refs:
             entry["linked_refs"] = linked_refs
-        history.append(entry)
+        if blockers:
+            entry["blockers"] = blockers
+
+        # 相同步骤+状态+阻塞指纹：只刷新时间，避免 sync 刷屏
+        if history and _step_fingerprint(history[-1]) == _step_fingerprint(entry):
+            history[-1] = {**history[-1], "at": entry["at"]}
+        else:
+            history.append(entry)
 
         patch: dict[str, Any] = {
             **run,
             "current_step": step,
             "status": _derive_run_status(step, status),
             "step_history": history[-100:],
+            "updated_at": _now_iso(),
         }
         if blockers is not None:
             patch["blockers"] = blockers
-        elif status == "blocked" and evidence:
-            patch["blockers"] = [
-                {
-                    "step": step,
-                    "detail": evidence.get("detail") or evidence.get("error") or str(evidence)[:200],
-                }
-            ]
+        elif status == "blocked":
+            step_blockers = entry.get("blockers")
+            if isinstance(step_blockers, list) and step_blockers:
+                patch["blockers"] = step_blockers
+            elif evidence:
+                patch["blockers"] = [
+                    {
+                        "step": step,
+                        "detail": evidence.get("summary")
+                        or evidence.get("detail")
+                        or evidence.get("error")
+                        or str(evidence)[:200],
+                    }
+                ]
         return save_workflow_run(patch)
     except Exception as exc:
         _log.warning("record_workflow_step failed ord_line=%s step=%s: %s", key, step, exc)

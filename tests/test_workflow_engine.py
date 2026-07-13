@@ -60,6 +60,21 @@ class WorkflowEngineTests(unittest.TestCase):
         self.assertEqual(loaded["status"], "blocked")
         self.assertTrue(loaded.get("blockers"))
 
+    def test_dedup_identical_pipeline_blocked(self) -> None:
+        eng.ensure_workflow_run("TI26070000101")
+        blockers = [{"key": "CAT", "label": "品类未映射", "detail": "需人工映射"}]
+        for _ in range(3):
+            eng.record_workflow_step(
+                "TI26070000101",
+                "pipeline_advance",
+                status="blocked",
+                evidence={"pipeline_step": "blocked", "summary": "备货处理：品类未映射"},
+                blockers=blockers,
+            )
+        loaded = eng.get_workflow_run_for_line("TI26070000101")
+        assert loaded is not None
+        self.assertEqual(len(loaded.get("step_history") or []), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

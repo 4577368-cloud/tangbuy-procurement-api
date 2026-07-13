@@ -25,6 +25,46 @@ def _summarize_invocations(invocations: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _step_display_summary(step: dict[str, Any]) -> str:
+    ev = step.get("evidence") if isinstance(step.get("evidence"), dict) else {}
+    summary = str(ev.get("summary") or "").strip()
+    if summary:
+        return summary
+    blockers = step.get("blockers") if isinstance(step.get("blockers"), list) else []
+    if blockers:
+        parts: list[str] = []
+        for b in blockers[:4]:
+            if not isinstance(b, dict):
+                continue
+            label = str(b.get("label") or b.get("key") or "").strip()
+            detail = str(b.get("detail") or "").strip()
+            parts.append(f"{label} · {detail}" if label and detail else label or detail)
+        return "；".join(p for p in parts if p)
+    summaries = ev.get("blocker_summaries")
+    if isinstance(summaries, list) and summaries:
+        return "；".join(str(s) for s in summaries[:4])
+    if step.get("step") == "category_map":
+        name = ev.get("category_cn_name")
+        if name:
+            return f"品类 → {name}"
+    if step.get("step") == "admin_writeback":
+        st = ev.get("status")
+        if st:
+            return f"Admin回写 {st}"
+    if step.get("step") == "release_gate":
+        failed = ev.get("failed_conditions") if isinstance(ev.get("failed_conditions"), list) else []
+        if failed:
+            return "；".join(
+                str(c.get("label") or c.get("key") or "")
+                for c in failed[:3]
+                if isinstance(c, dict)
+            )
+    pipeline_label = ev.get("pipeline_step_label") or ev.get("pipeline_step")
+    if pipeline_label:
+        return str(pipeline_label)
+    return ""
+
+
 def enrich_workflow_run(
     run: dict[str, Any],
     *,
@@ -54,6 +94,7 @@ def enrich_workflow_run(
 
     # 步骤历史 enriched：挂上该步骤的 skill 名
     history = []
+    run_blockers = run.get("blockers") if isinstance(run.get("blockers"), list) else []
     for step in run.get("step_history") or []:
         if not isinstance(step, dict):
             continue
@@ -67,6 +108,16 @@ def enrich_workflow_run(
             if name and name not in skill_names:
                 skill_names.append(name)
         row = {**step}
+        if (
+            row.get("status") == "blocked"
+            and not row.get("blockers")
+            and run_blockers
+            and stage == str(run.get("current_step") or "")
+        ):
+            row["blockers"] = run_blockers
+        display = _step_display_summary(row)
+        if display:
+            row["display_summary"] = display
         if skill_names:
             row["linked_skills"] = skill_names
         if stage_invs:
