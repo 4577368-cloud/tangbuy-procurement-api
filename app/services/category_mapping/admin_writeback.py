@@ -13,11 +13,170 @@ from app.integrations.tangbuy_admin.client import TangbuyAdminError
 
 _log = logging.getLogger(__name__)
 
+_writeback_locks: dict[str, threading.Lock] = {}
+_writeback_locks_guard = threading.Lock()
+
+
+def _writeback_lock(product_id: str) -> threading.Lock:
+    key = (product_id or "").strip()
+    with _writeback_locks_guard:
+        if key not in _writeback_locks:
+            _writeback_locks[key] = threading.Lock()
+        return _writeback_locks[key]
+
 AdminWritebackResolution = Literal["auto", "manual_confirm", "manual_correct"]
+
+WRITEBACK_STALE_SECONDS = 120
+
+_SKIP_REASON_LABELS = {
+    "no_items": "暂无可回写子单",
+    "invalid_cid": "类目无效",
+}
 
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
+
+def _writing_placeholder(
+    product: dict[str, Any],
+    hs: dict[str, Any],
+    *,
+    at: str,
+) -> dict[str, Any]:
+    from_name = str(product.get("platform_category_hint") or product.get("category") or "").strip()
+    if from_name in ("待映射", "其它", "其他"):
+        from_name = ""
+    to_name = str(hs.get("category_cn_name") or hs.get("declare_cn_name") or "").strip()
+    try:
+        to_cid = int(hs.get("category_id") or 0)
+    except (TypeError, ValueError):
+        to_cid = 0
+    return {
+        "status": "writing",
+        "at": at,
+        "from_category": from_name or None,
+        "to_category": to_name or None,
+        "from_cid": None,
+        "to_cid": to_cid or None,
+    }
+
+
+def _skipped_writeback_result(
+    *,
+    reason: str,
+    item_nos: list[str],
+    hs: dict[str, Any],
+    resolution: AdminWritebackResolution,
+    at: Optional[str] = None,
+) -> dict[str, Any]:
+    cid = target_hs_cid(hs)
+    to_name = str(hs.get("category_cn_name") or hs.get("declare_cn_name") or "").strip()
+    return {
+        "status": "skipped",
+        "at": at or _now_iso(),
+        "reason": _SKIP_REASON_LABELS.get(reason, reason),
+        "skip_reason": reason,
+        "item_nos": item_nos,
+        "to_cid": cid or None,
+        "to_category": to_name or None,
+        "resolution": resolution,
+    }
+
+
+def resolve_admin_writeback_placeholder(
+    product: dict[str, Any],
+    hs: dict[str, Any],
+    *,
+    at: str,
+    resolution: AdminWritebackResolution = "auto",
+    item_nos: Optional[list[str]] = None,
+) -> dict[str, Any]:
+    """映射确认时同步判定：可写回 → writing；否则直接终态，避免长期卡在回写中。"""
+    ids = item_nos if item_nos is not None else collect_item_nos(product)
+    skip, skip_reason = should_skip_admin_writeback(product, hs, item_nos=ids)
+    if skip:
+        if skip_reason in ("already_ok", "in_flight", "admin_already"):
+            return _build_skip_writeback_result(
+                product,
+                hs,
+                reason=skip_reason,
+                item_nos=ids,
+                resolution=resolution,
+            )
+        return _skipped_writeback_result(
+            reason=skip_reason or "skipped",
+            item_nos=ids,
+            hs=hs,
+            resolution=resolution,
+            at=at,
+        )
+    return _writing_placeholder(product, hs, at=at)
+
+
+def _parse_writeback_at(at: Optional[str]) -> Optional[datetime]:
+    if not at:
+        return None
+    raw = str(at).strip()
+    if not raw:
+        return None
+    try:
+        if raw.endswith("Z"):
+            raw = raw[:-1] + "+00:00"
+        return datetime.fromisoformat(raw)
+    except ValueError:
+        return None
+
+
+def reconcile_stale_admin_writeback(product: dict[str, Any]) -> tuple[dict[str, Any], bool]:
+    """writing 超时（含服务重启中断）→ failed / skipped，避免商品中心长期展示回写中。"""
+    mapping = dict(product.get("mapping_record") or {})
+    wb = dict(mapping.get("admin_writeback") or {})
+    if wb.get("status") != "writing":
+        return product, False
+
+    hs = product.get("hs_mapping") if isinstance(product.get("hs_mapping"), dict) else {}
+    ids = collect_item_nos(product)
+    resolution = wb.get("resolution") if wb.get("resolution") in ("auto", "manual_confirm", "manual_correct") else "auto"
+
+    if not ids:
+        mapping["admin_writeback"] = _skipped_writeback_result(
+            reason="no_items",
+            item_nos=[],
+            hs=hs or {},
+            resolution=resolution,  # type: ignore[arg-type]
+        )
+        product = {**product, "mapping_record": mapping}
+        return product, True
+
+    started = _parse_writeback_at(wb.get("at"))
+    if started is None:
+        age_seconds = WRITEBACK_STALE_SECONDS + 1
+    else:
+        age_seconds = (datetime.now(timezone.utc) - started.astimezone(timezone.utc)).total_seconds()
+
+    if age_seconds < WRITEBACK_STALE_SECONDS:
+        return product, False
+
+    if not ids:
+        mapping["admin_writeback"] = _skipped_writeback_result(
+            reason="no_items",
+            item_nos=[],
+            hs=hs or {},
+            resolution=resolution,  # type: ignore[arg-type]
+        )
+    else:
+        mapping["admin_writeback"] = {
+            **wb,
+            "status": "failed",
+            "at": _now_iso(),
+            "error": "回写未完成（可能服务重启），请重试",
+            "needs_retry": True,
+            "stale_recovered": True,
+        }
+
+    product = {**product, "mapping_record": mapping}
+    return product, True
 
 
 def admin_writeback_enabled() -> bool:
@@ -36,6 +195,117 @@ def collect_item_nos(product: dict[str, Any]) -> list[str]:
             seen.add(oid)
             out.append(oid)
     return out
+
+
+def target_hs_cid(hs: dict[str, Any]) -> int:
+    try:
+        return int(hs.get("category_id") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def local_writeback_covers(
+    prev: dict[str, Any],
+    *,
+    cid: int,
+    item_nos: list[str],
+) -> bool:
+    """本地已记录同目标类目的成功回写，且子单范围已覆盖。"""
+    if prev.get("status") != "ok":
+        return False
+    try:
+        prev_cid = int(prev.get("cid") or prev.get("to_cid") or 0)
+    except (TypeError, ValueError):
+        return False
+    if cid <= 0 or prev_cid != cid:
+        return False
+    if not item_nos:
+        return True
+    return set(item_nos) <= set(prev.get("item_nos") or [])
+
+
+def writeback_in_flight_for_same_target(
+    prev: dict[str, Any],
+    *,
+    cid: int,
+) -> bool:
+    """同目标类目已有回写任务进行中，避免并发重复提交。"""
+    if prev.get("status") != "writing":
+        return False
+    try:
+        prev_cid = int(prev.get("to_cid") or prev.get("cid") or 0)
+    except (TypeError, ValueError):
+        return False
+    return cid > 0 and prev_cid == cid
+
+
+def should_skip_admin_writeback(
+    product: dict[str, Any],
+    hs: dict[str, Any],
+    *,
+    item_nos: Optional[list[str]] = None,
+) -> tuple[bool, str]:
+    """
+    判断是否跳过 Admin 回写。
+    reason: already_ok | in_flight | admin_already | no_items | invalid_cid
+    """
+    cid = target_hs_cid(hs)
+    if cid <= 0:
+        return True, "invalid_cid"
+
+    ids = item_nos if item_nos is not None else collect_item_nos(product)
+    if not ids:
+        return True, "no_items"
+
+    prev = (product.get("mapping_record") or {}).get("admin_writeback") or {}
+    if local_writeback_covers(prev, cid=cid, item_nos=ids):
+        return True, "already_ok"
+    if writeback_in_flight_for_same_target(prev, cid=cid):
+        return True, "in_flight"
+
+    goods_id = str(product.get("source_product_id") or "").strip()
+    from_cid, _ = _fetch_admin_from_category(goods_id)
+    if from_cid > 0 and from_cid == cid:
+        return True, "admin_already"
+
+    return False, ""
+
+
+def _build_skip_writeback_result(
+    product: dict[str, Any],
+    hs: dict[str, Any],
+    *,
+    reason: str,
+    item_nos: list[str],
+    resolution: AdminWritebackResolution,
+) -> dict[str, Any]:
+    prev = (product.get("mapping_record") or {}).get("admin_writeback") or {}
+    if reason == "already_ok":
+        return {**prev, "status": "ok", "skipped_duplicate": True, "skip_reason": reason}
+    if reason == "in_flight":
+        return {**prev, "skipped_duplicate": True, "skip_reason": reason}
+
+    at = _now_iso()
+    cid = target_hs_cid(hs)
+    goods_id = str(product.get("source_product_id") or "").strip()
+    from_cid, from_name = _fetch_admin_from_category(goods_id)
+    if not from_name:
+        from_name = str(prev.get("from_category") or product.get("platform_category_hint") or "").strip()
+    to_name = str(hs.get("category_cn_name") or hs.get("declare_cn_name") or prev.get("to_category") or "").strip()
+    return {
+        "status": "ok",
+        "at": at,
+        "item_nos": item_nos,
+        "cid": cid,
+        "goods_id": goods_id or None,
+        "resolution": resolution,
+        "from_cid": from_cid or None,
+        "from_category": from_name or None,
+        "to_cid": cid,
+        "to_category": to_name or None,
+        "skipped_duplicate": True,
+        "skip_reason": reason,
+    }
 
 
 def _admin_category_label(entry: dict[str, Any]) -> tuple[int, str]:
@@ -62,6 +332,25 @@ def _fetch_admin_from_category(goods_id: str) -> tuple[int, str]:
         return 0, ""
 
 
+def prefetch_writeback_category_labels(
+    product: dict[str, Any],
+    hs: dict[str, Any],
+) -> tuple[str, str, int, int]:
+    """确认映射时预取回写前后类目名（toast 与写回结果一致）。"""
+    goods_id = str(product.get("source_product_id") or "").strip()
+    from_cid, from_name = _fetch_admin_from_category(goods_id)
+    if not from_name:
+        hint = str(product.get("platform_category_hint") or product.get("category") or "").strip()
+        if hint and hint not in ("待映射", "其它", "其他"):
+            from_name = hint
+    try:
+        to_cid = int(hs.get("category_id") or 0)
+    except (TypeError, ValueError):
+        to_cid = 0
+    to_name = str(hs.get("category_cn_name") or hs.get("declare_cn_name") or "").strip()
+    return from_name, to_name, from_cid, to_cid
+
+
 def push_category_to_admin(
     *,
     product: dict[str, Any],
@@ -84,22 +373,35 @@ def push_category_to_admin(
     if not ids:
         return {"status": "skipped", "reason": "no linked ord_line_no"}
 
-    prev = (product.get("mapping_record") or {}).get("admin_writeback") or {}
-    if (
-        prev.get("status") == "ok"
-        and int(prev.get("cid") or 0) == cid
-        and set(prev.get("item_nos") or []) >= set(ids)
-    ):
-        return {**prev, "status": "ok", "skipped_duplicate": True}
+    skip, skip_reason = should_skip_admin_writeback(product, hs, item_nos=ids)
+    if skip:
+        if skip_reason in ("already_ok", "in_flight", "admin_already"):
+            return _build_skip_writeback_result(
+                product,
+                hs,
+                reason=skip_reason,
+                item_nos=ids,
+                resolution=resolution,
+            )
+        return {"status": "skipped", "reason": skip_reason}
 
     at = _now_iso()
     goods_id = str(product.get("source_product_id") or "").strip()
+    pre = (product.get("mapping_record") or {}).get("admin_writeback") or {}
     from_cid, from_name = _fetch_admin_from_category(goods_id)
+    if not from_name:
+        from_name = str(pre.get("from_category") or "").strip()
     if not from_name:
         hint = str(product.get("platform_category_hint") or product.get("category") or "").strip()
         if hint and hint not in ("待映射", "其它", "其他"):
             from_name = hint
-    to_name = str(hs.get("category_cn_name") or "").strip()
+    try:
+        from_cid = int(from_cid or pre.get("from_cid") or 0)
+    except (TypeError, ValueError):
+        from_cid = 0
+    to_name = str(hs.get("category_cn_name") or hs.get("declare_cn_name") or "").strip()
+    if not to_name:
+        to_name = str(pre.get("to_category") or "").strip()
 
     try:
         change_item_category(item_nos=ids, cid=cid, update_goods_category=True)
@@ -192,13 +494,89 @@ def schedule_admin_writeback(
     def _run() -> None:
         from app.services.products.store import get_product_by_id, update_product
 
-        product = get_product_by_id(pid)
-        if not product:
+        lock = _writeback_lock(pid)
+        if not lock.acquire(blocking=False):
+            _log.debug("admin writeback skipped: lock busy pid=%s", pid)
             return
-        update_product(
-            pid,
-            lambda p: attach_admin_writeback(p, hs, resolution=resolution, item_nos=item_nos),
-        )
+        updated: Optional[dict[str, Any]] = None
+        try:
+            product = get_product_by_id(pid)
+            if not product:
+                return
+            ids = item_nos if item_nos is not None else collect_item_nos(product)
+            skip, skip_reason = should_skip_admin_writeback(product, hs, item_nos=ids)
+            if skip:
+                update_product(
+                    pid,
+                    lambda p: {
+                        **p,
+                        "mapping_record": {
+                            **(p.get("mapping_record") or {}),
+                            "admin_writeback": resolve_admin_writeback_placeholder(
+                                p,
+                                hs,
+                                at=_now_iso(),
+                                resolution=resolution,
+                                item_nos=ids,
+                            ),
+                        },
+                    },
+                )
+                return
+
+            updated = update_product(
+                pid,
+                lambda p: attach_admin_writeback(p, hs, resolution=resolution, item_nos=item_nos),
+            )
+            wb = (updated or {}).get("mapping_record", {}).get("admin_writeback") or {}
+            if wb.get("status") != "ok" or wb.get("skipped_duplicate"):
+                return
+
+            lines = item_nos if item_nos is not None else collect_item_nos(updated or product)
+            snapshot_ok = True
+            pipeline_errors: list[str] = []
+            try:
+                from app.services.orders import line_cache, order_line_sync
+
+                order_line_sync.refresh_ord_lines(lines)
+                line_cache.apply_category_overlay_to_lines(lines, hs, source="category_writeback")
+            except Exception as exc:
+                snapshot_ok = False
+                pipeline_errors.append(f"snapshot: {exc}")
+                _log.warning("post writeback snapshot sync failed pid=%s: %s", pid, exc)
+            try:
+                from app.services.orders.procurement_pipeline import resume_pipeline
+
+                for line_no in lines:
+                    key = str(line_no or "").strip()
+                    if not key:
+                        continue
+                    try:
+                        resume_pipeline(key, operator="category_writeback")
+                    except Exception as exc:
+                        pipeline_errors.append(f"{key}: {exc}")
+            except Exception as exc:
+                pipeline_errors.append(f"pipeline: {exc}")
+                _log.warning("resume_pipeline after category writeback failed pid=%s: %s", pid, exc)
+
+            if not snapshot_ok or pipeline_errors:
+
+                def _mark_post_sync(p: dict[str, Any]) -> dict[str, Any]:
+                    mapping = dict(p.get("mapping_record") or {})
+                    wb_row = dict(mapping.get("admin_writeback") or {})
+                    wb_row["post_sync"] = {
+                        "snapshot_refresh": "ok" if snapshot_ok else "failed",
+                        "pipeline_resume": "ok" if not pipeline_errors else "partial",
+                        "errors": pipeline_errors[:5] or None,
+                        "at": _now_iso(),
+                    }
+                    mapping["admin_writeback"] = wb_row
+                    p["mapping_record"] = mapping
+                    return p
+
+                update_product(pid, _mark_post_sync)
+        finally:
+            lock.release()
 
     threading.Thread(
         target=_run,

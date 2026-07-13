@@ -67,7 +67,7 @@ def agent_skills() -> dict[str, Any]:
 
     unified = {
         "id": UNIFIED_ASSISTANT_ID,
-        "name": "采购助手",
+        "name": "Agent助手",
         "description": "统一对话：选品、比价、寻源、催单",
         "status": "ready",
         "welcomeMessage": "需要什么？直接说；长程任务点底部标签。",
@@ -78,8 +78,10 @@ def agent_skills() -> dict[str, Any]:
 
     legacy = []
     for skill in LEGACY_SKILLS:
+        sid = skill.get("id")
+        if not sid:
+            continue
         configured = None
-        sid = skill["id"]
         if sid in (
             "1688-product-find",
             "product-compare",

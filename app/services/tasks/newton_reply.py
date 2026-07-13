@@ -9,17 +9,24 @@ ACK_PATTERNS = [
     re.compile(p)
     for p in [
         r"已向商家发起",
+        r"正在向商家发起",
         r"商家收到您的询问",
+        r"商家收到消息后会尽快回复",
         r"届时您将收到",
         r"将会.*回复",
         r"尽快回复",
         r"已为您发起",
+        r"已成功向商家发起",
         r"已发起.*询盘",
+        r"催发货询盘",
         r"询盘已提交",
+        r"询盘任务编号",
+        r"询盘内容",
         r"处理中",
         r"通常需要几分钟",
         r"无需记住任务编号",
         r"请稍候",
+        r"请稍等",
         r"正在为您",
         r"已收到您的",
         r"已为您向[\d一二三四五六七八九十]+家",
@@ -27,8 +34,17 @@ ACK_PATTERNS = [
         r"询盘表格中查看",
         r"询盘表格",
         r"您可以稍后.*查看商家",
+        r"帮您查询商家的回复结果",
+        r"如果需要针对特定工厂",
+        r"源头工厂发起询盘",
     ]
 ]
+
+ORDER_FOLLOWUP_INTERIM_RE = re.compile(
+    r"正在向商家发起|已成功向商家发起|催发货询盘|询盘任务编号|商家收到消息后会尽快回复|"
+    r"帮您查询商家的回复结果|询盘内容|请稍等",
+    re.I,
+)
 
 MERCHANT_SIGNALS = [
     re.compile(p)
@@ -91,22 +107,58 @@ def join_newton_text(messages: Optional[list[dict[str, Any]]], content: Optional
     parts = [m.get("content", "") for m in (messages or []) if m.get("content")]
     if content:
         parts.append(content)
-    return "\n\n".join(p for p in parts if p).strip()
+    combined = "\n\n".join(p for p in parts if p).strip()
+    return re.sub(r"<aside>.*?</aside>", "", combined, flags=re.I | re.S).strip()
+
+
+def looks_like_question_echo(text: str, question: Optional[str] = None) -> bool:
+    t = text.strip()
+    if not t:
+        return False
+    if not (ORDER_FOLLOWUP_INTERIM_RE.search(t) or any(p.search(t) for p in ACK_PATTERNS)):
+        return False
+    if re.search(r"询盘内容", t, re.I):
+        return True
+    if not question or not question.strip():
+        return False
+    q = question.strip()
+    for chunk in (q[:20], q[:12], q):
+        if len(chunk) >= 6 and chunk in t:
+            return True
+    return False
+
+
+def is_order_followup_ack(text: str, question: Optional[str] = None) -> bool:
+    t = join_newton_text(None, text)
+    if not t:
+        return False
+    if is_newton_platform_runtime_error(t) or is_newton_bulk_sourcing_ack(t):
+        return True
+    if looks_like_question_echo(t, question):
+        return True
+    if ORDER_FOLLOWUP_INTERIM_RE.search(t) and not DIRECT_MERCHANT_ANSWER_RE.search(t):
+        return True
+    if any(p.search(t) for p in ACK_PATTERNS) and not DIRECT_MERCHANT_ANSWER_RE.search(t):
+        if not any(p.search(t) for p in MERCHANT_SIGNALS) or looks_like_question_echo(t, question):
+            return True
+    return False
 
 
 def is_likely_merchant_reply(text: str, question: Optional[str] = None) -> bool:
     t = text.strip()
     if not t or is_newton_platform_runtime_error(t) or is_newton_bulk_sourcing_ack(t):
         return False
+    if is_order_followup_ack(t, question):
+        return False
     if any(p.search(t) for p in ACK_PATTERNS) and not any(p.search(t) for p in MERCHANT_SIGNALS):
         return False
     if DIRECT_MERCHANT_ANSWER_RE.search(t):
         return True
-    if any(p.search(t) for p in MERCHANT_SIGNALS):
+    if any(p.search(t) for p in MERCHANT_SIGNALS) and not looks_like_question_echo(t, question):
         return True
     if ASK_SELLER_ANSWER_RE.search(t):
         return True
-    if len(t) >= 24:
+    if len(t) >= 24 and not looks_like_question_echo(t, question):
         return True
     return False
 
@@ -117,7 +169,9 @@ def pick_order_followup_reply(
     question: str,
 ) -> Optional[str]:
     combined = join_newton_text(messages, content)
-    if not combined:
+    if not combined or is_order_followup_ack(combined, question):
+        return None
+    if ORDER_FOLLOWUP_INTERIM_RE.search(combined) and not DIRECT_MERCHANT_ANSWER_RE.search(combined):
         return None
     return combined if is_likely_merchant_reply(combined, question) else None
 

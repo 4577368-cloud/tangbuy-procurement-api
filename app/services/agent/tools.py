@@ -10,7 +10,6 @@ from typing import Any, Optional
 from app.core.paths import PROJECT_ROOT
 from app.integrations.newton.tasks import task_create
 from app.integrations.skill_cli import (
-    run_category_suggest,
     run_inquiry_query,
     run_inquiry_submit,
     run_procurement_inquiry,
@@ -27,7 +26,7 @@ from app.services.products.find_cache import (
     extract_products_from_tool_result,
     upsert_find_cache_items,
 )
-from app.services.products.store import confirm_product_mapping, find_by_source_product_id, update_product
+from app.services.products.store import confirm_product_mapping, find_by_source_product_id, finalize_product_mapping_confirm, update_product
 from app.services.tasks.supplychain import create_supplychain_inquiry_task, parse_supplychain_query
 
 _SCRIPTS = PROJECT_ROOT / "scripts"
@@ -92,6 +91,28 @@ def _build_suggest_markdown(result: dict[str, Any]) -> str:
     if result.get("match_detail"):
         lines.append(f"- **说明**: {result['match_detail']}")
     return "\n".join(lines)
+
+
+def _suggest_result_from_product(product: dict[str, Any]) -> dict[str, Any]:
+    hs = product.get("hs_mapping") if isinstance(product.get("hs_mapping"), dict) else {}
+    rec = product.get("mapping_record") if isinstance(product.get("mapping_record"), dict) else {}
+    status = str(product.get("category_status") or "")
+    ok = status in ("auto_passed", "confirmed", "needs_review", "mapping")
+    return {
+        "success": ok and bool(hs.get("category_id") or rec.get("category_id")),
+        "decision": rec.get("decision", ""),
+        "category_id": hs.get("category_id") or rec.get("category_id") or 0,
+        "category_cn_name": hs.get("category_cn_name") or rec.get("category_cn_name", ""),
+        "category_en_name": hs.get("category_en_name") or rec.get("category_en_name", ""),
+        "hs_code": hs.get("hs_code") or rec.get("hs_code", ""),
+        "declare_cn_name": hs.get("declare_cn_name") or rec.get("declare_cn_name", ""),
+        "declare_en_name": hs.get("declare_en_name") or rec.get("declare_en_name", ""),
+        "tariff": hs.get("tariff") or rec.get("tariff"),
+        "matched_keywords": rec.get("matched_keywords"),
+        "vision_summary": rec.get("vision_summary"),
+        "match_detail": rec.get("match_detail"),
+        "error": None if ok else "映射未完成",
+    }
 
 
 def execute_tool(
@@ -341,35 +362,39 @@ def execute_tool(
         }
 
     if tool_name == "category_map_suggest":
+        goods_id = (args.get("goods_id") or "").strip()
         title = (args.get("title") or "").strip()
+        product = find_by_source_product_id(goods_id) if goods_id else None
+        if not title and product:
+            title = str(product.get("product_name") or "").strip()
         if not title:
             return {"success": False, "markdown": "❌ 需要商品标题 title"}
-        result = run_category_suggest(
-            title,
-            hint=(args.get("hint") or "").strip() or None,
-            goods_id=(args.get("goods_id") or "").strip() or None,
-            image_url=(args.get("image_url") or "").strip() or None,
-        )
+
         write_back = ""
-        goods_id = (args.get("goods_id") or "").strip()
-        if result.get("success") and goods_id:
-            product = find_by_source_product_id(goods_id)
-            if product:
-                hs = {
-                    "category_id": result.get("category_id", 0),
-                    "category_cn_name": result.get("category_cn_name", ""),
-                    "category_en_name": result.get("category_en_name", ""),
-                    "hs_code": result.get("hs_code", ""),
-                    "declare_cn_name": result.get("declare_cn_name", ""),
-                    "declare_en_name": result.get("declare_en_name", ""),
-                    "tariff": result.get("tariff"),
-                }
-                updated = update_product(
-                    product["tangbuy_product_id"],
-                    lambda p: confirm_product_mapping(p, hs),
-                )
-                if updated:
-                    write_back = f"\n\n✅ 已写入商品中心（{product['tangbuy_product_id']}）。"
+        if product:
+            from app.services.products.service import map_product_category_by_id
+
+            updated = map_product_category_by_id(product["tangbuy_product_id"])
+            if not updated:
+                return {"success": False, "markdown": "❌ 映射执行失败"}
+            result = _suggest_result_from_product(updated)
+            pid = product["tangbuy_product_id"]
+            status = str(updated.get("category_status") or "")
+            if status in ("auto_passed", "confirmed"):
+                write_back = f"\n\n✅ 已写入商品中心（{pid}）。"
+            elif status == "needs_review":
+                write_back = f"\n\n⚠️ 建议已生成，需在商品中心复核（{pid}）。"
+            else:
+                write_back = f"\n\n商品中心状态：{status}（{pid}）"
+        else:
+            from app.services.category_mapping.suggest import run_category_mapping_suggest
+
+            result = run_category_mapping_suggest(
+                title,
+                hint=(args.get("hint") or "").strip() or None,
+                goods_id=goods_id or None,
+                image_url=(args.get("image_url") or "").strip() or None,
+            )
         return {
             "success": bool(result.get("success")),
             "markdown": _build_suggest_markdown(result) + write_back,
@@ -402,8 +427,9 @@ def execute_tool(
         }
         updated = update_product(
             product["tangbuy_product_id"],
-            lambda p: confirm_product_mapping(p, hs, manual=True),
+            lambda p: confirm_product_mapping(p, hs, manual=True, defer_side_effects=True),
         )
+        finalize_product_mapping_confirm(updated, manual=True, resolution="manual_correct")
         if not updated:
             return {"success": False, "markdown": "❌ 写入失败"}
         return {

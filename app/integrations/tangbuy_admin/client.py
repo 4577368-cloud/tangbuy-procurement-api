@@ -53,6 +53,18 @@ def _parse_admin_response(raw: dict[str, Any]) -> dict[str, Any]:
     return data if isinstance(data, dict) else {"raw": raw}
 
 
+def _check_admin_code(raw: dict[str, Any]) -> None:
+    code = raw.get("code")
+    if code in (401, "401"):
+        raise TangbuyAdminError(
+            "Admin Token 已失效：请登录 admin.tangbuy.cc 复制新 Admin-Token 到 TANGBUY_ADMIN_TOKEN 并重启 API",
+            status=401,
+        )
+    if code not in (200, "200", 0, "0"):
+        msg = raw.get("msg") or f"Admin 返回 code={code}"
+        raise TangbuyAdminError(msg, status=int(code) if str(code).isdigit() else None)
+
+
 def admin_post_any(path: str, body: dict[str, Any], *, timeout: int = 45) -> Any:
     """POST Admin API，返回 data 字段（可为 list 或 dict）。"""
     settings = get_settings()
@@ -70,6 +82,40 @@ def admin_post_any(path: str, body: dict[str, Any], *, timeout: int = 45) -> Any
         if not isinstance(raw, dict):
             raise TangbuyAdminError("Admin 响应格式异常")
         return _parse_admin_response_data(raw)
+    except TangbuyAdminError:
+        raise
+    except RuntimeError as exc:
+        msg = str(exc)
+        if msg.startswith("HTTP "):
+            parts = msg.split(":", 1)
+            status = int(parts[0].replace("HTTP ", "").split()[0]) if "HTTP " in parts[0] else None
+            raise TangbuyAdminError(f"Admin {msg}", status=status) from exc
+        raise TangbuyAdminError(f"Admin {msg}") from exc
+
+
+def admin_get_any(
+    path: str,
+    *,
+    params: Optional[dict[str, Any]] = None,
+    timeout: int = 45,
+) -> dict[str, Any]:
+    """GET Admin API，返回完整 JSON 体（部分接口 rows 在顶层而非 data 内）。"""
+    settings = get_settings()
+    normalized = path if path.startswith("/") else f"/{path}"
+    url = f"{settings.tangbuy_admin_base_url.rstrip('/')}{normalized}"
+    try:
+        raw = request_json(
+            "GET",
+            url,
+            headers=_admin_headers(),
+            params=params,
+            timeout=timeout,
+            connect_ip=settings.tangbuy_admin_connect_ip,
+        )
+        if not isinstance(raw, dict):
+            raise TangbuyAdminError("Admin 响应格式异常")
+        _check_admin_code(raw)
+        return raw
     except TangbuyAdminError:
         raise
     except RuntimeError as exc:

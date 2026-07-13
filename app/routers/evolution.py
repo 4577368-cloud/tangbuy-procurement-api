@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from app.api.deps import require_auth
+from app.config.demo_submit import evolution_patch_stub, is_demo_submit_always_success
 from app.services.evolution.engine import (
     capture_feedback,
     trigger_analysis,
@@ -15,6 +16,7 @@ from app.services.evolution.engine import (
     deploy_patch,
     rollback_patch,
     discard_patch,
+    revise_patch,
     get_overview,
 )
 from app.services.evolution.store import (
@@ -58,6 +60,12 @@ class PatchApproveBody(BaseModel):
 
 class PatchActionBody(BaseModel):
     patch_id: str
+
+
+class PatchUpdateBody(BaseModel):
+    patch_id: str
+    content: str
+    payload: Optional[dict[str, Any]] = None
 
 
 class ReplayBody(BaseModel):
@@ -197,6 +205,8 @@ def approve_patch_action(request: Request, body: PatchApproveBody) -> dict[str, 
     user = require_auth(request)
     result = approve_patch(body.patch_id, approved_by=user.account)
     if not result:
+        if is_demo_submit_always_success():
+            return evolution_patch_stub(body.patch_id, "approved")
         raise HTTPException(status_code=404, detail="补丁不存在")
     return {"ok": True, "patch": result}
 
@@ -206,6 +216,8 @@ def deploy_patch_action(request: Request, body: PatchActionBody) -> dict[str, An
     require_auth(request)
     result = deploy_patch(body.patch_id)
     if not result:
+        if is_demo_submit_always_success():
+            return evolution_patch_stub(body.patch_id, "deployed")
         raise HTTPException(status_code=404, detail="补丁不存在")
     return {"ok": True, "patch": result}
 
@@ -224,5 +236,18 @@ def discard_patch_action(request: Request, body: PatchActionBody) -> dict[str, A
     require_auth(request)
     result = discard_patch(body.patch_id)
     if not result:
+        if is_demo_submit_always_success():
+            return evolution_patch_stub(body.patch_id, "discarded")
         raise HTTPException(status_code=404, detail="补丁不存在")
+    return {"ok": True, "patch": result}
+
+
+@router.post("/patches/update")
+def update_patch_action(request: Request, body: PatchUpdateBody) -> dict[str, Any]:
+    require_auth(request)
+    result = revise_patch(body.patch_id, body.content, payload=body.payload)
+    if not result:
+        if is_demo_submit_always_success():
+            return evolution_patch_stub(body.patch_id, "approved")
+        raise HTTPException(status_code=404, detail="补丁不存在或不可编辑")
     return {"ok": True, "patch": result}

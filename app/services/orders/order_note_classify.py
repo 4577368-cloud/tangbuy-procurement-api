@@ -11,6 +11,7 @@ from typing import Any, Literal, Optional
 
 from app.core.config import get_settings
 from app.core.paths import data_dir
+from app.db.session import db_session, is_db_enabled
 
 NoteTier = Literal["none", "low", "high"]
 NoteTopic = Literal[
@@ -134,6 +135,12 @@ def _normalize(text: str) -> str:
 
 
 def _load_cache() -> dict[str, dict[str, Any]]:
+    if is_db_enabled():
+        from app.db.catalog_repos import ConfigRepository
+
+        with db_session() as session:
+            raw = ConfigRepository(session).load_document(ConfigRepository.NOTE_CLASSIFY_CACHE_KEY)
+            return raw if isinstance(raw, dict) else {}
     if not _CACHE_PATH.exists():
         return {}
     try:
@@ -144,11 +151,17 @@ def _load_cache() -> dict[str, dict[str, Any]]:
 
 
 def _save_cache(cache: dict[str, dict[str, Any]]) -> None:
-    _CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    # 控制体积
     items = list(cache.items())[-500:]
+    payload = dict(items)
+    if is_db_enabled():
+        from app.db.catalog_repos import ConfigRepository
+
+        with db_session() as session:
+            ConfigRepository(session).save_document(ConfigRepository.NOTE_CLASSIFY_CACHE_KEY, payload)
+        return
+    _CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
     _CACHE_PATH.write_text(
-        json.dumps(dict(items), ensure_ascii=False, indent=2) + "\n",
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
 
@@ -274,6 +287,7 @@ def classify_order_note(
     text: Optional[str],
     *,
     item_attr: Optional[str] = None,
+    allow_llm: bool = True,
 ) -> NoteClassification:
     """分级用户备注。待采购场景：high → 拦截；low → 忽略。"""
     note = _normalize(text or "")
@@ -292,9 +306,10 @@ def classify_order_note(
     if ruled is not None:
         return ruled
 
-    llm = _classify_with_llm(note)
-    if llm is not None:
-        return llm
+    if allow_llm:
+        llm = _classify_with_llm(note)
+        if llm is not None:
+            return llm
 
     # 无法判定：保守拦截，进指挥中心人工看
     return NoteClassification(
@@ -308,11 +323,19 @@ def classify_order_note(
     )
 
 
-def enrich_row_note_fields(row: dict[str, Any]) -> dict[str, Any]:
+def enrich_row_note_fields(
+    row: dict[str, Any],
+    *,
+    allow_llm: bool = True,
+) -> dict[str, Any]:
     """在宽表行上附加备注分级（供 UI / 规则引擎）。"""
     note = row.get("usr_rmk") or row.get("ord_rmk") or row.get("rmk") or row.get("item_rmk")
     item_attr = row.get("item_attr") or row.get("item_attr_cn")
-    cls = classify_order_note(str(note) if note else None, item_attr=str(item_attr) if item_attr else None)
+    cls = classify_order_note(
+        str(note) if note else None,
+        item_attr=str(item_attr) if item_attr else None,
+        allow_llm=allow_llm,
+    )
     pub = cls.to_public()
     row["note_tier"] = pub["tier"]
     row["note_topics"] = pub["topics"]

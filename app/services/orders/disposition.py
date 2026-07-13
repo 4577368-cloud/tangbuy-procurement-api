@@ -1,4 +1,4 @@
-"""指挥中心处置写回 — manual_confirm / procurement_pass。"""
+"""指挥中心处置写回 — manual_confirm / generate_1688_order。"""
 
 from __future__ import annotations
 
@@ -8,6 +8,14 @@ from typing import Any, Optional
 from app.core.config import get_settings
 from app.integrations.tangbuy_admin.client import TangbuyAdminError, admin_post
 from app.services.orders import disposition_store
+from app.services.orders.procurement_release import (
+    ProcurementReleaseError,
+    submit_1688_pre_purchase,
+)
+from app.services.orders.procurement_place_order import (
+    ProcurementPlaceOrderError,
+    submit_1688_place_order,
+)
 from app.services.orders.queue_filters import resolve_order_queue
 from app.services.orders.service import get_ord_line
 
@@ -63,6 +71,93 @@ def submit_disposition(
             "换供请调用 POST /api/products/switch-supplier",
             code="use_switch_supplier",
         )
+
+    if action_key == "generate_1688_order":
+        try:
+            result = submit_1688_pre_purchase(
+                key,
+                operator=operator,
+                trigger="disposition",
+                force=True,
+            )
+        except ProcurementReleaseError as exc:
+            raise DispositionError(str(exc), code=exc.code) from exc
+        release = result.get("release") or {}
+        return {
+            "ok": True,
+            "ord_line_no": key,
+            "action_key": action_key,
+            "stage_before": "pending_procurement",
+            "stage_after": release.get("stage_after") or "pending_procurement",
+            "admin_write": result.get("admin_write", "ok"),
+            "ord_line_stat_before": result.get("ord_line_stat_before"),
+            "ord_line_stat_after": result.get("ord_line_stat_after"),
+            "auto_confirmed": result.get("auto_confirmed"),
+            "release_id": release.get("release_id"),
+        }
+
+    if action_key == "place_1688_order":
+        try:
+            result = submit_1688_place_order(
+                [key],
+                operator=operator,
+                trigger="disposition",
+                merge_same_store=True,
+            )
+        except ProcurementPlaceOrderError as exc:
+            raise DispositionError(str(exc), code=exc.code) from exc
+        batches = result.get("batches") or []
+        first_release = (batches[0] or {}).get("release") if batches else {}
+        return {
+            "ok": True,
+            "ord_line_no": key,
+            "action_key": action_key,
+            "stage_before": "pending_procurement",
+            "stage_after": "pending_payment",
+            "admin_write": (batches[0] or {}).get("admin_write", "ok") if batches else "ok",
+            "ord_line_stat_before": 54,
+            "ord_line_stat_after": result.get("ord_line_stat_after"),
+            "release_id": first_release.get("release_id"),
+            "batches": batches,
+        }
+
+    if action_key == "ack_blocker":
+        from app.services.orders.procurement_pipeline import ack_blocker_and_resume
+
+        blocker_key = (override_reason or action_label or "").strip()
+        if not blocker_key:
+            raise DispositionError("缺少 blocker_key", code="missing_blocker_key")
+        try:
+            result = ack_blocker_and_resume(key, blocker_key, operator=operator)
+        except Exception as exc:
+            raise DispositionError(str(exc), code="ack_failed") from exc
+        state = result.get("state") or {}
+        return {
+            "ok": bool(result.get("ok")),
+            "ord_line_no": key,
+            "action_key": action_key,
+            "blocker_key": blocker_key,
+            "pipeline_step": state.get("pipeline_step"),
+            "blockers": state.get("blockers"),
+            "ord_line_stat_after": state.get("ord_line_stat"),
+        }
+
+    if action_key == "resume_pipeline":
+        from app.services.orders.procurement_pipeline import resume_pipeline
+
+        try:
+            result = resume_pipeline(key, operator=operator)
+        except Exception as exc:
+            raise DispositionError(str(exc), code="pipeline_failed") from exc
+        state = result.get("state") or {}
+        return {
+            "ok": bool(result.get("ok")),
+            "ord_line_no": key,
+            "action_key": action_key,
+            "pipeline_step": state.get("pipeline_step"),
+            "blockers": state.get("blockers"),
+            "ord_line_stat_after": state.get("ord_line_stat"),
+        }
 
     if action_key != "manual_confirm":
         raise DispositionError(f"暂不支持动作：{action_key}", code="unsupported_action")

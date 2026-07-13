@@ -9,6 +9,9 @@ data/products/*.bak*
 data/agent/tasks.json
 data/orders/line-cache.json
 data/orders/sync-state.json
+data/tangbuy.db
+data/tangbuy.db-shm
+data/tangbuy.db-wal
 data/integrations/
 workspace/
 *.egg-info/

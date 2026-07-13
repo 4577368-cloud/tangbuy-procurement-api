@@ -301,7 +301,14 @@ def enrich_product_by_id(product_id: str) -> dict[str, Any]:
             "error": "无商品链接，无法拉取运费",
         }
 
-    update_product(product_id, lambda p: {**p, "enrichment_status": "running"})
+    update_product(
+        product_id,
+        lambda p: {
+            **p,
+            "enrichment_status": "running",
+            "enrichment_started_at": _now_iso(),
+        },
+    )
 
     item: Optional[dict[str, Any]] = None
     page_url = page_urls[0]

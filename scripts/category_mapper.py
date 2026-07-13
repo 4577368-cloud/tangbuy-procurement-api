@@ -24,6 +24,8 @@ from category_heuristics import (
     label_fit_adjustment,
     load_learned_anchor_penalties,
     seed_domain_multiplier,
+    term_catalog_extension_mismatch,
+    term_catalog_extension_penalty,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -39,6 +41,49 @@ ATTRIBUTE_TERMS = {
     "新款", "爆款", "热卖", "潮款", "欧美", "跨境", "外贸", "中东", "阿拉", "穆斯林",
     "长袖", "短袖", "中袖", "无袖", "七分", "高领", "圆领", "立领", "翻领", "方领",
     "黑色", "白色", "红色", "蓝色", "绿色", "灰色", "粉色", "米色", "卡其", "驼色",
+}
+
+# 场景/用途修饰：标题常见但不是申报品类（如「户外运动胸包」里的户外运动）
+SCENE_DESCRIPTOR_TERMS = {
+    "户外运动", "休闲运动", "运动休闲", "休闲旅游", "健身运动", "户外休闲",
+    "居家", "室内", "室外", "旅行", "旅游", "运动",
+}
+
+# 地域/风格修饰：不是商品品类（如「非洲辫假发」里的非洲 → 非洲鼓）
+GEOGRAPHIC_REGION_TERMS = {
+    "非洲", "欧洲", "亚洲", "美洲", "大洋洲", "北欧", "南美", "北美", "东亚", "西欧",
+    "东南亚", "中东", "日式", "韩式", "欧美", "法式", "英式", "美式", "中式", "港风",
+    "非洲风", "波西米亚",
+}
+
+# 包袋类商品名词（长词优先匹配，避免「肩胸包斜跨包」整段误识别）
+BAG_NOUN_PATTERNS = (
+    "双肩背包", "单肩背包", "斜挎包", "斜跨包", "胸包", "腰包", "手提包",
+    "单肩包", "双肩包", "背包", "挎包", "手包", "拎包", "休闲包", "运动包", "配件包",
+)
+
+# 标题词 → 类目检索别名（如「胸包」叶子类目缺 HS，回退到「斜挎包」等同 HS 叶子）
+TERM_CATALOG_ALIASES: dict[str, list[str]] = {
+    "胸包": ["胸包", "斜挎包", "斜跨包", "单肩包", "腰包", "挎包"],
+    "斜跨包": ["斜挎包", "斜跨包", "胸包", "单肩包"],
+    "斜挎包": ["斜挎包", "斜跨包", "胸包"],
+    # 石器类：标题常见词在类目库中无直接对应，回退到有 HS 编码的石器类目
+    "石槽": ["石雕", "仿古石器", "石器", "石制品"],
+    "石磨": ["石雕", "仿古石器", "石器", "石制品"],
+    "石磨盘": ["石雕", "仿古石器", "石器", "石制品"],
+    "老石器": ["仿古石器", "石雕", "石器", "石制品"],
+    "青石板": ["石雕", "大理石制品", "仿古石器", "石制品"],
+    "石盆": ["石雕", "仿古石器", "石器", "石制品"],
+    "石臼": ["石雕", "仿古石器", "石器", "石制品"],
+    "石灯笼": ["石雕", "仿古石器", "石器", "石制品"],
+    "石条": ["石雕", "大理石制品", "仿古石器", "石制品"],
+    "石缸": ["石雕", "仿古石器", "石器", "石制品"],
+    "石钵": ["石雕", "仿古石器", "石器", "石制品"],
+    "石桌": ["大理石餐桌", "石雕", "仿古石器", "石制品"],
+    "石凳": ["大理石餐桌", "石雕", "仿古石器", "石制品"],
+    # 假发类：避免「发套」误撞沙发垫类目
+    "发套": ["假发", "发套", "假发套", "美发", "接发"],
+    "假发": ["假发", "发套", "美发", "接发", "假发套"],
 }
 
 # 泛父类词：见 category_heuristics（类目库自动归纳 + 人工种子）
@@ -183,7 +228,7 @@ DIMENSION_COMPARE_KEYS = (
 )
 
 
-def category_label_fit(term: str, cn: str, dec: str) -> float:
+def category_label_fit(term: str, cn: str, dec: str, title: str = "") -> float:
     """语义词与类目名的贴合：完全命中具体类目 > 泛词蹭进长路径 > 申报名碰撞降权。"""
     if not term:
         return 0.0
@@ -191,7 +236,10 @@ def category_label_fit(term: str, cn: str, dec: str) -> float:
     if term == cn or term == dec:
         base = 1.0
     elif cn.startswith(term) or (dec and dec.startswith(term)):
-        base = 0.92
+        if term_catalog_extension_mismatch(term, cn, dec, title):
+            base = 0.24
+        else:
+            base = 0.92
     elif term in cn or (dec and term in dec):
         host = cn if term in cn else dec
         extra = max(0, len(host) - len(term))
@@ -217,6 +265,8 @@ def dominant_product_signals(title: str, hint: str = "") -> list[tuple[str, int]
     """从标题+平台类目提取主商品词及频次。"""
     counts: dict[str, int] = {}
     blob = title or ""
+    for noun in extract_product_nouns(blob):
+        counts[noun] = counts.get(noun, 0) + blob.count(noun)
     for en, zh in EN_PRODUCT_NOUN_MAP.items():
         n = len(re.findall(rf"\b{en}\b", blob.lower()))
         if n:
@@ -224,7 +274,11 @@ def dominant_product_signals(title: str, hint: str = "") -> list[tuple[str, int]
     for term in re.findall(r"[\u4e00-\u9fff]{2,6}", blob):
         if term in TITLE_SEMANTIC_NOISE or term in AUDIENCE_DESCRIPTOR_TERMS:
             continue
+        if term in SCENE_DESCRIPTOR_TERMS:
+            continue
         if term in ANIMAL_DESCRIPTOR_TERMS and "绒" not in blob[max(0, blob.find(term) - 1) : blob.find(term) + len(term) + 1]:
+            continue
+        if any(term in noun or noun in term for noun in counts):
             continue
         if term.endswith(("袜", "鞋", "靴", "帽", "包", "裙", "裤", "衣", "服", "被", "毯", "枕", "巾")):
             counts[term] = counts.get(term, 0) + blob.count(term)
@@ -294,7 +348,9 @@ def compute_candidate_dimensions(
     return {
         "term_match": round(1.0 if term_in_title else (0.65 if term_in_cat else 0.0), 3),
         "term_frequency": freq,
-        "label_fit": round(category_label_fit(term, cn, dec) * term_position_bonus(term, title), 3),
+        "label_fit": round(
+            category_label_fit(term, cn, dec, title) * term_position_bonus(term, title), 3
+        ),
         "catalog_fit": round(min(1.0, catalog_fit * uniform_bonus), 3),
         "term_specificity": round(term_specificity_bonus(term, all_terms or []), 3),
         "vision": round(1.0 if term in vision_keywords else 0.0, 3),
@@ -357,6 +413,10 @@ def compute_separation(top: dict, second: dict) -> dict:
 def classify_term(term: str) -> str:
     """term -> 'attribute' | 'generic' | 'specific'"""
     if term in ATTRIBUTE_TERMS:
+        return "attribute"
+    if term in SCENE_DESCRIPTOR_TERMS:
+        return "attribute"
+    if term in GEOGRAPHIC_REGION_TERMS:
         return "attribute"
     if term in AUDIENCE_DESCRIPTOR_TERMS or term in ANIMAL_DESCRIPTOR_TERMS:
         return "attribute"
@@ -617,16 +677,31 @@ def _catalog_semantic_terms() -> set[str]:
     return terms
 
 
+def extract_product_nouns(title: str) -> list[str]:
+    """从标题按长度优先抽取包袋等具体商品名词。"""
+    title = title or ""
+    found: list[str] = []
+    for noun in sorted(BAG_NOUN_PATTERNS, key=len, reverse=True):
+        if noun in title:
+            found.append(noun)
+    return list(dict.fromkeys(found))
+
+
 def extract_title_semantics(title: str) -> list[str]:
     """从标题抽取可能指向不同品类的语义词。"""
     noise = TITLE_SEMANTIC_NOISE
     catalog_terms = _catalog_semantic_terms()
     title = title or ""
-    raw: list[str] = []
+    product_nouns = extract_product_nouns(title)
+    raw: list[str] = list(product_nouns)
     for n in (4, 3, 2):
         for i in range(max(0, len(title) - n + 1)):
             seg = title[i : i + n]
             if seg in noise or seg not in catalog_terms:
+                continue
+            if product_nouns and seg in SCENE_DESCRIPTOR_TERMS:
+                continue
+            if product_nouns and seg in GEOGRAPHIC_REGION_TERMS:
                 continue
             raw.append(seg)
 
@@ -645,16 +720,37 @@ def extract_title_semantics(title: str) -> list[str]:
     return found[:10]
 
 
-def _catalog_pick_rank(term: str, entry: dict, learned_anchors: dict[str, float] | None = None) -> tuple:
-    """同分候选：类目名直贴语义词 > 仅申报名蹭词 > 领域/锚点证据。"""
+def _catalog_pick_rank(
+    term: str,
+    entry: dict,
+    learned_anchors: dict[str, float] | None = None,
+    title: str = "",
+) -> tuple:
+    """同分候选：申报名/类目名直贴语义词 > 前缀蹭词 > 领域/锚点证据。"""
     cn = entry.get("cn_name", "") or ""
     dec = entry.get("dec_cn_name", "") or ""
     exact_cn = cn == term
+    exact_dec = dec == term
     cn_has = term in cn
     dec_only = (term in dec) and not cn_has
+    extension_bad = term_catalog_extension_mismatch(term, cn, dec, title)
     domain_penalty = seed_domain_multiplier("", cn, dec)
     anchor_penalty = evidence_multiplier("", cn, dec, None, learned_anchors)
-    return (exact_cn, cn_has and not exact_cn, not dec_only, domain_penalty, anchor_penalty)
+    return (
+        exact_cn or exact_dec,
+        exact_dec,
+        exact_cn,
+        not extension_bad,
+        cn_has and not exact_cn,
+        not dec_only,
+        domain_penalty,
+        anchor_penalty,
+    )
+
+
+def _search_terms_for(term: str) -> list[str]:
+    aliases = TERM_CATALOG_ALIASES.get(term, [])
+    return list(dict.fromkeys([term, *aliases]))
 
 
 def _best_catalog_for_term(
@@ -671,24 +767,45 @@ def _best_catalog_for_term(
     learned_anchors = learned_anchors or {}
     best_score = 0.0
     best_entry: dict | None = None
-    for entry in catalog["list"]:
-        cn = entry.get("cn_name", "")
-        dec = entry.get("dec_cn_name", "")
-        if term not in cn and term not in dec and term not in title:
-            continue
-        s = score_catalog_entry(title, title_tokens, hint, entry)
-        if term in cn or term in dec:
-            s += 0.45
-        if term in vision_keywords:
-            s += 0.35
-        s += domain_alignment_bonus(title, vision_keywords, cn, dec)
-        # 反馈学习：该判别词对此类目的正/负加权
-        s += boosts.get(f"{term}:{entry.get('cid')}", 0.0)
-        rank = _catalog_pick_rank(term, entry, learned_anchors)
-        if s > best_score or (s == best_score and rank > _catalog_pick_rank(term, best_entry or {}, learned_anchors)):
-            best_score = s
-            best_entry = entry
-    if not best_entry or best_score < 0.12:
+    best_match_term = term
+    scored: list[tuple[float, dict, str]] = []
+    for match_term in _search_terms_for(term):
+        for entry in catalog["list"]:
+            cn = entry.get("cn_name", "")
+            dec = entry.get("dec_cn_name", "")
+            # 语义词必须出现在类目名/申报名中才参与打分，
+            # 不能仅因出现在标题中就跨类匹配到不相关类目（如「石槽」→「路由器」）
+            if match_term not in cn and match_term not in dec:
+                continue
+            s = score_catalog_entry(title, title_tokens, hint, entry)
+            if match_term in cn or match_term in dec:
+                s += 0.45
+            if cn == match_term:
+                s += 0.2
+            if dec == match_term:
+                s += 0.28
+            if match_term == term:
+                s += 0.08
+            if match_term in vision_keywords or term in vision_keywords:
+                s += 0.35
+            s -= term_catalog_extension_penalty(match_term, cn, dec, title)
+            s += domain_alignment_bonus(title, vision_keywords, cn, dec)
+            # 反馈学习：该判别词对此类目的正/负加权
+            s += boosts.get(f"{term}:{entry.get('cid')}", 0.0)
+            scored.append((s, entry, match_term))
+    if not scored:
+        return None
+    with_hs = [(s, e, t) for s, e, t in scored if valid_hs(e.get("hs_code"))]
+    pool = with_hs if with_hs else scored
+    best_score, best_entry, best_match_term = max(
+        pool,
+        key=lambda row: (
+            row[0],
+            valid_hs(row[1].get("hs_code")),
+            _catalog_pick_rank(row[2], row[1], learned_anchors, title),
+        ),
+    )
+    if best_score < 0.12:
         return None
     return best_score, best_entry
 
@@ -728,11 +845,16 @@ def rank_semantic_candidates(
             term, title, title_tokens, hint, vision_keywords, entry, boost, kind, semantics
         )
         conf = confidence_from_dimensions(dims)
+        cn_name = entry["cn_name"]
+        dec_name = entry.get("dec_cn_name", "")
+        reason = ""
+        if term_catalog_extension_mismatch(term, cn_name, dec_name, title):
+            reason = f"标题词「{term}」与报关类目「{cn_name}」不是同一商品，已降权"
         raw.append(
             {
                 "label": term,
                 "category_id": entry["cid"],
-                "category_cn_name": entry["cn_name"],
+                "category_cn_name": cn_name,
                 "category_en_name": entry.get("en_name", ""),
                 "hs_code": entry.get("hs_code", ""),
                 "declare_cn_name": entry.get("dec_cn_name", ""),
@@ -745,6 +867,7 @@ def rank_semantic_candidates(
                 "is_generic": kind == "generic",
                 "matched_keywords": [term],
                 "sources": sources,
+                **({"reason": reason} if reason else {}),
             }
         )
 
@@ -794,6 +917,48 @@ def rank_semantic_candidates(
                     if not item.get("reason"):
                         item["reason"] = f"与标题主商品「{top_term}」不一致，已降权"
 
+    bag_nouns = extract_product_nouns(title)
+    dominant_terms = [t for t, _ in dominant_product_signals(title, hint)[:4]]
+    anchor_nouns = list(dict.fromkeys([*bag_nouns, *dominant_terms]))
+    if anchor_nouns:
+        for item in by_label.values():
+            label = str(item.get("label", ""))
+            cn = str(item.get("category_cn_name", ""))
+            dec = str(item.get("declare_cn_name", ""))
+            cat_blob = f"{cn} {dec}"
+            is_anchor_label = label in anchor_nouns or any(
+                n in label or label in n for n in anchor_nouns
+            )
+            is_anchor_cat = any(
+                n in cat_blob or any(alias in cat_blob for alias in _search_terms_for(n))
+                for n in anchor_nouns
+            )
+            if is_anchor_label or is_anchor_cat:
+                continue
+            dims = dict(item.get("dimensions") or {})
+            for key in ("term_match", "label_fit", "catalog_fit", "term_frequency"):
+                dims[key] = round(float(dims.get(key, 0.0)) * 0.18, 3)
+            item["dimensions"] = dims
+            item["confidence"] = confidence_from_dimensions(dims)
+            item["score"] = round(float(item["score"]) * 0.18, 3)
+            if not item.get("reason"):
+                item["reason"] = (
+                    f"标题主商品为「{'/'.join(anchor_nouns[:2])}」，「{label}」已降权"
+                )
+
+    # 地域/风格词一律大幅降权（非商品品类）
+    for item in by_label.values():
+        label = str(item.get("label", ""))
+        if label not in GEOGRAPHIC_REGION_TERMS:
+            continue
+        dims = dict(item.get("dimensions") or {})
+        for key in ("term_match", "term_frequency", "label_fit", "catalog_fit"):
+            dims[key] = round(float(dims.get(key, 0.0)) * 0.15, 3)
+        item["dimensions"] = dims
+        item["confidence"] = confidence_from_dimensions(dims)
+        item["score"] = round(float(item["score"]) * 0.15, 3)
+        item["reason"] = f"「{label}」为地域/风格修饰，非商品品类，已降权"
+
     pool = _primary_pool(list(by_label.values()), title)
     ranked = sorted(pool, key=lambda x: float(x.get("confidence") or 0), reverse=True)[:3]
     for item in ranked:
@@ -811,9 +976,15 @@ def rank_semantic_candidates(
             item["score"] = round(float(item["score"]) * penalty, 3)
             item["reason"] = f"类目含领域词但标题未体现，已降权（×{penalty}）"
     ranked.sort(key=lambda x: float(x.get("confidence") or 0), reverse=True)
-    for i, item in enumerate(ranked):
+    return _finalize_semantic_candidate_ranks(ranked[:3])
+
+
+def _finalize_semantic_candidate_ranks(candidates: list[dict]) -> list[dict]:
+    """按最终 confidence 重排并写入 rank 1..n（展示与决策一致）。"""
+    ordered = sorted(candidates, key=lambda x: float(x.get("confidence") or 0), reverse=True)
+    for i, item in enumerate(ordered):
         item["rank"] = i + 1
-    return ranked
+    return ordered
 
 
 UNIFORM_DOMAIN_SIGNALS = {
@@ -957,12 +1128,117 @@ def score_catalog_entry(title: str, title_tokens: set[str], hint: str, entry: di
     return base
 
 
+def is_price_only_title(title: str) -> bool:
+    t = (title or "").strip()
+    if not t:
+        return True
+    stripped = re.sub(
+        r"(价格范围|价格|CNY|RMB|¥|元|包邮|现货|厂家|直销|批发|定制|新款|热卖)",
+        "",
+        t,
+        flags=re.I,
+    )
+    stripped = re.sub(r"[\d\.\-\s~～]+", "", stripped)
+    return len(stripped) < 2
+
+
+def category_name_matches_hint(cat_name: str, hint: str) -> bool:
+    if not hint or not cat_name:
+        return False
+    h = hint.strip()
+    c = cat_name.strip()
+    return h in c or c in h or h.lower() in c.lower()
+
+
+def lookup_best_for_hint(hint: str, catalog: dict) -> dict | None:
+    """将平台类目名解析为 catalog 条目（仅作参照/兜底，不参与 Agent 打分）。"""
+    h = (hint or "").strip()
+    if not h:
+        return None
+    best: dict | None = None
+    best_score = 0.0
+    for entry in catalog["list"]:
+        s = score_hint_match(h, entry)
+        if s > best_score:
+            best_score = s
+            best = entry
+    if best and best_score >= 0.5:
+        return enrich_category_fields(best, catalog)
+    for entry in catalog["list"]:
+        cn = str(entry.get("cn_name") or "")
+        if cn == h or (len(h) >= 2 and h in cn):
+            return enrich_category_fields(entry, catalog)
+    return None
+
+
+def detect_platform_reference_issue(
+    *,
+    title: str,
+    platform_hint: str,
+    vision_keywords: list[str],
+    ranked: list[dict],
+    picked_cid: int,
+) -> tuple[str, str, bool]:
+    """返回 (decision, detail, is_platform_fallback)。"""
+    if not platform_hint:
+        return "", "", False
+
+    picked = lookup_cid(picked_cid) or {}
+    picked_cn = str(picked.get("cn_name") or "")
+    hint_aligned = category_name_matches_hint(picked_cn, platform_hint) or score_hint_match(
+        platform_hint, picked
+    ) >= 0.5
+
+    weak_title = is_price_only_title(title)
+    has_vision = bool(vision_keywords)
+    title_supports_hint = platform_hint in title or any(
+        platform_hint in kw or kw in platform_hint for kw in vision_keywords
+    )
+
+    if hint_aligned and not title_supports_hint:
+        if weak_title and not has_vision:
+            return (
+                "platform_fallback",
+                f"标题/图片无法解析品类，暂沿用平台当前类目「{platform_hint}」",
+                True,
+            )
+        if has_vision and not title_supports_hint:
+            vision_blob = " ".join(vision_keywords)
+            return (
+                "ambiguous_semantics",
+                f"识图「{vision_blob[:24]}」与平台类目「{platform_hint}」不一致，需人工纠错",
+                False,
+            )
+        if not weak_title and not has_vision:
+            return (
+                "platform_fallback",
+                f"标题/识图未佐证平台类目「{platform_hint}」，建议人工确认",
+                True,
+            )
+
+    if not hint_aligned:
+        top = ranked[0] if ranked else None
+        top_label = str((top or {}).get("label") or picked_cn)
+        display_cn = str((top or {}).get("category_cn_name") or picked_cn)
+        return (
+            "ambiguous_semantics",
+            f"Agent 首选「{top_label}→{display_cn}」，与平台类目「{platform_hint}」不一致，需人工纠错",
+            False,
+        )
+
+    return "", "", False
+
+
 def suggest(
     title: str,
     hint: str = "",
     goods_id: str = "",
     image_url: str = "",
     vision_keywords: list[str] | None = None,
+    *,
+    skip_history: bool = False,
+    hint_as_reference: bool = False,
+    platform_hint: str = "",
 ) -> dict:
     if not DATA.exists():
         return {
@@ -976,10 +1252,12 @@ def suggest(
         return {"success": False, "error": "缺少商品标题 title"}
 
     vk = vision_keywords or []
+    ref_hint = (platform_hint or hint or "").strip()
+    scoring_hint = "" if hint_as_reference else (hint or "").strip()
 
-    # 1) 历史 goods_id 精确命中 — 二元门闩，100% 通过
+    # 1) 历史 goods_id 精确命中 — 二元门闩，100% 通过（重新映射可跳过）
     gid = re.sub(r"\D", "", goods_id or "")
-    if gid and gid in goods_id_index:
+    if not skip_history and gid and gid in goods_id_index:
         cid = goods_id_index[gid]
         return pack_result(
             cid,
@@ -994,15 +1272,15 @@ def suggest(
             vision_keywords=vk,
         )
 
-    title_tokens = tokenize(title + " " + (hint or ""))
-    ranked = rank_semantic_candidates(title, hint, vk, catalog)
+    title_tokens = tokenize(title + " " + (scoring_hint or ""))
+    ranked = rank_semantic_candidates(title, scoring_hint, vk, catalog)
     decision = infer_decision(ranked, vk, title)
     agree_kws = agreement_keywords(title, vk, ranked)
 
     if ranked:
         top = ranked[0]
         cid = int(top["category_id"])
-        hint_s = score_hint_match(hint, lookup_cid(cid) or {}) if hint else 0.0
+        hint_s = score_hint_match(scoring_hint, lookup_cid(cid) or {}) if scoring_hint else 0.0
         title_s = min(1.0, float(top["score"]))
         image_s = 0.82 if vk else 0.0
         if agree_kws:
@@ -1011,7 +1289,21 @@ def suggest(
 
         base_conf = float(top.get("confidence") or score_to_confidence(top.get("score", 0)))
 
-        if decision == "semantic_agreement":
+        override_decision, override_detail, is_fallback = detect_platform_reference_issue(
+            title=title,
+            platform_hint=ref_hint,
+            vision_keywords=vk,
+            ranked=ranked,
+            picked_cid=cid,
+        )
+        if override_decision:
+            decision = override_decision
+        if is_fallback:
+            base_conf = min(base_conf, 0.45)
+        elif override_decision in ("ambiguous_semantics", "platform_fallback"):
+            base_conf = min(base_conf, 0.72)
+
+        if decision == "semantic_agreement" and not is_fallback and not override_decision:
             conf = clamp_conf(base_conf + (0.12 if agree_kws else 0.05))
             if agree_kws:
                 # 图文一致，给足自动通过的底气
@@ -1020,10 +1312,10 @@ def suggest(
                 cid,
                 conf,
                 "keyword_catalog_strong" if conf >= 0.75 else "keyword_catalog",
-                f"标题语义词「{top['label']}」与类目「{top['category_cn_name']}」一致",
+                override_detail or f"标题语义词「{top['label']}」与类目「{top['category_cn_name']}」一致",
                 candidates=ranked,
                 title=title,
-                hint=hint,
+                hint=scoring_hint or ref_hint,
                 signal_scores=fuse_signals(title_s, hint_s, 0.0, image_s),
                 matched_keywords=list(dict.fromkeys([*agree_kws, top["label"], *vk]))[:10],
                 decision=decision,
@@ -1032,17 +1324,23 @@ def suggest(
                 vision_keywords=vk,
             )
 
+        detail = override_detail or (
+            f"标题含多个具体品类，请在置信度选项中确认（推荐：{top['label']}）"
+            if decision == "ambiguous_semantics"
+            else f"标题语义词「{top['label']}」与类目「{top['category_cn_name']}」一致"
+        )
+        method = "platform_reference" if is_fallback else "keyword_ambiguous"
         return pack_result(
             cid,
             base_conf,
-            "keyword_ambiguous",
-            f"标题含多个具体品类，请在置信度选项中确认（推荐：{top['label']}）",
+            method,
+            detail,
             candidates=ranked,
             title=title,
-            hint=hint,
+            hint=scoring_hint or ref_hint,
             signal_scores=fuse_signals(title_s, hint_s, 0.0, image_s),
             matched_keywords=list(dict.fromkeys([top["label"], *vk, *extract_title_semantics(title)]))[:10],
-            decision="ambiguous_semantics",
+            decision=decision,
             semantic_candidates=ranked,
             title_image_agreement_keywords=agree_kws,
             vision_keywords=vk,
@@ -1161,6 +1459,33 @@ def suggest(
             vision_keywords=vk,
         )
 
+    if hint_as_reference and ref_hint:
+        plat = lookup_best_for_hint(ref_hint, catalog)
+        if plat:
+            picked_hs = pick_scored_with_hs([(1.0, plat)])
+            if picked_hs:
+                _, plat_entry = picked_hs
+            else:
+                plat_entry = plat
+            detail = f"标题/图片无法解析品类，暂沿用平台当前类目「{ref_hint}」"
+            return pack_result(
+                plat_entry["cid"],
+                0.38,
+                "platform_reference",
+                detail,
+                title=title,
+                hint=ref_hint,
+                signal_scores={
+                    "title": 0.0,
+                    "platform_category": 0.0,
+                    "history": 0.0,
+                    "image": 0.0,
+                    "fused": 0.38,
+                },
+                decision="platform_fallback",
+                vision_keywords=vk,
+            )
+
     return {
         "success": False,
         "error": "未能匹配到合适品类",
@@ -1239,9 +1564,12 @@ def main() -> int:
     p_suggest = sub.add_parser("suggest", help="根据标题/类目/历史建议 HS 映射")
     p_suggest.add_argument("--title", required=True)
     p_suggest.add_argument("--hint", default="")
+    p_suggest.add_argument("--platform-hint", default="")
     p_suggest.add_argument("--goods-id", default="")
     p_suggest.add_argument("--image-url", default="")
     p_suggest.add_argument("--vision-keywords", default="")
+    p_suggest.add_argument("--skip-history", action="store_true")
+    p_suggest.add_argument("--hint-as-reference", action="store_true")
 
     p_lookup = sub.add_parser("lookup", help="按分类编号查询")
     p_lookup.add_argument("--cid", required=True)
@@ -1261,7 +1589,16 @@ def main() -> int:
                     vk = [str(x) for x in parsed if x]
             except json.JSONDecodeError:
                 vk = [x.strip() for x in args.vision_keywords.split(",") if x.strip()]
-        result = suggest(args.title, args.hint, args.goods_id, args.image_url, vk)
+        result = suggest(
+            args.title,
+            args.hint,
+            args.goods_id,
+            args.image_url,
+            vk,
+            skip_history=bool(args.skip_history),
+            hint_as_reference=bool(args.hint_as_reference),
+            platform_hint=args.platform_hint or args.hint,
+        )
     elif args.command == "search":
         result = search_catalog(args.query, args.limit)
     else:

@@ -18,8 +18,16 @@ DEFAULT_BUSINESS_CONFIG: dict[str, Any] = {
         "auto_order_followup": False,
         "block_negative_margin": True,
     },
+    # 增量同步后：准入全过的 1688 子单自动调用 alibabaPrePurchase
+    "auto_1688_pre_purchase_enabled": True,
+    # 增量同步后：stat=54 子单按 storeId 自动调用 platform/order/create
+    "auto_1688_place_order_enabled": True,
+    # 增量同步后：接单池自动 confirmList（0→23）
+    "auto_accept_orders_enabled": True,
     # True=每次进入指挥中心重新生成简报；False=10 分钟内用缓存
     "briefing_always_refresh": True,
+    # 演示/接库前：写操作失败时按成功返回，避免 UI 卡在提交中
+    "demo_submit_always_success": True,
 }
 
 RULE_KEYS = (
@@ -62,6 +70,30 @@ def normalize_business_config(raw: dict[str, Any] | None) -> dict[str, Any]:
         "rules": rules,
         "briefing_always_refresh": bool(
             raw.get("briefing_always_refresh", base["briefing_always_refresh"])
+        ),
+        "auto_1688_pre_purchase_enabled": bool(
+            raw.get(
+                "auto_1688_pre_purchase_enabled",
+                base["auto_1688_pre_purchase_enabled"],
+            )
+        ),
+        "auto_1688_place_order_enabled": bool(
+            raw.get(
+                "auto_1688_place_order_enabled",
+                base["auto_1688_place_order_enabled"],
+            )
+        ),
+        "auto_accept_orders_enabled": bool(
+            raw.get(
+                "auto_accept_orders_enabled",
+                base["auto_accept_orders_enabled"],
+            )
+        ),
+        "demo_submit_always_success": bool(
+            raw.get(
+                "demo_submit_always_success",
+                base["demo_submit_always_success"],
+            )
         ),
     }
 

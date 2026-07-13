@@ -8,7 +8,11 @@ from app.core.paths import PROJECT_ROOT
 
 
 # 这些键以 .env.local 为准，避免 reload 后子进程仍用父进程注入的旧值
-_ALWAYS_REFRESH_KEYS = frozenset({"TANGBUY_ADMIN_TOKEN"})
+_ALWAYS_REFRESH_KEYS = frozenset({
+    "TANGBUY_ADMIN_TOKEN",
+    "ALIBABA_NEWTON_APIKEY",
+    "ALI_1688_AK",
+})
 
 
 def load_env_local() -> None:

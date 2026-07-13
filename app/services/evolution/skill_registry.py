@@ -39,6 +39,38 @@ AGENT_CORE_CRITERIA = [
 # ─── 技能定义 ───
 
 SKILL_DEFINITIONS: list[SkillEvolutionDescriptor] = [
+    # ── 采购助手总入口 ──
+    SkillEvolutionDescriptor(
+        skill_id="procurement-assistant",
+        skill_name="采购助手",
+        domain=EvolutionDomain.AGENT_CORE,
+        phase=EvolutionPhase.PASSIVE,
+        feedback_channels=[
+            FeedbackSource.MANUAL_AUDIT,
+            FeedbackSource.MANUAL_RATING,
+            FeedbackSource.USAGE_SIGNAL,
+        ],
+        eval_criteria=AGENT_CORE_CRITERIA,
+        auto_pass_threshold=0.85,
+        patch_injection=PatchInjection.SYSTEM_PROMPT_APPEND,
+        max_active_patches=8,
+        priority_badcase_trigger=True,
+        analysis_prompt_template=(
+            "采购助手 badcase：重点检查是否该调工具未调、编造商品/催单、路由到错误 Skill。"
+        ),
+    ),
+    SkillEvolutionDescriptor(
+        skill_id="order-data-query",
+        skill_name="订单数据查询",
+        domain=EvolutionDomain.ORDER_FLOW,
+        phase=EvolutionPhase.PASSIVE,
+        feedback_channels=[FeedbackSource.MANUAL_AUDIT, FeedbackSource.MANUAL_RATING],
+        eval_criteria=ORDER_FLOW_CRITERIA,
+        auto_pass_threshold=0.90,
+        patch_injection=PatchInjection.SYSTEM_PROMPT_APPEND,
+        max_active_patches=5,
+        analysis_prompt_template="订单查询 badcase：检查筛选条件理解、字段映射、统计口径。",
+    ),
     # ── Agent 对话核心域 ──
     SkillEvolutionDescriptor(
         skill_id="newton-cloud",

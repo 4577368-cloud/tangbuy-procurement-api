@@ -6,12 +6,18 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from app.services.command_center.board_signals import (
+    BOARD_SIGNAL_KEYS,
+    aggregate_board_signal_stats,
+    row_to_board_signal,
+)
 from app.services.orders import service as order_service
 from app.services.orders.exception_rules import (
     classify_exception_reason,
     scan_exception_summary,
 )
 from app.services.orders.procurement_scope import is_in_procurement_scope
+from app.services.products.service import list_products
 
 SIGNAL_SCAN_QUEUES = (
     "pending_procurement",
@@ -131,6 +137,83 @@ def scan_ord_lines_for_signals(
     return rows, per_queue_scan
 
 
+def enrich_row_for_board(
+    row: dict[str, Any],
+    *,
+    pipeline_states: dict[str, dict[str, Any]] | None = None,
+    skip_disposition: bool = False,
+) -> dict[str, Any]:
+    """看板/简报信号所需 enrich（跳过品类映射 enrich，批量扫描不调备注 LLM）。"""
+    from app.services.orders import disposition_store
+    from app.services.orders.order_note_classify import enrich_row_note_fields
+    from app.services.orders.order_sku_check import enrich_row_sku_fields
+    from app.services.orders.pipeline_store import enrich_row_pipeline_fields
+    from app.services.orders.platform_order_enrich import enrich_row_platform_order_fields
+    from app.services.orders.purchase_cost import enrich_row_purchase_cost_fields
+
+    base = dict(row) if skip_disposition else disposition_store.apply_row_override(dict(row))
+    return enrich_row_pipeline_fields(
+        enrich_row_purchase_cost_fields(
+            enrich_row_platform_order_fields(
+                enrich_row_sku_fields(enrich_row_note_fields(base, allow_llm=False))
+            )
+        ),
+        states=pipeline_states,
+    )
+
+
+def enrich_scan_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """批量 enrich：预加载 pipeline / disposition，串行处理（避免文件锁争用）。"""
+    if not rows:
+        return []
+
+    from app.services.orders import disposition_store
+    from app.services.orders.pipeline_store import _pipeline_state_map
+
+    pipeline_states = _pipeline_state_map()
+    overrides = disposition_store.load_all_overrides()
+
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        base = dict(row)
+        ord_line_no = str(base.get("ord_line_no") or "").strip()
+        if ord_line_no:
+            override = overrides.get(ord_line_no)
+            if override:
+                for key, value in override.items():
+                    if key in ("queue_override", "passed_at", "action_key", "signal_type"):
+                        continue
+                    base[key] = value
+        out.append(
+            enrich_row_for_board(
+                base,
+                pipeline_states=pipeline_states,
+                skip_disposition=True,
+            )
+        )
+    return out
+
+
+def load_all_scan_rows() -> list[dict[str, Any]]:
+    """从本地缓存加载指挥中心相关队列的全部子单（非抽样）。"""
+    from app.services.orders.line_cache import load_all_lines
+    from app.services.orders.queue_filters import resolve_order_queue
+
+    all_lines = load_all_lines()
+    if not all_lines:
+        return []
+
+    rows: list[dict[str, Any]] = []
+    for row in all_lines.values():
+        if not isinstance(row, dict) or not is_in_procurement_scope(row):
+            continue
+        queue = resolve_order_queue(row)
+        if queue not in SIGNAL_SCAN_QUEUES:
+            continue
+        rows.append(row)
+    return rows
+
+
 def _count_signal_types(rows: list[dict[str, Any]]) -> dict[str, int]:
     counts: dict[str, int] = {}
     for row in rows:
@@ -159,14 +242,27 @@ def _count_ship_overdue(rows: list[dict[str, Any]]) -> int:
     return count
 
 
-def aggregate_signal_stats(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    exception_summary = scan_exception_summary(rows)
-    signal_counts = _count_signal_types(rows)
-    ship_overdue = _count_ship_overdue(rows)
-    if ship_overdue > 0:
-        signal_counts["SHIP_OVERDUE"] = ship_overdue
+def aggregate_signal_stats(
+    rows: list[dict[str, Any]],
+    *,
+    products: list[dict[str, Any]] | None = None,
+    enriched_rows: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    enriched = enriched_rows if enriched_rows is not None else enrich_scan_rows(rows)
+    product_list = products if products is not None else list_products()
+    board = aggregate_board_signal_stats(enriched, product_list)
+
+    exception_summary = scan_exception_summary(enriched)
+    legacy_counts = _count_signal_types(enriched)
+    ship_overdue = int(board["board_signal_counts"].get("SHIP_OVERDUE") or 0)
+    if ship_overdue <= 0:
+        ship_overdue = _count_ship_overdue(enriched)
+
     return {
-        "signal_counts": signal_counts,
+        "signal_counts": legacy_counts,
+        "board_signal_counts": board["board_signal_counts"],
+        "board_signal_counts_action": board["board_signal_counts_action"],
+        "board_band_counts": board["board_band_counts"],
         "exception_bands": {
             "action_required": exception_summary["action_required"],
             "needs_attention": exception_summary["needs_attention"],
@@ -175,6 +271,25 @@ def aggregate_signal_stats(rows: list[dict[str, Any]]) -> dict[str, Any]:
         },
         "ship_overdue_estimated": ship_overdue,
     }
+
+
+def list_command_center_signal_rows() -> list[dict[str, Any]]:
+    """全量缓存扫描，返回带看板信号的子单行（与 stats 卡片同源）。"""
+    rows = load_all_scan_rows()
+    if not rows:
+        return []
+    products = list_products()
+    enriched = enrich_scan_rows(rows)
+    out: list[dict[str, Any]] = []
+    for row in enriched:
+        signal = row_to_board_signal(row, products)
+        if not signal:
+            continue
+        signal_type = str(signal.get("signal_type") or "")
+        if signal_type not in BOARD_SIGNAL_KEYS:
+            continue
+        out.append(row)
+    return out
 
 
 def build_signal_scan_payload(queue_counts: dict[str, int]) -> dict[str, Any]:

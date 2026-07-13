@@ -15,7 +15,7 @@ from app.services.agent.query_semantics import (
     normalize_query_args,
 )
 from app.services.command_center.briefing import get_command_center_stats
-from app.services.data_center import QUEUE_LABELS, get_data_center_snapshot
+from app.services.data_center import IN_TRANSIT_QUEUES, QUEUE_LABELS, get_data_center_snapshot
 from app.services.orders import service as order_service
 from app.services.orders.queue_filters import resolve_order_queue
 from app.services.tasks.store import get_agent_operation_stats, get_task_stats
@@ -23,6 +23,12 @@ from app.services.tasks.store import get_agent_operation_stats, get_task_stats
 _ORDER_ID_RE = re.compile(r"\b\d{10,22}\b")
 _TI_PREFIX_RE = re.compile(r"\bTI[\d\-]+\b", re.I)
 _TO_PREFIX_RE = re.compile(r"\bTO[\d\-]+\b", re.I)
+_HTTP_URL_RE = re.compile(r"https?://\S+", re.I)
+
+
+def _text_without_urls(text: str) -> str:
+    """去掉 URL 后再抽订单号，避免 alicdn/1688 链接内数字被误识别。"""
+    return _HTTP_URL_RE.sub(" ", text)
 
 QUEUE_ALIASES: dict[str, str] = {
     "待下单": "pending_procurement",
@@ -30,6 +36,7 @@ QUEUE_ALIASES: dict[str, str] = {
     "待支付": "pending_payment",
     "已订购": "ordered",
     "待发货": "ordered",
+    "在途": "in_transit",
     "已发货": "shipped",
     "已到仓": "in_warehouse",
     "已发出": "dispatched",
@@ -128,17 +135,18 @@ def resolve_queue_from_text(text: str) -> Optional[str]:
 def extract_lookup_ids(text: str) -> list[str]:
     found: list[str] = []
     seen: set[str] = set()
-    for m in _TI_PREFIX_RE.finditer(text):
+    scan = _text_without_urls(text)
+    for m in _TI_PREFIX_RE.finditer(scan):
         v = m.group(0).upper().replace("-", "")
         if v not in seen:
             seen.add(v)
             found.append(v)
-    for m in _TO_PREFIX_RE.finditer(text):
+    for m in _TO_PREFIX_RE.finditer(scan):
         v = m.group(0).upper().replace("-", "")
         if v not in seen:
             seen.add(v)
             found.append(v)
-    for m in _ORDER_ID_RE.finditer(text):
+    for m in _ORDER_ID_RE.finditer(scan):
         v = m.group(0)
         if v not in seen:
             seen.add(v)
@@ -163,7 +171,22 @@ def _lookup_one(order_id: str) -> Optional[dict[str, Any]]:
     if items:
         return items[0]
 
-    # 1688 采购单号 — 按队列扫描
+    # 本地快照扫描（pur_no / ord_no / ord_line_no）
+    from app.services.orders.line_cache import load_all_lines
+
+    pool = load_all_lines()
+    if pool:
+        for row in pool.values():
+            if not isinstance(row, dict):
+                continue
+            if str(row.get("pur_no") or "") == oid:
+                return order_service.get_ord_line(str(row.get("ord_line_no") or "")) or row
+            if str(row.get("ord_no") or "") == oid:
+                return order_service.get_ord_line(str(row.get("ord_line_no") or "")) or row
+            if str(row.get("ord_line_no") or "") == oid:
+                return order_service.get_ord_line(str(row.get("ord_line_no") or "")) or row
+
+    # 1688 采购单号 — 按队列扫描（缓存未命中时）
     queues = list(QUEUE_LABELS.keys()) + ["all"]
     for q in queues:
         listed = order_service.list_ord_lines(
@@ -219,65 +242,6 @@ def _query_pool_or_error() -> tuple[list[dict[str, Any]], str] | dict[str, Any]:
     return rows, source
 
 
-def _build_filtered_stats(
-    filters: dict[str, Any],
-    *,
-    scope_label: str = "订单",
-    queue_fallback: Optional[str] = None,
-) -> dict[str, Any]:
-    pool = _query_pool_or_error()
-    if isinstance(pool, dict):
-        return pool
-    rows, source = pool
-    if queue_fallback and not filters.get("queue"):
-        filters = {**filters, "queue": queue_fallback}
-
-    matched = filter_ord_lines(rows, filters)
-    summary_ctx = filters_summary(filters)
-    by_queue: dict[str, int] = {}
-    for row in matched:
-        q = resolve_order_queue(row) or "pending_procurement"
-        by_queue[q] = by_queue.get(q, 0) + 1
-
-    breakdown = [
-        {
-            "label": QUEUE_LABELS.get(q, q),
-            "value": n,
-            "tone": "rose" if q == "exception" else "amber" if q in ("pending_procurement", "pending_payment") else "default",
-        }
-        for q, n in sorted(by_queue.items(), key=lambda x: -x[1])
-    ][:8]
-
-    groups = [
-        {
-            "label": summary_ctx,
-            "value": len(matched),
-            "highlight": True,
-            "breakdown": breakdown or [{"label": "无匹配", "value": 0}],
-        }
-    ]
-
-    summary = f"{summary_ctx} 共 {len(matched)} 单"
-    md_lines = [f"**{summary_ctx}**", "", f"- 合计：**{len(matched)}** 单（数据源 {source}）"]
-    if breakdown:
-        md_lines.append("")
-        md_lines.extend(f"- {b['label']}：{b['value']}" for b in breakdown)
-
-    return {
-        "success": True,
-        "summary": summary,
-        "markdown": "\n".join(md_lines),
-        "data": {
-            "kind": "stats",
-            "scope": "filtered",
-            "groups": groups,
-            "filters": _filters_payload(filters, output_mode="count"),
-            "total": len(matched),
-            "source": source,
-        },
-    }
-
-
 def _filters_payload(filters: dict[str, Any], *, output_mode: str = "list") -> dict[str, Any]:
     return {
         "summary": filters_summary(filters),
@@ -294,8 +258,103 @@ def _filters_payload(filters: dict[str, Any], *, output_mode: str = "list") -> d
     }
 
 
+def _compact_stats_copy(
+    filters: dict[str, Any],
+    count: int,
+    *,
+    freshness: str = "",
+) -> tuple[str, str]:
+    """统计类回复：一行结论，避免正文/卡片重复堆砌。"""
+    ctx = filters_summary(filters)
+    suffix = freshness.strip()
+    if ctx and ctx not in ("全库", "订单"):
+        line = f"{ctx} {count} 单"
+    else:
+        line = f"共 {count} 单"
+    if suffix:
+        line += f" {suffix}"
+    return line, line
+
+
+def _build_filtered_stats(
+    filters: dict[str, Any],
+    *,
+    scope_label: str = "订单",
+    queue_fallback: Optional[str] = None,
+) -> dict[str, Any]:
+    pool = _query_pool_or_error()
+    if isinstance(pool, dict):
+        return pool
+    rows, source = pool
+    if queue_fallback and not filters.get("queue"):
+        filters = {**filters, "queue": queue_fallback}
+
+    matched = filter_ord_lines(rows, filters)
+    summary_ctx = filters_summary(filters)
+    total = len(matched)
+    freshness = ""
+    pool_summary = order_service.cached_queue_summary()
+    if isinstance(pool_summary, dict) and not pool_summary.get("error"):
+        freshness = _cache_freshness_suffix(pool_summary)
+
+    by_queue: dict[str, int] = {}
+    for row in matched:
+        q = resolve_order_queue(row) or "pending_procurement"
+        by_queue[q] = by_queue.get(q, 0) + 1
+
+    show_breakdown = len(by_queue) > 1 and not filters.get("queue")
+    summary, markdown = _compact_stats_copy(filters, total, freshness=freshness)
+
+    if show_breakdown:
+        breakdown = [
+            {
+                "label": QUEUE_LABELS.get(q, q),
+                "value": n,
+                "tone": "rose" if q == "exception" else "amber" if q in ("pending_procurement", "pending_payment") else "default",
+            }
+            for q, n in sorted(by_queue.items(), key=lambda x: -x[1])
+        ][:8]
+        groups = [
+            {
+                "label": summary_ctx,
+                "value": total,
+                "highlight": True,
+                "breakdown": breakdown,
+            }
+        ]
+        md_lines = [summary, ""]
+        md_lines.extend(f"- {b['label']}：{b['value']}" for b in breakdown)
+        markdown = "\n".join(md_lines)
+    else:
+        groups: list[dict[str, Any]] = []
+
+    return {
+        "success": True,
+        "summary": summary,
+        "markdown": markdown,
+        "data": {
+            "kind": "stats",
+            "scope": "filtered",
+            "groups": groups,
+            "filters": _filters_payload(filters, output_mode="count"),
+            "total": total,
+            "source": source,
+        },
+    }
+
+
+def _cache_freshness_suffix(summary: dict[str, Any]) -> str:
+    sync = summary.get("sync_state") if isinstance(summary.get("sync_state"), dict) else {}
+    at = sync.get("last_incremental_at") or sync.get("last_backfill_at")
+    if not at:
+        return "（订单缓存未同步，请先在订单中心拉取最新）"
+    if not sync.get("backfill_complete"):
+        return "（全量回填未完成，数字可能偏低）"
+    return ""
+
+
 def _build_order_stats(queue_filter: Optional[str]) -> dict[str, Any]:
-    summary = order_service.queue_summary()
+    summary = order_service.cached_queue_summary()
     if summary.get("error"):
         return {
             "success": False,
@@ -320,21 +379,28 @@ def _build_order_stats(queue_filter: Optional[str]) -> dict[str, Any]:
         }
     ]
 
-    if queue_filter and queue_filter in QUEUE_LABELS:
+    if queue_filter == "in_transit":
+        n = sum(int(counts.get(q) or 0) for q in IN_TRANSIT_QUEUES)
+        label = "在途"
+        freshness = _cache_freshness_suffix(summary)
+        summary_text = f"{label} 共 {n} 单{freshness}"
+        breakdown = " + ".join(
+            f"{QUEUE_LABELS[q]} {int(counts.get(q) or 0)}"
+            for q in IN_TRANSIT_QUEUES
+        )
+        markdown = f"**{label}**：{n} 单（{breakdown}）{freshness}"
+    elif queue_filter and queue_filter in QUEUE_LABELS:
         n = int(counts.get(queue_filter) or 0)
         label = QUEUE_LABELS[queue_filter]
-        summary_text = f"{label} {n} 单"
-        markdown = f"**{label}**：{n} 单（全库 {int(counts.get('all') or 0)} 单）"
+        freshness = _cache_freshness_suffix(summary)
+        summary_text = f"{label} {n} 单{freshness}"
+        markdown = summary_text
     else:
         pending = int(counts.get("pending_procurement") or 0) + int(counts.get("pending_payment") or 0)
         summary_text = f"待处理 {pending} 单 · 全库 {int(counts.get('all') or 0)} 单"
-        markdown = (
-            "**订单队列统计**\n\n"
-            + "\n".join(
-                f"- {QUEUE_LABELS[q]}：{int(counts.get(q) or 0)}"
-                for q in QUEUE_LABELS
-            )
-            + f"\n- **合计**：{int(counts.get('all') or 0)}"
+        markdown = summary_text + "\n\n" + "\n".join(
+            f"- {QUEUE_LABELS[q]}：{int(counts.get(q) or 0)}"
+            for q in QUEUE_LABELS
         )
 
     return {

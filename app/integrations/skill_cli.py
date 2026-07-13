@@ -30,7 +30,9 @@ def _extract_json_object(text: str) -> Optional[str]:
 
 def _build_ak_env() -> dict[str, str]:
     env = {**os.environ}
-    if env.get("ALI_1688_AK", "").strip():
+    ak = (env.get("ALIBABA_NEWTON_APIKEY") or env.get("ALI_1688_AK") or "").strip()
+    if ak:
+        env["ALI_1688_AK"] = ak
         return env
     ak_path = PROJECT_ROOT / "workspace" / ".1688-AK" / ".ak_store.json"
     try:
@@ -166,9 +168,35 @@ def run_category_suggest(
     goods_id: Optional[str] = None,
     image_url: Optional[str] = None,
     vision_keywords: Optional[list[str]] = None,
+    *,
+    skip_history: bool = False,
+    hint_as_reference: bool = False,
+    platform_hint: Optional[str] = None,
 ) -> dict[str, Any]:
+    ref = (platform_hint or hint or "").strip()
+    try:
+        from app.services.category_mapping.mapper_runtime import suggest_inprocess
+
+        result = suggest_inprocess(
+            title,
+            hint=(hint or "").strip() if not hint_as_reference else "",
+            goods_id=(goods_id or "").strip(),
+            image_url=(image_url or "").strip(),
+            vision_keywords=vision_keywords,
+            skip_history=skip_history,
+            hint_as_reference=hint_as_reference,
+            platform_hint=ref,
+        )
+        if isinstance(result, dict):
+            return result
+    except Exception:
+        pass
     cmd = ["suggest", "--title", title]
-    if hint:
+    if hint_as_reference:
+        if ref:
+            cmd.extend(["--platform-hint", ref])
+        cmd.append("--hint-as-reference")
+    elif hint:
         cmd.extend(["--hint", hint])
     if goods_id:
         cmd.extend(["--goods-id", goods_id])
@@ -176,10 +204,29 @@ def run_category_suggest(
         cmd.extend(["--image-url", image_url])
     if vision_keywords:
         cmd.extend(["--vision-keywords", json.dumps(vision_keywords, ensure_ascii=False)])
+    if skip_history:
+        cmd.append("--skip-history")
     return unwrap_category_suggest_result(run_python_cli(category_mapper_path(), cmd, timeout=120))
 
 
 def run_category_lookup(category_id: int) -> dict[str, Any]:
+    try:
+        from app.services.category_mapping.mapper_runtime import lookup_inprocess
+
+        cat = lookup_inprocess(category_id)
+        if cat:
+            return {
+                "success": True,
+                "category_id": cat.get("cid"),
+                "category_cn_name": cat.get("cn_name"),
+                "category_en_name": cat.get("en_name"),
+                "hs_code": cat.get("hs_code"),
+                "declare_cn_name": cat.get("dec_cn_name"),
+                "declare_en_name": cat.get("dec_en_name"),
+                "tariff": cat.get("tariff"),
+            }
+    except Exception:
+        pass
     raw = run_python_cli(category_mapper_path(), ["lookup", "--cid", str(category_id)], timeout=60)
     data = raw.get("data")
     if isinstance(data, dict) and data.get("cid"):

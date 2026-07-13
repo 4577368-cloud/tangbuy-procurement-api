@@ -14,6 +14,7 @@ from app.services.products.store import (
     find_reusable_hs_mapping,
     load_products,
     save_products,
+    _protect_resolved_mapping,
 )
 
 
@@ -46,7 +47,15 @@ def _merge_ord_line(product: dict[str, Any], row: dict[str, Any]) -> dict[str, A
         "source": product.get("source") or "order",
     }
     if platform_cat:
-        merged["platform_category_hint"] = platform_cat
+        merged["admin_ord_category_hint"] = platform_cat
+        existing_hint = str(merged.get("platform_category_hint") or "").strip()
+        if not existing_hint:
+            merged["platform_category_hint"] = platform_cat
+        elif name:
+            from app.services.category_mapping.mapping_quality import hint_conflicts_title
+
+            if not hint_conflicts_title(name, platform_cat):
+                merged["platform_category_hint"] = platform_cat
 
     if name and (not merged.get("product_name") or merged.get("product_name") == "（无标题）"):
         merged["product_name"] = name
@@ -71,7 +80,7 @@ def _merge_ord_line(product: dict[str, Any], row: dict[str, Any]) -> dict[str, A
         merged["original_shipping"] = shipping
         merged["tangbuy_shipping"] = round(shipping * markup, 2)
 
-    return merged
+    return _protect_resolved_mapping(product, merged)
 
 
 def _new_product_from_ord_line(row: dict[str, Any], *, new_id_fn) -> dict[str, Any]:

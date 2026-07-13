@@ -11,13 +11,12 @@
 
 from __future__ import annotations
 
-import json
-import os
 import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Optional
 
+from app.services.evolution.store import append_patch
 from app.services.evolution.types import (
     ReplayFinding,
     ReplayFindingType,
@@ -417,16 +416,7 @@ def _save_replay_patch(
     rule_keywords: Optional[list[str]] = None,
     target_category: Optional[str] = None,
 ) -> None:
-    """将复盘生成的品类映射补丁保存到 JSONL。
-
-    补丁格式对齐 category_heuristics.py 的学习机制：
-    - keyword_boost 类型：标题含特定品类词 → boost 特定类目
-    - 后续 category_mapper.py 可加载此类补丁作为 run-time boost
-    """
-    data_dir = os.environ.get("EVOLUTION_DATA_DIR", "data/evolution")
-    os.makedirs(data_dir, exist_ok=True)
-    patch_path = os.path.join(data_dir, "patches.jsonl")
-
+    """将复盘生成的品类映射补丁持久化（DB / JSONL 双写）。"""
     content = "; ".join(o.description for o in optimizations)
 
     # 结构化 payload：keyword_boost 补丁的机器可读数据
@@ -462,5 +452,4 @@ def _save_replay_patch(
         "active": False,
     }
 
-    with open(patch_path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    append_patch(entry)

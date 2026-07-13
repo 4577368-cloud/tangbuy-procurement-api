@@ -2,7 +2,7 @@
 """
 AK 认证模块
 
-AK 来源：`ALI_1688_AK` 环境变量，或 `{workspace}/.1688-AK/.ak_store.json`。
+AK 来源：`ALIBABA_NEWTON_APIKEY` / `ALI_1688_AK` 环境变量，或 `{workspace}/.1688-AK/.ak_store.json`。
 """
 from __future__ import annotations
 
@@ -25,9 +25,13 @@ def get_ak_raw() -> Optional[str]:
     """从环境变量或 AK_STORE_FILE 读取原始 AK 字符串。"""
     import os
 
-    env_ak = (os.environ.get("ALI_1688_AK") or "").strip()
-    if env_ak:
-        return env_ak
+    for key in ("ALIBABA_NEWTON_APIKEY", "ALI_1688_AK"):
+        env_ak = (os.environ.get(key) or "").strip()
+        if not env_ak:
+            continue
+        ak_id, ak_secret = extract_ak_keys(env_ak)
+        if ak_id and ak_secret:
+            return env_ak
     if not AK_STORE_FILE.exists():
         return None
     try:

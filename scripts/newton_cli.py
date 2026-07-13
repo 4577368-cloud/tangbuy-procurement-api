@@ -87,11 +87,31 @@ _TRANSIENT_GATEWAY_MARKERS = (
     "temporarily",
     "请稍后",
 )
+_TRANSIENT_HTTP_STATUS = frozenset({409, 429, 502, 503, 504})
 
 
 def _is_transient_gateway_error(message: str) -> bool:
     lower = (message or "").lower()
     return any(m.lower() in lower for m in _TRANSIENT_GATEWAY_MARKERS)
+
+
+def _http_error_message(exc: requests.HTTPError) -> str:
+    resp = exc.response
+    if resp is None:
+        return str(exc)
+    code = resp.status_code
+    if code == 409:
+        return "图搜繁忙，请稍后重试"
+    if code == 429:
+        return "图搜限流，请稍后重试"
+    if code in (502, 503, 504):
+        return "图搜网关暂不可用，请稍后重试"
+    if code == 401:
+        return (
+            "1688 牛顿 AK 鉴权失败（401）。请检查 .env.local 中 ALIBABA_NEWTON_APIKEY / "
+            "ALI_1688_AK 是否与 clawhub.1688.com 一致，二者勿多抄字符。"
+        )
+    return str(exc)
 
 
 def simplify_search_query(query: str) -> str:
@@ -109,14 +129,14 @@ def simplify_search_query(query: str) -> str:
     return q[:60]
 
 
-def _gateway_post(path: str, body: dict, timeout: int = 30, *, retries: int = 3) -> dict:
+def _gateway_post(path: str, body: dict, timeout: int = 30, *, retries: int = 4) -> dict:
     body_str = json.dumps(body, ensure_ascii=False)
-    headers = build_auth_headers("POST", path, body_str)
-    if not headers:
-        raise RuntimeError("AK 未配置")
 
     last_err: Exception | None = None
     for attempt in range(max(retries, 1)):
+        headers = build_auth_headers("POST", path, body_str)
+        if not headers:
+            raise RuntimeError("AK 未配置")
         try:
             resp = requests.post(
                 f"{GATEWAY_BASE}{path}",
@@ -124,19 +144,31 @@ def _gateway_post(path: str, body: dict, timeout: int = 30, *, retries: int = 3)
                 data=body_str.encode("utf-8"),
                 timeout=timeout,
             )
+            if resp.status_code in _TRANSIENT_HTTP_STATUS and attempt < retries - 1:
+                time.sleep(0.8 * (2**attempt))
+                continue
             resp.raise_for_status()
             result = resp.json()
             if result.get("success") is False:
                 detail = str(result.get("msgInfo") or result.get("msgCode") or "未知业务错误")
                 if _is_transient_gateway_error(detail) and attempt < retries - 1:
-                    time.sleep(0.6 * (attempt + 1))
+                    time.sleep(0.8 * (2**attempt))
                     continue
                 raise RuntimeError(detail)
             return result
+        except requests.HTTPError as exc:
+            last_err = exc
+            if (
+                getattr(exc.response, "status_code", None) in _TRANSIENT_HTTP_STATUS
+                and attempt < retries - 1
+            ):
+                time.sleep(0.8 * (2**attempt))
+                continue
+            raise RuntimeError(_http_error_message(exc)) from exc
         except requests.RequestException as exc:
             last_err = exc
             if attempt < retries - 1:
-                time.sleep(0.6 * (attempt + 1))
+                time.sleep(0.8 * (2**attempt))
                 continue
             raise RuntimeError(str(exc)) from exc
     if last_err:

@@ -2,26 +2,36 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse
 
-from app.services.command_center.briefing import get_command_center_stats, get_briefing_payload, stream_briefing
+from app.services.command_center.briefing import (
+    get_command_center_signals,
+    get_command_center_stats,
+    get_briefing_payload,
+    stream_briefing,
+)
 
 router = APIRouter(prefix="/api/command-center", tags=["command-center"])
 
 
 @router.get("/stats")
-def command_center_stats(force: bool = False) -> dict:
+def command_center_stats(force: bool = Query(False)) -> dict:
     return get_command_center_stats(force=force)
 
 
+@router.get("/signals")
+def command_center_signals(force: bool = Query(False)) -> dict:
+    return get_command_center_signals(force=force)
+
+
 @router.get("/briefing/facts")
-def briefing_facts(force: bool = False) -> dict:
+def briefing_facts(force: bool = Query(False)) -> dict:
     return get_briefing_payload(force=force)
 
 
 @router.get("/briefing/stream")
-def briefing_stream(force: bool = False) -> StreamingResponse:
+def briefing_stream(force: bool = Query(False)) -> StreamingResponse:
     return StreamingResponse(
         stream_briefing(force=force),
         media_type="text/event-stream",

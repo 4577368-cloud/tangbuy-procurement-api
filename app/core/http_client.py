@@ -50,6 +50,7 @@ def request_json(
     *,
     headers: Optional[dict[str, str]] = None,
     json_body: Optional[dict[str, Any]] = None,
+    params: Optional[dict[str, Any]] = None,
     timeout: int = 45,
     connect_ip: str = "",
 ) -> dict[str, Any]:
@@ -57,7 +58,13 @@ def request_json(
     try:
         with _resolve_host_to_ip(host, connect_ip):
             with httpx.Client(trust_env=False, timeout=timeout, follow_redirects=True) as client:
-                resp = client.request(method.upper(), url, headers=headers, json=json_body)
+                resp = client.request(
+                    method.upper(),
+                    url,
+                    headers=headers,
+                    json=json_body,
+                    params=params,
+                )
                 resp.raise_for_status()
                 data = resp.json()
                 return data if isinstance(data, dict) else {"raw": data}

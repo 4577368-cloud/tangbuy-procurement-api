@@ -17,6 +17,7 @@ from app.core.paths import data_dir
 from app.services.products.alternative_scan import scan_product_alternatives
 from app.services.products.enrichment import enrich_product_by_id
 from app.services.products.store import load_products
+from app.services.products.store import is_valid_hs_mapping
 
 _log = logging.getLogger(__name__)
 
@@ -27,6 +28,42 @@ _lock = threading.Lock()
 _active = 0
 _MAX_WORKERS = 2
 _scheduler: Optional[BackgroundScheduler] = None
+_STALE_ENRICH_MINUTES = 10
+
+
+def _now_iso() -> str:
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
+
+def _enrichment_running_stale(product: dict[str, Any], *, minutes: int = _STALE_ENRICH_MINUTES) -> bool:
+    if product.get("enrichment_status") != "running":
+        return False
+    started = str(product.get("enrichment_started_at") or "").strip()
+    if not started:
+        return True
+    from datetime import datetime, timezone
+
+    try:
+        text = started[:-1] + "+00:00" if started.endswith("Z") else started
+        dt = datetime.fromisoformat(text)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        age_sec = (datetime.now(timezone.utc) - dt).total_seconds()
+        return age_sec > minutes * 60
+    except ValueError:
+        return True
+
+
+def _mark_enrichment_running(pid: str) -> None:
+    from app.services.products.store import update_product
+
+    now = _now_iso()
+    update_product(
+        pid,
+        lambda p: {**p, "enrichment_status": "running", "enrichment_started_at": now},
+    )
 
 _QUOTA_PATH = data_dir() / "products" / "alt-scan-daily.json"
 DEFAULT_DAILY_LIMIT = 15
@@ -167,11 +204,8 @@ def schedule_product_pipeline(product_id: str) -> None:
     if not pid:
         return
 
-    from app.services.products.store import update_product
-
-    update_product(pid, lambda p: {**p, "enrichment_status": "running"})
-
     def _run() -> None:
+        _mark_enrichment_running(pid)
         try:
             enrich_product_by_id(pid)
         except Exception as exc:
@@ -209,16 +243,32 @@ def resume_stale_enrichments(*, limit: int = 40) -> int:
         st = p.get("enrichment_status")
         if st in ("matched", "done", "partial"):
             continue
+        if (
+            p.get("category_status") in ("auto_passed", "confirmed")
+            and is_valid_hs_mapping(p.get("hs_mapping"))
+        ):
+            continue
+        if st == "running":
+            if not _enrichment_running_stale(p):
+                continue
+            from app.services.products.enrichment import mark_pending_match
+
+            mark_pending_match(pid, reason="匹配超时，重新入队")
+            p = {**p, "enrichment_status": "pending_match"}
         if st not in (None, "running", "pending_match", "failed", "pending"):
             continue
-        from app.services.products.store import update_product
-
-        update_product(pid, lambda row: {**row, "enrichment_status": "running"})
+        if st != "running":
+            _mark_enrichment_running(pid)
         if _enqueue(pid, do_enrich=True, do_scan=False):
             started += 1
     if started:
         _log.info("[product-enrich] resumed %s stale products", started)
     return started
+
+
+def sweep_stale_enrichments(*, limit: int = 20) -> int:
+    """周期清扫：仅处理超时的 running 状态。"""
+    return resume_stale_enrichments(limit=limit)
 
 
 def _pending_scan_candidates() -> list[str]:
@@ -439,6 +489,9 @@ def start_product_auto_scan() -> None:
             n = sweep_pending_alt_scans(limit=settings.product_auto_scan_batch)
             if n:
                 _log.info("[product-auto-scan] 入队 %s 条待扫商品", n)
+            stale = sweep_stale_enrichments(limit=10)
+            if stale:
+                _log.info("[product-enrich] 周期清扫 %s 条超时匹配", stale)
         except Exception:
             _log.exception("[product-auto-scan] 周期扫描失败")
 

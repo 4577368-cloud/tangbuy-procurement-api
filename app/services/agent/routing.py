@@ -443,6 +443,12 @@ def resolve_deterministic_route(
             },
         }
 
+    # 主图/链接优先即时选品，避免 URL 内数字误入订单查询（见 extract_lookup_ids）
+    if extract_image_urls(user_text) or extract_1688_offer_urls(user_text):
+        instant = resolve_instant_product_route(user_text, allowed)
+        if instant:
+            return instant
+
     data_route = resolve_order_data_route(user_text, allowed, context)
     if data_route:
         return data_route

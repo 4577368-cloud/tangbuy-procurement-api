@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from app.services.agent.llm import chat_completion
 from app.services.evolution.engine import capture_feedback, trigger_analysis
 from app.services.evolution.skill_registry import get_evolution_skill
+from app.services.evolution.store import append_patch
+from app.services.evolution.types import EvolutionPatchStatus, PatchType
 
 
 def _resolve_domain(skill_id: str) -> str:
@@ -56,7 +59,7 @@ def capture_invocation_feedback(
     outcome = str(inv.get("outcome") or "")
 
     ai_preview = f"[{tool}] {response}" if response else f"[{tool}] ({outcome})"
-    human_preview = note.strip() or f"审计标记 Badcase · {inv.get('id', '')}"
+    human_preview = note.strip() or f"审计标记问题 · {inv.get('id', '')}"
 
     return capture_feedback(
         {
@@ -133,6 +136,47 @@ AI / 工具返回:
     }
 
 
+def _create_draft_rule_patch(
+    inv: dict[str, Any],
+    diagnosis: dict[str, Any],
+    *,
+    feedback_id: str,
+    note: str = "",
+) -> Optional[dict[str, Any]]:
+    """将诊断建议规则写入待确认队列（需人工确认后才生效）。"""
+    rule = str(diagnosis.get("suggested_rule") or "").strip()
+    if not rule:
+        return None
+
+    skill_id = str(inv.get("skill_id") or "procurement-assistant")
+    descriptor = get_evolution_skill(skill_id)
+    domain = descriptor.domain.value if descriptor else _resolve_domain(skill_id)
+    inv_id = str(inv.get("id") or "unknown")
+
+    patch = {
+        "id": f"patch-{int(datetime.now(timezone.utc).timestamp() * 1000)}-audit",
+        "type": PatchType.PROMPT_PATCH.value,
+        "target_skill_id": skill_id,
+        "domain": domain,
+        "source_analysis_id": None,
+        "source_pattern_name": f"audit:{inv_id}",
+        "content": rule,
+        "payload": {
+            "source": "audit_diagnosis",
+            "invocation_id": inv_id,
+            "feedback_id": feedback_id,
+            "audit_note": note.strip() or None,
+            "root_cause": diagnosis.get("root_cause"),
+        },
+        "status": EvolutionPatchStatus.DRAFT.value,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": "audit_diagnosis",
+        "active": False,
+    }
+    append_patch(patch)
+    return patch
+
+
 def bridge_badcase_to_evolution(
     inv: dict[str, Any],
     *,
@@ -141,24 +185,33 @@ def bridge_badcase_to_evolution(
     run_diagnosis: bool = True,
     run_analysis: bool = True,
 ) -> dict[str, Any]:
-    """Badcase / 打补丁后：捕获反馈 → 单条诊断 → 可选触发批量分析。"""
+    """Badcase / 打补丁后：捕获反馈 → 单条诊断 → 规则草案 → 可选触发批量分析。"""
     feedback_id = capture_invocation_feedback(inv, note=note, issue=issue)
 
     diagnosis: Optional[dict[str, Any]] = None
+    draft_patch: Optional[dict[str, Any]] = None
     if run_diagnosis:
         diagnosis = diagnose_invocation(inv, note)
+        if diagnosis:
+            draft_patch = _create_draft_rule_patch(
+                inv, diagnosis, feedback_id=feedback_id, note=note
+            )
 
     report: Optional[dict[str, Any]] = None
     analysis_triggered = False
+    generated_patch_count = 1 if draft_patch else 0
     if run_analysis:
         skill_id = str(inv.get("skill_id") or "")
         report = trigger_analysis(min_feedback_count=1, skill_id=skill_id or None)
         analysis_triggered = report is not None
+        if report:
+            generated_patch_count += int(report.get("generated_patch_count") or 0)
 
     return {
         "feedback_id": feedback_id,
         "diagnosis": diagnosis,
+        "draft_patch_id": draft_patch.get("id") if draft_patch else None,
         "analysis_triggered": analysis_triggered,
         "report_id": report.get("id") if report else None,
-        "generated_patch_count": report.get("generated_patch_count") if report else 0,
+        "generated_patch_count": generated_patch_count,
     }

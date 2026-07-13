@@ -6,11 +6,7 @@ import logging
 from typing import Any, Optional
 
 from app.integrations.tangbuy_admin.category_api import list_goods_categories
-from app.services.products.store import (
-    GENERIC_PLATFORM_HINTS,
-    confirm_product_mapping,
-    is_valid_hs_mapping,
-)
+from app.services.products.store import GENERIC_PLATFORM_HINTS, RESOLVED_MAPPING_STATUSES, confirm_product_mapping, finalize_product_mapping_confirm, is_valid_hs_mapping
 
 _log = logging.getLogger(__name__)
 
@@ -163,6 +159,9 @@ def try_adopt_admin_category(
     Admin 已有可信类目时直接采纳，跳过 AI。
     返回更新后的 product；不可信则返回 None。
     """
+    if product.get("category_status") in RESOLVED_MAPPING_STATUSES:
+        return None
+
     gid = str(goods_id or product.get("source_product_id") or "").strip()
     if not gid:
         return None
@@ -190,5 +189,10 @@ def try_adopt_admin_category(
         hs,
         resolution="auto",
         skip_admin_writeback=True,
+        defer_side_effects=True,
     )
-    return updated
+    return finalize_product_mapping_confirm(
+        updated,
+        resolution="auto",
+        skip_admin_writeback=True,
+    )

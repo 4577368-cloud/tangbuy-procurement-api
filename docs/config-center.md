@@ -25,7 +25,7 @@
 
 ## 用户目录（`src/lib/auth/users.ts`）
 
-- 种子用户：BD = jody/lydia/kevin；采购员 = 孙玉田；管理员 = 贵峰/老K/雪芝。
+- 种子用户：BD = jody/lydia/kevin；采购员 = 孙玉田；管理员 = admin/雪芝。
 - 登录：**账号 + 密码**（模拟阶段默认密码 `tangbuy123`）。
 - 唯一键 = `account`（使用人）。后续对接库时，以账号字段分配角色，替换种子即可。
 

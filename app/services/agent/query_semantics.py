@@ -94,7 +94,12 @@ QUEUE_DIMENSION: dict[str, dict[str, Any]] = {
     "pending_procurement": {"label": "待下单", "aliases": ("待下单", "待采购", "还没下单", "未采购")},
     "pending_payment": {"label": "待支付", "aliases": ("待支付", "待付款", "未支付")},
     "ordered": {"label": "已订购", "aliases": ("已订购", "已下单", "待发货", "还没发货")},
-    "shipped": {"label": "已发货", "aliases": ("已发货", "在途", "运输中")},
+    "shipped": {"label": "已发货", "aliases": ("已发货", "运输中")},
+    "in_transit": {
+        "label": "在途",
+        "aliases": ("在途",),
+        "meaning": "已发货 + 已到仓 + 已发出（国际段在途）",
+    },
     "in_warehouse": {"label": "已到仓", "aliases": ("已到仓", "在仓", "仓库里", "已入库")},
     "dispatched": {"label": "已发出", "aliases": ("已发出", "海外仓发出", "国际段")},
     "exception": {
@@ -282,11 +287,15 @@ def resolve_time_preset(text: str) -> Optional[str]:
     return None
 
 
+_QUEUE_TIME_FALSE_POSITIVE = re.compile(r"待支付|待付款|未支付|待下单|待采购|未采购|待发货")
+
+
 def resolve_time_field(text: str, explicit: Optional[str] = None) -> Optional[str]:
     if explicit and explicit in TIME_FIELDS:
         return explicit
+    scrubbed = _QUEUE_TIME_FALSE_POSITIVE.sub(" ", text or "")
     for pattern, field in TIME_FIELD_PHRASES:
-        if re.search(pattern, text):
+        if re.search(pattern, scrubbed):
             meta = TIME_FIELDS.get(field, {})
             if meta.get("queryable", True):
                 return field
@@ -295,7 +304,7 @@ def resolve_time_field(text: str, explicit: Optional[str] = None) -> Optional[st
         if not meta.get("queryable", True):
             continue
         for alias in meta["aliases"]:
-            if alias in text:
+            if alias in scrubbed:
                 hits.append((len(alias), key))
     if hits:
         hits.sort(reverse=True)
@@ -304,7 +313,11 @@ def resolve_time_field(text: str, explicit: Optional[str] = None) -> Optional[st
 
 
 def resolve_queue_from_text(text: str) -> Optional[str]:
+    if "在途" in text:
+        return "in_transit"
     for key, meta in QUEUE_DIMENSION.items():
+        if key == "in_transit":
+            continue
         for alias in meta.get("aliases", ()):
             if alias in text:
                 return key
@@ -357,7 +370,7 @@ def describe_interpretation(filters: dict[str, str], output_mode: str) -> str:
 
     scope = " · ".join(parts) if parts else "全库"
     if output_mode == "count":
-        return f"统计 {scope} 订单数量"
+        return scope if scope != "全库" else "订单"
     if output_mode == "lookup":
         return "按单号查询订单详情"
     return f"列出 {scope} 订单（含正常与异常，除非另指定）"
@@ -530,6 +543,9 @@ def build_query_filters_from_text(text: str) -> dict[str, str]:
     queue = resolve_queue_from_text(text)
     if queue:
         out["queue"] = queue
+        if out.get("time_field") == "pay_time" and queue == "pending_payment":
+            if not re.search(r"(昨天|今天|本周|本月|上周|近\d+天|支付时间|付款时间|付过款|付的款)", text):
+                out.pop("time_field", None)
 
     bd = extract_bd_owner(text)
     if bd:
@@ -604,6 +620,9 @@ def row_health(row: dict[str, Any]) -> str:
 def row_matches_queue_filter(row: dict[str, Any], queue: Optional[str]) -> bool:
     if not queue or queue == "all":
         return True
+    if queue == "in_transit":
+        q = resolve_order_queue(row)
+        return q in ("shipped", "in_warehouse", "dispatched")
     if queue == "exception":
         return classify_exception(row) is not None or resolve_order_queue(row) == "exception"
     return resolve_order_queue(row) == queue
@@ -683,18 +702,24 @@ def load_ord_lines_pool() -> tuple[list[dict[str, Any]], str]:
 
 def filters_summary(filters: dict[str, Any]) -> str:
     parts: list[str] = []
-    if filters.get("time_range_label") and filters.get("time_field_label"):
-        parts.append(f"{filters['time_range_label']} · {filters['time_field_label']}")
-    elif filters.get("time_range_label"):
+    preset = filters.get("time_preset") or "all"
+    has_real_time = preset != "all" or bool(filters.get("time_start") or filters.get("time_end"))
+    if has_real_time and filters.get("time_range_label") and filters.get("time_field_label"):
+        parts.append(f"{filters['time_range_label']}{filters['time_field_label']}")
+    elif has_real_time and filters.get("time_range_label"):
         parts.append(str(filters["time_range_label"]))
     if filters.get("bd_owner"):
         parts.append(f"BD {filters['bd_owner']}")
     if filters.get("user_keyword"):
         parts.append(f"客户 {filters['user_keyword']}")
     if filters.get("queue"):
-        from app.services.data_center import QUEUE_LABELS
+        q = filters["queue"]
+        if q == "in_transit":
+            parts.append("在途")
+        else:
+            from app.services.data_center import QUEUE_LABELS
 
-        parts.append(QUEUE_LABELS.get(filters["queue"], filters["queue"]))
+            parts.append(QUEUE_LABELS.get(q, q))
     if filters.get("keyword"):
         parts.append(f"「{filters['keyword']}」")
     return " · ".join(parts) if parts else "全库"

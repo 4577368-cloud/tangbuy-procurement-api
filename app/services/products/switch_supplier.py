@@ -360,6 +360,7 @@ def switch_supplier(
     operator: Optional[str] = None,
     signal_type: Optional[str] = None,
     note: Optional[str] = None,
+    reason_key: Optional[str] = None,
 ) -> dict[str, Any]:
     """用备选 offer 完整替换原商品：B 作为订单新货源入库。"""
     offer = (offer_id or "").strip()
@@ -471,6 +472,7 @@ def switch_supplier(
                 "supplier_switched_to_shop": str(product_b.get("shop_name") or ""),
                 "supplier_switched_to_price": product_b.get("original_unit_price"),
                 "supplier_switched_reason": note or "",
+                "supplier_switched_reason_key": (reason_key or "").strip(),
             },
         )
         disposition_store.append_audit(
@@ -492,6 +494,7 @@ def switch_supplier(
                 "to_shop_name": product_b.get("shop_name"),
                 "to_unit_price": product_b.get("original_unit_price"),
                 "switch_reason": note or "",
+                "switch_reason_key": (reason_key or "").strip(),
                 "at": now,
             }
         )
@@ -512,6 +515,14 @@ def switch_supplier(
         schedule_product_pipeline(b_id)
     except Exception:
         pass
+
+    for line_key in linked:
+        try:
+            from app.services.orders.procurement_pipeline import resume_pipeline
+
+            resume_pipeline(line_key, operator="switch_supplier")
+        except Exception:
+            pass
 
     return {
         "ok": True,

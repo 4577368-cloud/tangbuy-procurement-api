@@ -4,32 +4,30 @@ from __future__ import annotations
 
 import json
 import time as _time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any, Iterator, Optional
 from zoneinfo import ZoneInfo
 
 from app.core.paths import data_dir
+from app.db.session import db_session, is_db_enabled
 from app.services.agent.llm import chat_completion_stream
 from app.services.command_center.briefing_fallback import render_briefing_fallback
 from app.services.command_center.briefing_prompt import build_briefing_messages
-from app.services.command_center.signal_scan import (
-    BRIEFING_MAX_PER_QUEUE,
-    REASON_TO_SIGNAL,
-    aggregate_signal_stats,
-    scan_ord_lines_for_signals,
+from app.services.command_center.board_signals import row_to_board_signal
+from app.services.command_center.scan_cache import (
+    get_command_center_scan,
+    invalidate_command_center_scan,
 )
-from app.services.orders.exception_rules import (
-    classify_exception,
-    classify_exception_reason,
-)
+from app.services.command_center.signal_scan import load_all_scan_rows
+from app.services.orders.disposition_store import list_audits
 from app.services.products.service import list_products
 from app.services.tasks.store import OPERATION_TASK_TYPES, list_tasks
 
 _SH_TZ = ZoneInfo("Asia/Shanghai")
 _SNAPSHOT_PATH = data_dir() / "command-center" / "briefing-snapshot.json"
-_SHIP_OVERDUE_HOURS = 48
-_FACTS_CACHE_TTL = 90.0
+_FACTS_CACHE_TTL = 180.0
 _BRIEFING_SYNC_STALE_SEC = 600.0
+_BRIEFING_FORCE_SYNC_COOLDOWN_SEC = 30.0
 _facts_cache: dict[str, Any] = {"at": 0.0, "value": None}
 
 
@@ -77,47 +75,31 @@ def _row_pay_time(row: dict[str, Any]) -> Optional[datetime]:
     return _parse_iso(row.get("pay_time")) or _parse_iso(row.get("pur_time"))
 
 
-def _count_yesterday_carryover(rows: list[dict[str, Any]]) -> dict[str, int]:
-    """今日 0 点前产生、当前仍为 action 档的订单，按信号类型估算。"""
+def _count_yesterday_carryover(
+    rows: list[dict[str, Any]],
+    products: list[dict[str, Any]],
+) -> dict[str, int]:
+    """今日 0 点前产生、当前仍为待处理看板信号的订单。"""
     out: dict[str, int] = {}
     for row in rows:
-        if classify_exception(row) != "action":
-            continue
         ref = _row_pay_time(row)
         if not ref or not _is_before_today_sh(ref):
             continue
-        result = classify_exception_reason(row)
-        label = result[1] if result else "其他"
-        signal = REASON_TO_SIGNAL.get(label, "OTHER")
-        if row.get("ord_line_stat") in (22, "22"):
-            ref_time = _parse_iso(row.get("pur_time")) or ref
-            if ref_time and ref_time < datetime.now(timezone.utc) - timedelta(
-                hours=_SHIP_OVERDUE_HOURS
-            ):
-                signal = "SHIP_OVERDUE"
-        out[signal] = out.get(signal, 0) + 1
+        signal = row_to_board_signal(row, products)
+        if not signal:
+            continue
+        urgency = str(signal.get("urgency") or "")
+        if urgency not in ("immediate", "today"):
+            continue
+        signal_type = str(signal.get("signal_type") or "")
+        if not signal_type:
+            continue
+        out[signal_type] = out.get(signal_type, 0) + 1
     return out
 
 
 def _read_dispositions() -> list[dict[str, Any]]:
-    path = data_dir() / "orders" / "dispositions.jsonl"
-    if not path.exists():
-        return []
-    records: list[dict[str, Any]] = []
-    try:
-        for line in path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                row = json.loads(line)
-                if isinstance(row, dict):
-                    records.append(row)
-            except json.JSONDecodeError:
-                continue
-    except OSError:
-        return []
-    return records
+    return list_audits(limit=5000)
 
 
 def _disposition_today_counts() -> dict[str, int]:
@@ -168,6 +150,12 @@ def _category_mapping_stats() -> dict[str, int]:
 
 
 def _load_snapshot() -> Optional[dict[str, Any]]:
+    if is_db_enabled():
+        from app.db.catalog_repos import ConfigRepository
+
+        with db_session() as session:
+            data = ConfigRepository(session).load_document(ConfigRepository.BRIEFING_SNAPSHOT_KEY)
+        return data if isinstance(data, dict) else None
     if not _SNAPSHOT_PATH.exists():
         return None
     try:
@@ -178,11 +166,17 @@ def _load_snapshot() -> Optional[dict[str, Any]]:
 
 
 def save_briefing_snapshot(facts: dict[str, Any]) -> None:
-    _SNAPSHOT_PATH.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "facts": facts,
     }
+    if is_db_enabled():
+        from app.db.catalog_repos import ConfigRepository
+
+        with db_session() as session:
+            ConfigRepository(session).save_document(ConfigRepository.BRIEFING_SNAPSHOT_KEY, payload)
+        return
+    _SNAPSHOT_PATH.parent.mkdir(parents=True, exist_ok=True)
     _SNAPSHOT_PATH.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -227,6 +221,10 @@ def compute_delta(
         "signal_counts": _dict_delta(
             current.get("signal_counts") or {},
             prev.get("signal_counts") or {},
+        ),
+        "board_signal_counts_action": _dict_delta(
+            current.get("board_signal_counts_action") or {},
+            prev.get("board_signal_counts_action") or {},
         ),
         "ship_overdue_estimated": _numeric_delta(
             current, prev, "ship_overdue_estimated"
@@ -274,29 +272,42 @@ def _queue_counts_from_cache() -> dict[str, int] | None:
 
 
 def _briefing_cache_needs_sync(*, force: bool) -> bool:
+    """是否需要在简报前增量同步 Admin。
+
+    自动刷新时超过 _BRIEFING_SYNC_STALE_SEC 才同步，避免频繁拉取。
+    手动刷新（force=True）时最短 _BRIEFING_FORCE_SYNC_COOLDOWN_SEC 后可再次同步，
+    既响应用户"立即刷新"的预期，又避免连点导致重复请求。
+    """
     from app.services.orders.line_cache import load_all_lines, load_sync_state
 
     if not load_all_lines():
-        return True
-    if force:
         return True
     state = load_sync_state()
     at = _parse_iso(state.get("last_incremental_at"))
     if not at:
         return True
     age = (datetime.now(timezone.utc) - at).total_seconds()
-    return age > _BRIEFING_SYNC_STALE_SEC
+    threshold = _BRIEFING_FORCE_SYNC_COOLDOWN_SEC if force else _BRIEFING_SYNC_STALE_SEC
+    return age > threshold
 
 
 def ensure_order_cache_for_briefing(*, force: bool = False) -> dict[str, Any]:
-    """简报前置：增量拉 Admin 订单写入 line_cache，与汇总解耦。"""
+    """简报前置：必要时增量拉 Admin；失败时若有本地缓存则继续生成文稿。"""
     from app.services.orders import line_cache, order_line_sync
 
     if not _briefing_cache_needs_sync(force=force):
         return _orders_sync_meta(skipped=True)
 
-    pages = 2 if force else 1
-    result = order_line_sync.sync_orders_incremental(pages=pages)
+    pages = 1
+    try:
+        result = order_line_sync.sync_orders_incremental(pages=pages)
+    except Exception as exc:
+        if line_cache.load_all_lines():
+            meta = _orders_sync_meta(skipped=True)
+            meta["sync_warning"] = str(exc)[:240]
+            return meta
+        raise
+
     cache_total = int(result.get("cache_total") or len(line_cache.load_all_lines()))
     if cache_total <= 0:
         errors = result.get("errors") if isinstance(result.get("errors"), list) else []
@@ -348,15 +359,19 @@ def build_briefing_facts() -> dict[str, Any]:
         )
     }
 
-    rows, per_queue_scan = scan_ord_lines_for_signals(
-        queue_counts,
-        max_per_queue=BRIEFING_MAX_PER_QUEUE,
-    )
-    scan_stats = aggregate_signal_stats(rows)
+    rows = load_all_scan_rows()
+    if not rows:
+        raise RuntimeError("订单缓存为空，请稍后重试")
+
+    scan = get_command_center_scan()
+    enriched_rows = scan.get("enriched_rows") or []
+    scan_stats = scan.get("stats") or {}
+    per_queue_scan = scan.get("per_queue_scan") or {}
 
     from app.services.tasks.store import get_agent_operation_stats
 
     agent_ops = get_agent_operation_stats()
+    products = list_products()
 
     facts: dict[str, Any] = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -365,6 +380,9 @@ def build_briefing_facts() -> dict[str, Any]:
         "queue_counts": queue_counts,
         "exception_bands": scan_stats["exception_bands"],
         "signal_counts": scan_stats["signal_counts"],
+        "board_signal_counts": scan_stats["board_signal_counts"],
+        "board_signal_counts_action": scan_stats["board_signal_counts_action"],
+        "board_band_counts": scan_stats["board_band_counts"],
         "ship_overdue_estimated": scan_stats["ship_overdue_estimated"],
         "scanned_rows": len(rows),
         "per_queue_scan": per_queue_scan,
@@ -373,12 +391,17 @@ def build_briefing_facts() -> dict[str, Any]:
         "disposition_today": _disposition_today_counts(),
         "tasks_completed_today": _tasks_completed_today(),
         "category_mapping": _category_mapping_stats(),
-        "yesterday_carryover": _count_yesterday_carryover(rows),
+        "yesterday_carryover": _count_yesterday_carryover(enriched_rows, products),
     }
     return facts
 
 
-def _get_facts_cached(*, force: bool = False, assume_cache_ready: bool = False) -> dict[str, Any]:
+def _get_facts_cached(
+    *,
+    force: bool = False,
+    assume_cache_ready: bool = False,
+    skip_sync: bool = False,
+) -> dict[str, Any]:
     if not force:
         cached = _facts_cache.get("value")
         if (
@@ -386,8 +409,10 @@ def _get_facts_cached(*, force: bool = False, assume_cache_ready: bool = False) 
             and _time.monotonic() - float(_facts_cache.get("at") or 0.0) < _FACTS_CACHE_TTL
         ):
             return cached  # type: ignore[return-value]
-    if not assume_cache_ready:
+    if not assume_cache_ready and not skip_sync:
         ensure_order_cache_for_briefing(force=force)
+    if force:
+        invalidate_command_center_scan()
     facts = build_briefing_facts()
     _facts_cache["value"] = facts
     _facts_cache["at"] = _time.monotonic()
@@ -395,7 +420,7 @@ def _get_facts_cached(*, force: bool = False, assume_cache_ready: bool = False) 
 
 
 def get_command_center_stats(*, force: bool = False) -> dict[str, Any]:
-    facts = _get_facts_cached(force=force)
+    facts = _get_facts_cached(force=force, skip_sync=True)
     signal_counts = dict(facts.get("signal_counts") or {})
     neg = int(signal_counts.pop("NEGATIVE_MARGIN", 0) or 0)
     if neg:
@@ -404,11 +429,27 @@ def get_command_center_stats(*, force: bool = False) -> dict[str, Any]:
         "generated_at": facts.get("generated_at"),
         "queue_counts": facts.get("queue_counts") or {},
         "signal_counts": signal_counts,
+        "board_signal_counts": facts.get("board_signal_counts") or {},
+        "board_signal_counts_action": facts.get("board_signal_counts_action") or {},
+        "board_band_counts": facts.get("board_band_counts") or {},
         "exception_bands": facts.get("exception_bands") or {},
         "ship_overdue_estimated": facts.get("ship_overdue_estimated") or 0,
         "scanned_rows": facts.get("scanned_rows") or 0,
         "per_queue_scan": facts.get("per_queue_scan") or {},
         "orders_source": facts.get("orders_source"),
+    }
+
+
+def get_command_center_signals(*, force: bool = False) -> dict[str, Any]:
+    """全量看板信号子单列表，供指挥中心浮层与卡片数字对齐。"""
+    if force:
+        invalidate_command_center_scan()
+    scan = get_command_center_scan(force=force)
+    items = scan.get("signal_items") or []
+    return {
+        "generated_at": scan.get("generated_at") or datetime.now(timezone.utc).isoformat(),
+        "items": items,
+        "total": len(items),
     }
 
 
@@ -459,6 +500,11 @@ def stream_briefing(*, force: bool = False) -> Iterator[str]:
     """SSE 事件流：sync → meta → facts → llm / t / error，结束 [DONE]。"""
     from app.core.config import get_settings
 
+    if force:
+        _facts_cache["at"] = 0.0
+        _facts_cache["value"] = None
+        invalidate_command_center_scan()
+
     orders_meta: dict[str, Any] | None = None
     if _briefing_cache_needs_sync(force=force):
         yield f'data: {json.dumps({"phase": "sync"}, ensure_ascii=False)}\n\n'
@@ -471,11 +517,18 @@ def stream_briefing(*, force: bool = False) -> Iterator[str]:
                 continue
             kind, value = item
             if kind == "err":
+                from app.services.orders.line_cache import load_all_lines
+
+                if load_all_lines():
+                    orders_meta = _orders_sync_meta(skipped=True)
+                    orders_meta["sync_warning"] = str(value)[:240]
+                    break
                 err = json.dumps({"error": str(value)}, ensure_ascii=False)
                 yield f"data: {err}\n\n"
                 yield "data: [DONE]\n\n"
                 return
             orders_meta = value if isinstance(value, dict) else None
+            break
     else:
         orders_meta = ensure_order_cache_for_briefing(force=force)
 

@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import sys
+import time
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -326,6 +327,55 @@ def _rank_candidates(
     return ranked, filtered_hard, skipped
 
 
+def _extract_candidates(result: dict[str, Any]) -> list[dict[str, Any]]:
+    data = result.get("data") or {}
+    candidates = data.get("similar_products") or data.get("products") or []
+    if not isinstance(candidates, list):
+        return []
+    return [c for c in candidates if isinstance(c, dict)]
+
+
+def _fetch_search_candidates(
+    image_url: str,
+    plan: AltSearchQueryPlan,
+    *,
+    limit: int,
+) -> tuple[list[dict[str, Any]], Optional[str]]:
+    """图搜为主；空结果或瞬时失败时降级文搜。"""
+    last_error: Optional[str] = None
+    for attempt in range(2):
+        try:
+            result = newton_cli.search_image(
+                image_url,
+                limit=limit,
+                query=plan.search_query or None,
+            )
+            if not result.get("success"):
+                raise RuntimeError(result.get("error") or result.get("markdown") or "图搜失败")
+            candidates = _extract_candidates(result)
+            if candidates:
+                return candidates, None
+            last_error = None
+            break
+        except Exception as exc:
+            last_error = str(exc)
+            if attempt == 0:
+                time.sleep(1.0)
+                continue
+            break
+
+    query = (plan.search_query or plan.subject or "").strip()
+    if not query:
+        return [], last_error
+    try:
+        result = newton_cli.search_text(query, limit=limit)
+        if not result.get("success"):
+            return [], last_error or str(result.get("error") or "文搜失败")
+        return _extract_candidates(result), None
+    except Exception as exc:
+        return [], last_error or str(exc)
+
+
 def scan_product_alternatives(
     product_id: str,
     *,
@@ -396,17 +446,13 @@ def scan_product_alternatives(
         try:
             # 后续轮适当加大 limit，尽量拿到未被屏蔽的新 offer
             limit = SEARCH_PAGE_SIZE + (round_i * 10)
-            result = newton_cli.search_image(
+            candidates, fetch_error = _fetch_search_candidates(
                 image_url,
+                plan,
                 limit=limit,
-                query=plan.search_query or None,
             )
-            if not result.get("success"):
-                raise RuntimeError(result.get("error") or result.get("markdown") or "图搜失败")
-            data = result.get("data") or {}
-            candidates = data.get("similar_products") or data.get("products") or []
-            if not isinstance(candidates, list):
-                candidates = []
+            if fetch_error and not candidates:
+                raise RuntimeError(fetch_error)
         except Exception as exc:
             last_error = str(exc)
             if rounds == 1 and not top:
@@ -460,39 +506,36 @@ def scan_product_alternatives(
     # 刷新时若严格阈值凑不足 3 个，用本轮已屏蔽池外的较低相似度结果补齐（不再无限轮）
     if do_refresh and len(top) < MAX_ALTERNATIVES and rounds >= 1:
         try:
-            result = newton_cli.search_image(
+            candidates, _ = _fetch_search_candidates(
                 image_url,
+                plan,
                 limit=SEARCH_PAGE_SIZE + 20,
-                query=plan.search_query or None,
             )
-            if result.get("success"):
-                data = result.get("data") or {}
-                candidates = data.get("similar_products") or data.get("products") or []
-                if isinstance(candidates, list):
-                    total_scanned += len(candidates)
-                    soft, filtered_hard, skipped = _rank_candidates(
-                        candidates,
-                        product=product,
-                        plan=plan,
-                        blocked=blocked | {str(a.get("offer_id") or "") for a in top},
-                        current_offer=current_offer,
-                        current_cost=current_cost,
-                        current_composite=current_composite,
-                        default_city=settings.tangbuy_default_shipping_city,
-                        min_similarity=0.0,
-                    )
-                    total_filtered += filtered_hard
-                    total_skipped += skipped
-                    have_ids = {str(a.get("offer_id") or "") for a in top}
-                    for alt in soft:
-                        oid = str(alt.get("offer_id") or "")
-                        if not oid or oid in have_ids:
-                            continue
-                        top.append(alt)
-                        have_ids.add(oid)
-                        if len(top) >= MAX_ALTERNATIVES:
-                            break
-                    rounds += 1
+            if candidates:
+                total_scanned += len(candidates)
+                soft, filtered_hard, skipped = _rank_candidates(
+                    candidates,
+                    product=product,
+                    plan=plan,
+                    blocked=blocked | {str(a.get("offer_id") or "") for a in top},
+                    current_offer=current_offer,
+                    current_cost=current_cost,
+                    current_composite=current_composite,
+                    default_city=settings.tangbuy_default_shipping_city,
+                    min_similarity=0.0,
+                )
+                total_filtered += filtered_hard
+                total_skipped += skipped
+                have_ids = {str(a.get("offer_id") or "") for a in top}
+                for alt in soft:
+                    oid = str(alt.get("offer_id") or "")
+                    if not oid or oid in have_ids:
+                        continue
+                    top.append(alt)
+                    have_ids.add(oid)
+                    if len(top) >= MAX_ALTERNATIVES:
+                        break
+                rounds += 1
         except Exception:
             pass
 

@@ -61,6 +61,43 @@ MANUAL_DOMAIN_MARKERS: list[dict] = [
             "袜", "绒", "毛", "衣", "服", "鞋", "包", "帽", "被", "毯", "围巾", "手套",
         ],
     },
+    {
+        "domain": "玩具",
+        "markers": ["玩具", "益智", "积木", "玩偶", "娃娃", "模型玩具"],
+        "human_context": [
+            "包", "胸包", "斜挎", "斜跨", "单肩", "双肩", "腰包", "背包", "挎包", "手包", "拎包",
+            "卫衣", "毛衣", "针织", "裤", "裙", "袜", "鞋", "帽", "衣", "服",
+        ],
+    },
+    {
+        "domain": "箱包",
+        "markers": [
+            "胸包", "斜挎包", "斜跨包", "单肩包", "双肩包", "腰包", "背包", "挎包",
+            "手包", "拎包", "手提包", "箱包", "休闲包",
+        ],
+        "human_context": ["玩具", "益智", "卫衣", "毛衣", "针织"],
+    },
+    {
+        "domain": "石器",
+        "markers": [
+            "石槽", "石磨", "石器", "青石板", "老石", "石雕", "石盆", "石刻",
+            "石制品", "石条", "石灯笼", "石臼", "石桌", "石凳", "石缸", "石钵",
+        ],
+        "human_context": [
+            "卫衣", "毛衣", "裤", "裙", "袜", "鞋", "帽", "包", "背心", "内衣",
+            "路由器", "网卡", "交换机", "网关", "耳机", "音箱",
+        ],
+    },
+    {
+        "domain": "电子网络",
+        "markers": [
+            "路由器", "网卡", "交换机", "网关", "光纤", "集线器", "中继器",
+        ],
+        "human_context": [
+            "石槽", "石磨", "石器", "青石板", "老石", "石雕", "石盆", "石刻",
+            "卫衣", "毛衣", "裤", "裙", "袜", "鞋", "帽",
+        ],
+    },
 ]
 
 # 锚点词过泛时不参与「必须有标题证据」
@@ -302,6 +339,52 @@ def evidence_multiplier(
             mult = min(mult, learned[anchor])
 
     return mult
+
+
+# 语义词作类目名前缀时，后缀若构成另一商品（盒/架/袋等）且标题未体现 → 蹭词
+CATALOG_EXTENSION_SUFFIXES = (
+    "盒",
+    "架",
+    "袋",
+    "箱",
+    "柜",
+    "桶",
+    "瓶",
+    "盖",
+    "套",
+    "垫",
+    "收纳",
+    "展示",
+    "保养",
+    "鉴定",
+    "包装",
+)
+
+
+def term_catalog_extension_mismatch(term: str, cn: str, dec: str, title: str = "") -> bool:
+    """语义词仅为类目名前缀、后缀构成另一商品且标题未体现时，视为蹭词（首饰≠首饰盒）。"""
+    if not term:
+        return False
+    if cn == term or dec == term:
+        return False
+    title = title or ""
+    for host in (cn, dec):
+        if not host or host == term or not host.startswith(term):
+            continue
+        suffix = host[len(term) :]
+        if not suffix:
+            continue
+        if host in title:
+            return False
+        if any(s in title for s in CATALOG_EXTENSION_SUFFIXES if s in suffix):
+            return False
+        if any(suffix.startswith(s) or s in suffix for s in CATALOG_EXTENSION_SUFFIXES):
+            return True
+    return False
+
+
+def term_catalog_extension_penalty(term: str, cn: str, dec: str, title: str = "") -> float:
+    return 0.55 if term_catalog_extension_mismatch(term, cn, dec, title) else 0.0
 
 
 def declare_only_penalty(term: str, cn: str, dec: str) -> float:

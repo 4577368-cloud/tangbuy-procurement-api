@@ -12,6 +12,7 @@ from app.services.category_mapping.suggest import run_category_mapping_suggest
 from app.config.business_config import get_price_markup
 from app.services.products.store import (
     confirm_product_mapping,
+    finalize_product_mapping_confirm,
     find_by_source_product_id,
     find_reusable_hs_mapping,
     get_product_by_id as store_get_product_by_id,
@@ -71,8 +72,21 @@ def _build_tier_prices(
     ]
 
 
+def _reconcile_product_writeback(product: dict[str, Any]) -> dict[str, Any]:
+    from app.services.category_mapping.admin_writeback import reconcile_stale_admin_writeback
+
+    reconciled, changed = reconcile_stale_admin_writeback(product)
+    if not changed:
+        return reconciled
+    pid = str(reconciled.get("tangbuy_product_id") or "").strip()
+    if pid:
+        update_product(pid, lambda _: reconciled)
+    return reconciled
+
+
 def list_products() -> list[dict[str, Any]]:
     items = load_products()
+    items = [_reconcile_product_writeback(p) for p in items]
     return sorted(items, key=lambda p: p.get("created_at", ""), reverse=True)
 
 
@@ -81,7 +95,10 @@ def get_product_stats() -> dict[str, int]:
 
 
 def get_product_by_id(pid: str) -> Optional[dict[str, Any]]:
-    return store_get_product_by_id(pid)
+    product = store_get_product_by_id(pid)
+    if not product:
+        return None
+    return _reconcile_product_writeback(product)
 
 
 def add_product_from_find_item(
@@ -192,6 +209,10 @@ _MAPPING_META_KEYS = (
     "auto_resolved",
     "mapped_at",
     "suggested_category_id",
+    "similar",
+    "authoritative_near",
+    "admin_reference_hs",
+    "admin_reference_label",
 )
 
 
@@ -227,7 +248,7 @@ def save_mapping_draft(product: dict[str, Any], record: dict[str, Any]) -> dict[
     product["category_status"] = "needs_review"
     hs = mapping.get("suggested_hs")
     if record.get("auto_resolved") and is_valid_hs_mapping(hs):
-        product = confirm_product_mapping(product, hs)
+        product = confirm_product_mapping(product, hs, defer_side_effects=True)
         product["mapping_record"] = _merge_suggest_into_mapping(
             dict(product.get("mapping_record") or {}),
             record,
@@ -236,13 +257,28 @@ def save_mapping_draft(product: dict[str, Any], record: dict[str, Any]) -> dict[
 
 
 def save_mapping_draft_from_payload(product: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    from app.services.category_mapping.mapping_quality import assess_mapping_quality
+
     now = _now_iso()
     record = dict(payload)
     record.setdefault("mapped_at", now)
     record.setdefault("review_status", "pending")
     decision = str(payload.get("decision") or "")
     conf = float(payload.get("confidence") or 0)
-    record["auto_resolved"] = decision in ("semantic_agreement", "history_hit") and conf >= 0.85
+    hs = _hs_from_suggest_payload(payload) or {}
+    quality = assess_mapping_quality(
+        str(product.get("product_name") or ""),
+        hs,
+        vision_keywords=payload.get("vision_keywords") if isinstance(payload.get("vision_keywords"), list) else None,
+        match_method=str(payload.get("match_method") or ""),
+        confidence=conf,
+        matched_keywords=payload.get("matched_keywords") if isinstance(payload.get("matched_keywords"), list) else None,
+    )
+    record["auto_resolved"] = (
+        quality["auto_pass_eligible"]
+        and decision in ("semantic_agreement", "history_hit")
+    )
+    record["quality_gate"] = quality
     return save_mapping_draft(product, record)
 
 
@@ -260,48 +296,112 @@ def map_product_category_by_id(
         update_product(pid, lambda p: {**p, "category_status": "pending"})
         product = store_get_product_by_id(pid) or product
 
+    from app.services.category_mapping.admin_sync import (
+        prefetch_admin_goods_cache,
+        try_adopt_admin_category,
+    )
+
     reused = find_reusable_hs_mapping(product, exclude_id=pid)
     if reused:
         hs, detail = reused
-        return update_product(
-            pid,
-            lambda p: confirm_product_mapping(
-                {
-                    **p,
-                    "mapping_record": {
-                        **(p.get("mapping_record") or {}),
-                        "match_detail": detail,
-                        "match_method": "local_item_mapped",
-                    },
-                },
-                hs,
-            ),
+        from app.services.category_mapping.mapping_quality import assess_mapping_quality
+
+        quality = assess_mapping_quality(
+            str(product.get("product_name") or ""),
+            hs,
+            match_method="local_item_mapped",
+            confidence=1.0,
         )
+        if quality["auto_pass_eligible"]:
+            result = update_product(
+                pid,
+                lambda p: confirm_product_mapping(
+                    {
+                        **p,
+                        "mapping_record": {
+                            **(p.get("mapping_record") or {}),
+                            "match_detail": detail,
+                            "match_method": "local_item_mapped",
+                            "quality_gate": quality,
+                        },
+                    },
+                    hs,
+                    defer_side_effects=True,
+                ),
+            )
+            return finalize_product_mapping_confirm(result, resolution="auto")
 
-    from app.services.category_mapping.admin_sync import try_adopt_admin_category
+    gid = str(product.get("source_product_id") or "").strip()
+    cache: dict[str, dict[str, Any]] = dict(admin_cache or {})
+    if gid:
+        prefetch_admin_goods_cache([gid], cache)
+        adopted = try_adopt_admin_category(
+            product,
+            ord_row=ord_row,
+            admin_cache=cache,
+        )
+        if adopted:
+            return adopted
 
-    adopted = try_adopt_admin_category(
-        product,
-        ord_row=ord_row,
-        admin_cache=admin_cache,
+        entry = cache.get(gid) if cache else None
+        if entry:
+            from app.services.category_mapping.admin_sync import hs_from_admin_entry
+
+            admin_hs = hs_from_admin_entry(entry)
+            if admin_hs:
+                product = {
+                    **product,
+                    "mapping_record": {
+                        **(product.get("mapping_record") or {}),
+                        "admin_reference_hs": admin_hs,
+                        "admin_reference_label": admin_hs.get("category_cn_name"),
+                    },
+                }
+
+    update_product(
+        pid,
+        lambda p: {
+            **p,
+            "category_status": "mapping",
+            "mapping_record": {
+                **(p.get("mapping_record") or {}),
+                **((product.get("mapping_record") or {})),
+            },
+        },
     )
-    if adopted:
-        return update_product(pid, lambda _: adopted)
-
-    update_product(pid, lambda p: {**p, "category_status": "mapping"})
     try:
         payload = run_category_mapping_suggest(
             product.get("product_name", ""),
             hint=mapping_hint_for_product(product),
             goods_id=product.get("source_product_id"),
             image_url=product.get("image_url"),
+            hint_as_reference=True,
         )
         if not payload.get("success"):
-            return update_product(pid, lambda p: {**p, "category_status": "failed"})
+            def _mark_failed(p: dict[str, Any]) -> dict[str, Any]:
+                rec = dict(p.get("mapping_record") or {})
+                for key in (
+                    "similar",
+                    "authoritative_near",
+                    "match_detail",
+                    "decision",
+                    "match_method",
+                    "vision_summary",
+                    "vision_keywords",
+                    "matched_keywords",
+                ):
+                    if payload.get(key) is not None:
+                        rec[key] = payload[key]
+                rec["review_status"] = "pending"
+                rec["mapped_at"] = _now_iso()
+                return {**p, "category_status": "failed", "mapping_record": rec}
+
+            return update_product(pid, _mark_failed)
         hs = _hs_from_suggest_payload(payload)
         if not is_valid_hs_mapping(hs):
             return update_product(pid, lambda p: {**p, "category_status": "failed"})
-        return update_product(pid, lambda p: save_mapping_draft_from_payload(p, payload))
+        result = update_product(pid, lambda p: save_mapping_draft_from_payload(p, payload))
+        return finalize_product_mapping_confirm(result, resolution="auto")
     except Exception:
         return update_product(pid, lambda p: {**p, "category_status": "failed"})
 
@@ -318,7 +418,12 @@ def apply_mapping_record(product: dict[str, Any], record: dict[str, Any]) -> dic
         resolution = "manual_confirm"
     else:
         resolution = "auto"
-    updated = confirm_product_mapping(product, hs, resolution=resolution)
+    updated = confirm_product_mapping(
+        product,
+        hs,
+        resolution=resolution,
+        defer_side_effects=True,
+    )
     mapping = _merge_suggest_into_mapping(dict(updated.get("mapping_record") or {}), record)
     category_path = record.get("suggested_category_path")
     if category_path:

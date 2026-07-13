@@ -52,15 +52,52 @@ def is_ready() -> bool:
     return _path("hs-authoritative.json").exists()
 
 
-def _tokenize(text: str) -> set[str]:
+_AUTH_GENERIC_TOKENS = frozenset(
+    {
+        "其他",
+        "制品",
+        "用品",
+        "配件",
+        "材料",
+        "产品",
+        "商品",
+        "零件",
+        "部件",
+        "装置",
+        "设备",
+        "机器",
+        "机械",
+        "器具",
+        "工具",
+        "零件",
+        "未列名",
+        "不论",
+        "是否",
+        "包括",
+        "除外",
+        "类似",
+        "相关",
+    }
+)
+
+
+def tokenize_for_search(text: str) -> set[str]:
     text = (text or "").lower()
     tokens: set[str] = set()
     tokens.update(re.findall(r"[a-z]{2,}", text))
     han = re.sub(r"[^\u4e00-\u9fff]", "", text)
     for i in range(max(0, len(han) - 1)):
-        tokens.add(han[i : i + 2])
-    tokens.update(re.findall(r"[\u4e00-\u9fff]{2,8}", text))
+        seg = han[i : i + 2]
+        if seg not in _AUTH_GENERIC_TOKENS:
+            tokens.add(seg)
+    for seg in re.findall(r"[\u4e00-\u9fff]{2,8}", text):
+        if seg not in _AUTH_GENERIC_TOKENS:
+            tokens.add(seg)
     return {t for t in tokens if len(t) >= 2}
+
+
+def _tokenize(text: str) -> set[str]:
+    return tokenize_for_search(text)
 
 
 def normalize_code(raw: object) -> str:
@@ -98,12 +135,15 @@ def search(query: str, limit: int = 12) -> list[dict[str, Any]]:
 
     tokens = _tokenize(q)
     for tok in tokens:
+        weight = 1.0 + min(len(tok), 6) * 0.15
         for code in index.get(tok, []):
-            scores[code] = scores.get(code, 0.0) + 1.0
+            scores[code] = scores.get(code, 0.0) + weight
 
-    ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)[:limit]
+    ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
     out: list[dict[str, Any]] = []
     for code, score in ranked:
+        if score < 1.8 and code_q != code:
+            continue
         e = by_code.get(code)
         if not e:
             continue
@@ -119,4 +159,6 @@ def search(query: str, limit: int = 12) -> list[dict[str, Any]]:
                 "source": "authoritative",
             }
         )
+        if len(out) >= limit:
+            break
     return out

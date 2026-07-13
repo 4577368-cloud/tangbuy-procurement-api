@@ -11,17 +11,37 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from app.core.paths import data_dir
+from app.db.session import db_session, is_db_enabled
 from app.services.category_mapping.local_mappings import upsert_local_mapping
 
 _CENTER_PATH = data_dir() / "products" / "center.json"
 _io_lock = threading.Lock()
 
 RESOLVED_MAPPING_STATUSES = frozenset({"auto_passed", "confirmed", "needs_review"})
+PROTECTED_PRODUCT_FIELDS = (
+    "hs_mapping",
+    "category",
+    "category_status",
+    "mapping_record",
+    "mapping_confidence",
+    "mapping_mapped_at",
+)
 GENERIC_PLATFORM_HINTS = frozenset({"其它", "其他", "待映射", "—", "-", ""})
 
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
+
+def _protect_resolved_mapping(product: dict[str, Any], merged: dict[str, Any]) -> dict[str, Any]:
+    """已确认品类不被订单同步覆盖。"""
+    if product.get("category_status") not in RESOLVED_MAPPING_STATUSES:
+        return merged
+    out = dict(merged)
+    for key in PROTECTED_PRODUCT_FIELDS:
+        if key in product:
+            out[key] = product[key]
+    return out
 
 
 def _parse_products_text(raw: str) -> list[dict[str, Any]]:
@@ -41,6 +61,12 @@ def _parse_products_text(raw: str) -> list[dict[str, Any]]:
 
 
 def load_products() -> list[dict[str, Any]]:
+    if is_db_enabled():
+        from app.db.catalog_repos import ProductRepository
+
+        with db_session() as session:
+            items = ProductRepository(session).load_all()
+            return [sanitize_product_mapping_state(p) for p in items]
     with _io_lock:
         if not _CENTER_PATH.exists():
             return []
@@ -52,6 +78,12 @@ def load_products() -> list[dict[str, Any]]:
 
 
 def save_products(items: list[dict[str, Any]]) -> None:
+    if is_db_enabled():
+        from app.db.catalog_repos import ProductRepository
+
+        with db_session() as session:
+            ProductRepository(session).save_all(items)
+        return
     payload = json.dumps(items, ensure_ascii=False, indent=2) + "\n"
     with _io_lock:
         _CENTER_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -77,17 +109,34 @@ def save_products(items: list[dict[str, Any]]) -> None:
 def find_by_source_product_id(source_id: str) -> Optional[dict[str, Any]]:
     if not source_id:
         return None
+    if is_db_enabled():
+        from app.db.catalog_repos import ProductRepository
+
+        with db_session() as session:
+            return ProductRepository(session).find_by_source_product_id(source_id)
     return next((p for p in load_products() if p.get("source_product_id") == source_id), None)
 
 
 def get_product_by_id(tangbuy_id: str) -> Optional[dict[str, Any]]:
     if not tangbuy_id:
         return None
+    if is_db_enabled():
+        from app.db.catalog_repos import ProductRepository
+
+        with db_session() as session:
+            return ProductRepository(session).get_by_id(tangbuy_id)
     return next((p for p in load_products() if p.get("tangbuy_product_id") == tangbuy_id), None)
 
 
 def find_product_for_ord_line(row: dict[str, Any]) -> Optional[dict[str, Any]]:
     ord_line = str(row.get("ord_line_no") or "").strip()
+    if is_db_enabled() and ord_line:
+        from app.db.catalog_repos import ProductRepository
+
+        with db_session() as session:
+            found = ProductRepository(session).find_by_ord_line(ord_line)
+            if found and not found.get("replaced_by_product_id"):
+                return found
     if ord_line:
         for p in load_products():
             lines = p.get("linked_ord_lines") or []
@@ -103,6 +152,53 @@ def find_product_for_ord_line(row: dict[str, Any]) -> Optional[dict[str, Any]]:
         found = find_by_source_product_id(splr_id)
         if found and not found.get("replaced_by_product_id"):
             return found
+    return None
+
+
+def build_ord_line_product_index() -> dict[str, dict[str, dict[str, Any]]]:
+    """一次性加载商品并建立 ord_line / item_id / source_product_id 索引，供批量 enrich。
+
+    替代逐行 find_product_for_ord_line（每行 1~3 次 DB 会话），
+    列表/看板批量场景改为一次全量 + 内存查找。
+    """
+    by_line: dict[str, dict[str, Any]] = {}
+    by_item: dict[str, dict[str, Any]] = {}
+    by_source: dict[str, dict[str, Any]] = {}
+    for p in load_products():
+        if p.get("replaced_by_product_id"):
+            continue
+        for line in p.get("linked_ord_lines") or []:
+            key = str(line or "").strip()
+            if key and key not in by_line:
+                by_line[key] = p
+        tid = str(p.get("tangbuy_product_id") or "").strip()
+        if tid and tid not in by_item:
+            by_item[tid] = p
+        sid = str(p.get("source_product_id") or "").strip()
+        if sid and sid not in by_source:
+            by_source[sid] = p
+    return {"by_line": by_line, "by_item": by_item, "by_source": by_source}
+
+
+def find_product_in_index(
+    row: dict[str, Any], index: dict[str, dict[str, dict[str, Any]]]
+) -> Optional[dict[str, Any]]:
+    """在 build_ord_line_product_index 结果里查找，优先级同 find_product_for_ord_line。"""
+    ord_line = str(row.get("ord_line_no") or "").strip()
+    if ord_line:
+        hit = index["by_line"].get(ord_line)
+        if hit:
+            return hit
+    item_id = str(row.get("item_id") or "").strip()
+    if item_id:
+        hit = index["by_item"].get(item_id)
+        if hit:
+            return hit
+    splr_id = str(row.get("splr_item_id") or "").strip()
+    if splr_id:
+        hit = index["by_source"].get(splr_id)
+        if hit:
+            return hit
     return None
 
 
@@ -130,9 +226,21 @@ def find_reusable_hs_mapping(
     product: dict[str, Any],
     *,
     exclude_id: Optional[str] = None,
+    validate_title: bool = True,
 ) -> Optional[tuple[dict[str, Any], str]]:
-    """同 SKU 复用已有映射，避免重复跑 Agent。"""
+    """同 SKU 复用已有映射；标题与 HS 不一致时放弃复用，改走完整映射。"""
     from app.services.category_mapping.local_mappings import get_by_item_id, get_by_splr_item_id
+    from app.services.category_mapping.mapping_quality import mapping_aligns_with_title
+
+    title = str(product.get("product_name") or "").strip()
+
+    def _accept(hs: dict[str, Any], detail: str) -> Optional[tuple[dict[str, Any], str]]:
+        if validate_title and title:
+            ok, reason, _ = mapping_aligns_with_title(title, hs)
+            if not ok:
+                return None
+            return hs, detail if ok else reason
+        return hs, detail
 
     pid = str(product.get("tangbuy_product_id") or "").strip()
     splr = str(product.get("source_product_id") or "").strip()
@@ -140,12 +248,16 @@ def find_reusable_hs_mapping(
     if splr:
         local = get_by_splr_item_id(splr)
         if local and is_valid_hs_mapping(local.get("hs")):
-            return local["hs"], f"1688 offer {splr} 已有本地映射"
+            accepted = _accept(local["hs"], f"1688 offer {splr} 已有本地映射")
+            if accepted:
+                return accepted
 
     if pid:
         local = get_by_item_id(pid)
         if local and is_valid_hs_mapping(local.get("hs")):
-            return local["hs"], f"Tangbuy 商品 {pid} 已有本地映射"
+            accepted = _accept(local["hs"], f"Tangbuy 商品 {pid} 已有本地映射")
+            if accepted:
+                return accepted
 
     for sibling in load_products():
         sid = str(sibling.get("tangbuy_product_id") or "")
@@ -158,9 +270,13 @@ def find_reusable_hs_mapping(
             continue
         s_splr = str(sibling.get("source_product_id") or "").strip()
         if splr and s_splr == splr:
-            return hs, f"商品中心同款 offer {splr}"
+            accepted = _accept(hs, f"商品中心同款 offer {splr}")
+            if accepted:
+                return accepted
         if pid and sid == pid:
-            return hs, f"商品中心同款 item {pid}"
+            accepted = _accept(hs, f"商品中心同款 item {pid}")
+            if accepted:
+                return accepted
 
     return None
 
@@ -169,6 +285,11 @@ def update_product(
     tangbuy_id: str,
     updater: Callable[[dict[str, Any]], dict[str, Any]],
 ) -> Optional[dict[str, Any]]:
+    if is_db_enabled():
+        from app.db.catalog_repos import ProductRepository
+
+        with db_session() as session:
+            return ProductRepository(session).update_product(tangbuy_id, updater)
     with _io_lock:
         if not _CENTER_PATH.exists():
             return None
@@ -234,6 +355,19 @@ def _ensure_catalog_cid(hs: dict[str, Any]) -> dict[str, Any]:
 
 def repair_stuck_mapping_products() -> int:
     """持久化修复：mapping 且无 HS → pending。"""
+    if is_db_enabled():
+        items = load_products()
+        changed = 0
+        repaired: list[dict[str, Any]] = []
+        for p in items:
+            if p.get("category_status") == "mapping" and not is_valid_hs_mapping(p.get("hs_mapping")):
+                repaired.append({**p, "category_status": "pending"})
+                changed += 1
+            else:
+                repaired.append(p)
+        if changed:
+            save_products(repaired)
+        return changed
     with _io_lock:
         if not _CENTER_PATH.exists():
             return 0
@@ -262,6 +396,86 @@ def sanitize_product_mapping_state(product: dict[str, Any]) -> dict[str, Any]:
     return {**product, "category_status": "pending"}
 
 
+def _initial_admin_writeback_meta(
+    product: dict[str, Any],
+    hs: dict[str, Any],
+    *,
+    at: str,
+) -> dict[str, Any]:
+    from app.services.category_mapping.admin_writeback import _writing_placeholder
+
+    return _writing_placeholder(product, hs, at=at)
+
+
+def persist_product_mapping_side_effects(
+    product: dict[str, Any],
+    hs: dict[str, Any],
+    *,
+    manual: bool = False,
+    resolution: Optional[str] = None,
+    skip_admin_writeback: bool = False,
+) -> None:
+    """商品落库提交后再写本地映射缓存与 Admin 回写，避免 SQLite 嵌套事务锁库。"""
+    if not is_valid_hs_mapping(hs):
+        return
+    upsert_local_mapping(
+        item_id=str(product.get("tangbuy_product_id") or "") or None,
+        splr_item_id=str(product.get("source_product_id") or "") or None,
+        hs=hs,
+        source="correct" if manual else "confirm",
+    )
+    pid = str(product.get("tangbuy_product_id") or "").strip()
+    if skip_admin_writeback or not pid:
+        return
+    from app.services.category_mapping.admin_writeback import (
+        collect_item_nos,
+        schedule_admin_writeback,
+    )
+
+    wb = (product.get("mapping_record") or {}).get("admin_writeback") or {}
+    if wb.get("status") != "writing":
+        return
+    wb_resolution = resolution or ("manual_correct" if manual else "auto")
+    schedule_admin_writeback(pid, hs, resolution=wb_resolution)  # type: ignore[arg-type]
+
+
+def finalize_product_mapping_confirm(
+    product: Optional[dict[str, Any]],
+    *,
+    manual: bool = False,
+    resolution: Optional[str] = None,
+    skip_admin_writeback: bool = False,
+) -> Optional[dict[str, Any]]:
+    """商品落库提交后执行映射副作用（本地缓存 + Admin 回写）。"""
+    if not product:
+        return None
+    hs = product.get("hs_mapping")
+    if is_valid_hs_mapping(hs):
+        persist_product_mapping_side_effects(
+            product,
+            hs,
+            manual=manual,
+            resolution=resolution,
+            skip_admin_writeback=skip_admin_writeback,
+        )
+    return product
+
+
+def _writeback_already_ok(product: dict[str, Any], hs: dict[str, Any]) -> bool:
+    """本地已记录同目标类目的成功回写，或 Admin 已是目标类目，无需再次调度。"""
+    from app.services.category_mapping.admin_writeback import (
+        collect_item_nos,
+        should_skip_admin_writeback,
+    )
+
+    skip, reason = should_skip_admin_writeback(
+        product,
+        hs,
+        item_nos=collect_item_nos(product),
+    )
+    return skip and reason in ("already_ok", "in_flight", "admin_already")
+
+
 def confirm_product_mapping(
     product: dict[str, Any],
     hs: dict[str, Any],
@@ -270,11 +484,13 @@ def confirm_product_mapping(
     manual: bool = False,
     resolution: Optional[str] = None,
     skip_admin_writeback: bool = False,
+    defer_side_effects: bool = False,
 ) -> dict[str, Any]:
     hs = _ensure_catalog_cid(hs)
     now = _now_iso()
     category_path = f"{hs.get('category_cn_name', '')} / {hs.get('declare_cn_name', '')} · HS {hs.get('hs_code', '')}"
     mapping = product.get("mapping_record") or {}
+    suggest_at = str(mapping.get("mapped_at") or product.get("mapping_mapped_at") or "").strip() or now
     mapping.update(
         {
             "suggested_category_path": category_path,
@@ -284,25 +500,34 @@ def confirm_product_mapping(
             "reviewer_note": reviewer_note,
         }
     )
+    if not mapping.get("mapped_at"):
+        mapping["mapped_at"] = suggest_at
     product["mapping_record"] = mapping
     product["hs_mapping"] = hs
     product["category"] = hs.get("category_cn_name") or product.get("category")
     product["category_status"] = "auto_passed"
     product["mapping_confidence"] = 1.0 if manual else product.get("mapping_confidence", 0.9)
-    product["mapping_mapped_at"] = now
-    upsert_local_mapping(
-        item_id=str(product.get("tangbuy_product_id") or "") or None,
-        splr_item_id=str(product.get("source_product_id") or "") or None,
-        hs=hs,
-        source="correct" if manual else "confirm",
-    )
-    pid = str(product.get("tangbuy_product_id") or "").strip()
-    if not skip_admin_writeback and pid:
-        from app.services.category_mapping.admin_writeback import schedule_admin_writeback
-
-        wb_resolution = resolution or ("manual_correct" if manual else "auto")
+    product["mapping_mapped_at"] = suggest_at
+    if not skip_admin_writeback:
         mapping = dict(product.get("mapping_record") or {})
-        mapping["admin_writeback"] = {"status": "writing", "at": now}
-        product["mapping_record"] = mapping
-        schedule_admin_writeback(pid, hs, resolution=wb_resolution)  # type: ignore[arg-type]
+        if not _writeback_already_ok(product, hs):
+            from app.services.category_mapping.admin_writeback import resolve_admin_writeback_placeholder
+
+            wb_resolution = resolution or ("manual_correct" if manual else "auto")
+            mapping["admin_writeback"] = resolve_admin_writeback_placeholder(
+                product,
+                hs,
+                at=now,
+                resolution=wb_resolution,  # type: ignore[arg-type]
+            )
+            product["mapping_record"] = mapping
+    if defer_side_effects:
+        return product
+    persist_product_mapping_side_effects(
+        product,
+        hs,
+        manual=manual,
+        resolution=resolution,
+        skip_admin_writeback=skip_admin_writeback,
+    )
     return product

@@ -1,4 +1,4 @@
-"""采购助手 1688 搜品结果缓存（服务端 JSON 持久化，含线上 data 目录）。"""
+"""采购助手 1688 搜品结果缓存（DB 或 JSON）。"""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from app.core.paths import data_dir
+from app.db.session import db_session, is_db_enabled
 
 _CACHE_PATH = data_dir() / "products" / "find-cache.json"
 _io_lock = threading.Lock()
@@ -37,7 +38,32 @@ def _normalize_product(raw: dict[str, Any]) -> Optional[dict[str, Any]]:
     }
 
 
+def _load_entries_db() -> list[dict[str, Any]]:
+    from app.db.catalog_repos import ConfigRepository
+
+    with db_session() as session:
+        raw = ConfigRepository(session).load_document(ConfigRepository.FIND_CACHE_KEY)
+    if isinstance(raw, list):
+        return [x for x in raw if isinstance(x, dict)]
+    if isinstance(raw, dict):
+        items = raw.get("entries")
+        return [x for x in items if isinstance(x, dict)] if isinstance(items, list) else []
+    return []
+
+
+def _save_entries_db(entries: list[dict[str, Any]]) -> None:
+    from app.db.catalog_repos import ConfigRepository
+
+    with db_session() as session:
+        ConfigRepository(session).save_document(
+            ConfigRepository.FIND_CACHE_KEY,
+            {"version": 1, "updated_at": _now_iso(), "entries": entries[:_MAX_ENTRIES]},
+        )
+
+
 def load_find_cache() -> list[dict[str, Any]]:
+    if is_db_enabled():
+        return _load_entries_db()
     with _io_lock:
         if not _CACHE_PATH.exists():
             return []
@@ -49,7 +75,11 @@ def load_find_cache() -> list[dict[str, Any]]:
 
 
 def _save_find_cache(entries: list[dict[str, Any]]) -> None:
-    payload = json.dumps(entries, ensure_ascii=False, indent=2) + "\n"
+    trimmed = entries[:_MAX_ENTRIES]
+    if is_db_enabled():
+        _save_entries_db(trimmed)
+        return
+    payload = json.dumps(trimmed, ensure_ascii=False, indent=2) + "\n"
     with _io_lock:
         _CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
         fd, tmp_name = tempfile.mkstemp(
@@ -87,8 +117,8 @@ def upsert_find_cache_items(
     now = _now_iso()
     entries = load_find_cache()
     by_id = {str(e.get("product_id") or ""): e for e in entries if e.get("product_id")}
-
     written = 0
+
     for raw in products:
         if not isinstance(raw, dict):
             continue

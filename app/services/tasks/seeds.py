@@ -6,7 +6,7 @@ import json
 import re
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
-from typing import Any
+from typing import Any, Optional
 
 from app.core.paths import data_dir
 from app.services.products.store import load_products
@@ -93,6 +93,120 @@ def _build_auto_release_seeds() -> list[dict[str, Any]]:
     return tasks
 
 
+def _mapping_mapped_at(prod: dict[str, Any], m: dict[str, Any]) -> str:
+    """Agent 产出映射建议的时间（禁止用 now 兜底，避免时间线倒挂）。"""
+    return (
+        str(m.get("mapped_at") or "").strip()
+        or str(prod.get("mapping_mapped_at") or "").strip()
+        or str(m.get("reviewed_at") or "").strip()
+    )
+
+
+def _is_auto_mapping(prod: dict[str, Any], m: dict[str, Any]) -> bool:
+    if m.get("auto_resolved") is True:
+        return True
+    if prod.get("category_status") == "auto_passed":
+        return True
+    wb = m.get("admin_writeback") if isinstance(m.get("admin_writeback"), dict) else {}
+    if str(wb.get("resolution") or m.get("resolution") or "").strip() == "auto":
+        return True
+    method = str(m.get("match_method") or "").strip()
+    return method in ("history_goods_id", "history_similar", "local_item_mapped", "admin_existing")
+
+
+def _review_timeline_event(
+    prod: dict[str, Any],
+    m: dict[str, Any],
+    *,
+    review: str,
+    review_note: Optional[str],
+) -> Optional[dict[str, str]]:
+    reviewed_at = str(m.get("reviewed_at") or "").strip()
+    if not reviewed_at or review == "pending":
+        return None
+
+    auto = _is_auto_mapping(prod, m)
+    if review == "corrected":
+        label = "人工修正"
+        detail = review_note or f"修正为「{prod.get('category', '')}」"
+    elif review == "rejected":
+        label = "已驳回"
+        detail = review_note or ""
+    elif review == "confirmed" and auto:
+        label = "自动通过"
+        conf = m.get("agent_confidence")
+        method = str(m.get("match_method") or "").strip()
+        bits = []
+        if conf is not None:
+            try:
+                bits.append(f"置信 {int(float(conf) * 100)}%")
+            except (TypeError, ValueError):
+                pass
+        if method:
+            bits.append(method)
+        detail = " · ".join(bits) if bits else (review_note or "质量门禁通过")
+    elif review == "confirmed":
+        label = "人工确认"
+        detail = review_note or "确认无误"
+    else:
+        return None
+    return {"at": reviewed_at, "label": label, "detail": detail}
+
+
+def _writeback_timeline_event(wb: Any) -> Optional[dict[str, str]]:
+    if not isinstance(wb, dict):
+        return None
+    status = str(wb.get("status") or "").strip()
+    at = str(wb.get("at") or "").strip()
+    if not status or not at:
+        return None
+    labels = {
+        "writing": "写入 Admin",
+        "ok": "已写入 Admin",
+        "failed": "写入失败",
+        "skipped": "无需写入",
+    }
+    label = labels.get(status)
+    if not label:
+        return None
+    detail = ""
+    if status == "ok":
+        fr = str(wb.get("from_category") or "").strip()
+        to = str(wb.get("to_category") or "").strip()
+        if fr and to and fr != to:
+            detail = f"{fr} → {to}"
+        elif to:
+            detail = to
+    elif status == "failed":
+        detail = str(wb.get("error") or "").strip()
+    elif status == "skipped":
+        detail = str(wb.get("reason") or "").strip()
+    return {"at": at, "label": label, "detail": detail}
+
+
+def _build_mapping_timeline(prod: dict[str, Any], m: dict[str, Any]) -> list[dict[str, str]]:
+    events: list[dict[str, str]] = []
+    mapped_at = _mapping_mapped_at(prod, m)
+    if mapped_at:
+        events.append(
+            {
+                "at": mapped_at,
+                "label": "生成映射建议",
+                "detail": m.get("suggested_category_path") or prod.get("category", ""),
+            }
+        )
+    review = m.get("review_status", "pending")
+    review_note = m.get("reviewer_note")
+    rev = _review_timeline_event(prod, m, review=str(review), review_note=review_note)
+    if rev:
+        events.append(rev)
+    wb_evt = _writeback_timeline_event(m.get("admin_writeback"))
+    if wb_evt:
+        events.append(wb_evt)
+    events.sort(key=lambda e: e.get("at", ""))
+    return events
+
+
 def _build_category_mapping_seeds(products: list[dict[str, Any]]) -> list[dict[str, Any]]:
     tasks: list[dict[str, Any]] = []
     for prod in products:
@@ -109,20 +223,16 @@ def _build_category_mapping_seeds(products: list[dict[str, Any]]) -> list[dict[s
             status = "in_progress"
         else:
             status = "needs_review"
+        # 已完结的映射不进任务中心列表，避免淹没催单/询盘等长程任务
+        if status == "completed":
+            continue
         review_note = m.get("reviewer_note")
         if not review_note and review == "corrected":
             review_note = f"人工修正为「{prod.get('category', '')}」"
-        elif not review_note and review == "confirmed":
-            review_note = "确认无误"
-        timeline = [
-            {
-                "at": m.get("mapped_at", _iso(_now())),
-                "label": "生成映射建议",
-                "detail": m.get("suggested_category_path") or prod.get("category", ""),
-            }
-        ]
-        if m.get("reviewed_at"):
-            timeline.append({"at": m["reviewed_at"], "label": "人工审查", "detail": review_note})
+        mapped_at = _mapping_mapped_at(prod, m)
+        timeline = _build_mapping_timeline(prod, m)
+        auto = _is_auto_mapping(prod, m)
+        wb = m.get("admin_writeback") if isinstance(m.get("admin_writeback"), dict) else {}
         suffix = "（人工修正）" if review == "corrected" else ""
         tasks.append(
             {
@@ -133,8 +243,8 @@ def _build_category_mapping_seeds(products: list[dict[str, Any]]) -> list[dict[s
                 "title": prod.get("product_name", ""),
                 "subtitle": prod.get("category", ""),
                 "status": status,
-                "created_at": m.get("mapped_at", _iso(_now())),
-                "updated_at": m.get("reviewed_at") or m.get("mapped_at", _iso(_now())),
+                "created_at": mapped_at or m.get("reviewed_at") or _iso(_now()),
+                "updated_at": m.get("reviewed_at") or wb.get("at") or mapped_at or _iso(_now()),
                 "completed_at": m.get("reviewed_at")
                 if review in ("confirmed", "corrected")
                 else None,
@@ -146,6 +256,8 @@ def _build_category_mapping_seeds(products: list[dict[str, Any]]) -> list[dict[s
                     "suggested_category_path": m.get("suggested_category_path") or prod.get("category"),
                     "checks_passed": passed,
                     "checks_total": len(checks),
+                    "auto_resolved": auto,
+                    "writeback_status": wb.get("status"),
                 },
                 "timeline": timeline,
                 "result_summary": f"{prod.get('category', '')}{suffix}",
@@ -415,8 +527,25 @@ def get_task_seeds() -> tuple[dict[str, Any], ...]:
     return tuple(seeds)
 
 
+def _is_demo_seed_task(task: dict[str, Any]) -> bool:
+    """演示种子（demo-newton 等）不进入正式任务列表。"""
+    tid = str(task.get("id") or "")
+    if tid in ("task-newton-demo",) or tid.startswith("task-demo-"):
+        return True
+    ref = str(task.get("external_ref") or "")
+    if ref.startswith("demo-"):
+        return True
+    payload = task.get("payload") if isinstance(task.get("payload"), dict) else {}
+    for key in ("newton_task_id", "alphashop_task_id"):
+        val = str(payload.get(key) or "")
+        if val.startswith("demo-"):
+            return True
+    return False
+
+
 def merge_tasks_with_seeds(runtime: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    by_id = {t["id"]: t for t in get_task_seeds()}
+    seeds = [t for t in get_task_seeds() if not _is_demo_seed_task(t)]
+    by_id = {t["id"]: t for t in seeds}
     for t in runtime:
         by_id[t["id"]] = t
     merged = list(by_id.values())

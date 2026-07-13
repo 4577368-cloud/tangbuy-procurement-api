@@ -5,7 +5,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app.api.deps import require_permission
+from app.api.deps import require_auth, require_permission
 from app.services.tasks import store
 from app.services.tasks.supplychain import create_supplychain_inquiry_task
 

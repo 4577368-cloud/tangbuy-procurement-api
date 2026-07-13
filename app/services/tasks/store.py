@@ -15,6 +15,7 @@ from app.services.tasks.seeds import merge_tasks_with_seeds
 from app.services.tasks.newton_reply import (
     format_newton_platform_error,
     is_newton_platform_runtime_error,
+    is_order_followup_ack,
     join_newton_text,
     pick_ask_seller_consult_reply,
     pick_order_followup_reply,
@@ -328,6 +329,7 @@ def _refresh_newton_task_inner(task_id: str, *, force: bool = False) -> Optional
     question = payload.get("question") or task.get("title", "")
 
     if is_order:
+        combined = join_newton_text(r.get("messages"), r.get("content"))
         merchant_reply = pick_order_followup_reply(r.get("messages"), r.get("content"), question)
         status = r.get("status")
         err_msg = r.get("errorMessage")
@@ -359,6 +361,15 @@ def _refresh_newton_task_inner(task_id: str, *, force: bool = False) -> Optional
             task["completed_at"] = task.get("completed_at") or _now_iso()
             if not any(e.get("label") == "商家已回复" for e in task.get("timeline", [])):
                 _push_timeline(task, "商家已回复", task["result_summary"][:120])
+        elif combined and is_order_followup_ack(combined, question):
+            task["status"] = "in_progress"
+            task["result_summary"] = "询盘已发出，等待商家回复"
+            task.pop("completed_at", None)
+            task["timeline"] = [
+                e for e in (task.get("timeline") or [])
+                if e.get("label") != "商家已回复"
+            ]
+            _push_timeline_if_new(task, "询盘已发出", "平台受理回执，非商家原话")
         else:
             task["status"] = "in_progress"
             task["result_summary"] = "已提交，等待商家回复"

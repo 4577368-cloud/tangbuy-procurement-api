@@ -76,6 +76,98 @@ def _append_evolution_prompt_patches(system_parts: list[str]) -> None:
         pass
 
 
+def _invocation_outcome(result: dict[str, Any], denied: bool) -> str:
+    if denied:
+        return "permission_denied"
+    return "api_ok" if result.get("success") else "api_fail"
+
+
+def _preview_tool_result(result: dict[str, Any]) -> Optional[str]:
+    markdown = (result.get("markdown") or "").strip()
+    if markdown:
+        return markdown[:600]
+    err = (result.get("error") or "").strip()
+    if err:
+        return err[:300]
+    data = result.get("data")
+    if data is not None:
+        try:
+            return json.dumps(data, ensure_ascii=False)[:400]
+        except Exception:
+            pass
+    return "工具执行成功" if result.get("success") else "工具执行失败"
+
+
+def _log_tool_invocation(
+    skill_id: str,
+    tool: str,
+    result: dict[str, Any],
+    denied: bool,
+    user_preview: str,
+    *,
+    task_id: Optional[str] = None,
+    audit_ids: Optional[list[str]] = None,
+) -> str:
+    from app.services.skill_audit.store import log_skill_invocation
+
+    tid = task_id or result.get("taskId") or (
+        result.get("data", {}).get("task_id") if isinstance(result.get("data"), dict) else None
+    )
+    record = log_skill_invocation(
+        skill_id=skill_id,
+        tool=tool,
+        outcome=_invocation_outcome(result, denied),
+        error=result.get("error"),
+        user_message_preview=user_preview or None,
+        response_preview=_preview_tool_result(result),
+        task_id=str(tid) if tid else None,
+    )
+    inv_id = str(record["id"])
+    if audit_ids is not None:
+        audit_ids.append(inv_id)
+    return inv_id
+
+
+def _log_no_tool_response(
+    user_preview: str,
+    *,
+    detail: Optional[str] = None,
+    assistant_preview: Optional[str] = None,
+    audit_ids: Optional[list[str]] = None,
+) -> str:
+    from app.services.agent.skills import UNIFIED_ASSISTANT_ID
+    from app.services.skill_audit.store import log_skill_invocation
+
+    tool = (
+        "(编造商品)"
+        if detail == "fabricated_products"
+        else "(编造催单)"
+        if detail == "fabricated_followup"
+        else "(未调用工具)"
+    )
+    record = log_skill_invocation(
+        skill_id=UNIFIED_ASSISTANT_ID,
+        tool=tool,
+        outcome="no_tool",
+        error=detail or "assistant_replied_without_tool",
+        user_message_preview=user_preview or None,
+        response_preview=(assistant_preview or "")[:600] or None,
+    )
+    inv_id = str(record["id"])
+    if audit_ids is not None:
+        audit_ids.append(inv_id)
+    return inv_id
+
+
+def _finalize_response(
+    payload: dict[str, Any],
+    audit_ids: list[str],
+) -> dict[str, Any]:
+    if audit_ids:
+        payload["auditInvocationIds"] = audit_ids
+    return payload
+
+
 def _tool_denied(tool_name: str) -> dict[str, Any]:
     return {
         "success": False,
@@ -99,6 +191,25 @@ def _format_ctx(context: Optional[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def _short_circuit_response(
+    pre: dict[str, Any],
+    tool_trace: list[dict[str, Any]],
+    registered_tasks: Optional[list[dict[str, Any]]] = None,
+    audit_ids: Optional[list[str]] = None,
+) -> dict[str, Any]:
+    traces = list(tool_trace)
+    if pre.get("omit_tool_trace") and traces:
+        traces.pop()
+    return _finalize_response(
+        {
+            "message": {"role": "assistant", "content": pre["content"]},
+            "toolTrace": traces or None,
+            "registeredTasks": registered_tasks or None,
+        },
+        audit_ids or [],
+    )
+
+
 def _run_single_tool(
     tool_name: str,
     args: dict[str, str],
@@ -106,14 +217,27 @@ def _run_single_tool(
     tool_trace: list[dict[str, Any]],
     order_context: Optional[dict[str, Any]],
     registered_tasks: Optional[list[dict[str, Any]]] = None,
+    *,
+    user_preview: str = "",
+    audit_ids: Optional[list[str]] = None,
 ) -> Optional[dict[str, Any]]:
     owner = resolve_skill_id_for_tool(tool_name)
     denied = grants is not None and not is_tool_allowed(tool_name, grants)
     result = _tool_denied(tool_name) if denied else execute_tool(tool_name, args, order_context)
+    task = None
     if not denied:
         task = register_task_from_tool(owner, tool_name, args, result)
         if task and registered_tasks is not None:
             registered_tasks.append(task)
+    _log_tool_invocation(
+        owner,
+        tool_name,
+        result,
+        denied,
+        user_preview,
+        task_id=str(task["id"]) if task else None,
+        audit_ids=audit_ids,
+    )
     tool_trace.append({"tool": tool_name, "arguments": args, "result": result})
 
     payload = parse_product_search_payload(result.get("data"))
@@ -121,7 +245,12 @@ def _run_single_tool(
         return {"short_circuit": True, "content": build_product_search_summary(result.get("data"))}
 
     if result.get("success") and tool_name in ("procurement_stats", "order_query"):
-        return {"short_circuit": True, "content": result.get("summary") or result.get("markdown") or "查询完成。"}
+        data = result.get("data") if isinstance(result.get("data"), dict) else {}
+        if data.get("kind") == "stats":
+            content = result.get("summary") or result.get("markdown") or "查询完成。"
+            return {"short_circuit": True, "content": content, "omit_tool_trace": True}
+        content = result.get("summary") or result.get("markdown")
+        return {"short_circuit": True, "content": content or "查询完成。"}
 
     if result.get("success") and tool_name in ("newton_consult", "order_inquiry_send"):
         return {"short_circuit": True, "content": result.get("markdown") or "已提交，请到任务中心查看进度。"}
@@ -186,6 +315,7 @@ def run_agent_chat(
     allowed_names = {t["name"] for t in allowed_tools}
     tool_trace: list[dict[str, Any]] = []
     registered_tasks: list[dict[str, Any]] = []
+    audit_ids: list[str] = []
 
     last_user = next((m for m in reversed(messages) if m.get("role") == "user"), None)
     user_preview = (last_user.get("content") or "")[:200] if last_user else ""
@@ -198,13 +328,18 @@ def run_agent_chat(
             context,
         )
         if route:
-            pre = _run_single_tool(route["tool"], route["args"], grants, tool_trace, context, registered_tasks)
+            pre = _run_single_tool(
+                route["tool"],
+                route["args"],
+                grants,
+                tool_trace,
+                context,
+                registered_tasks,
+                user_preview=user_preview,
+                audit_ids=audit_ids,
+            )
             if pre and pre.get("short_circuit"):
-                return {
-                    "message": {"role": "assistant", "content": pre["content"]},
-                    "toolTrace": tool_trace or None,
-                    "registeredTasks": registered_tasks or None,
-                }
+                return _short_circuit_response(pre, tool_trace, registered_tasks, audit_ids)
             if pre and pre.get("continue_transcript"):
                 transcript.extend(pre["continue_transcript"])
 
@@ -221,27 +356,35 @@ def run_agent_chat(
                         tool_trace,
                         context,
                         registered_tasks,
+                        user_preview=user_preview,
+                        audit_ids=audit_ids,
                     )
                     if img_run and img_run.get("short_circuit"):
-                        return {
-                            "message": {"role": "assistant", "content": img_run["content"]},
-                            "toolTrace": tool_trace or None,
-                            "registeredTasks": registered_tasks or None,
-                        }
+                        return _finalize_response(
+                            {
+                                "message": {"role": "assistant", "content": img_run["content"]},
+                                "toolTrace": tool_trace or None,
+                                "registeredTasks": registered_tasks or None,
+                            },
+                            audit_ids,
+                        )
             if link_failed:
                 err = next(
                     (t["result"].get("markdown") for t in tool_trace if t["tool"] == "product_link_search"),
                     None,
                 )
-                return {
-                    "message": {
-                        "role": "assistant",
-                        "content": (err or "").replace("❌", "").strip()
-                        or "未能从链接获取主图。请粘贴商品主图 URL，或改用关键词搜索。",
+                return _finalize_response(
+                    {
+                        "message": {
+                            "role": "assistant",
+                            "content": (err or "").replace("❌", "").strip()
+                            or "未能从链接获取主图。请粘贴商品主图 URL，或改用关键词搜索。",
+                        },
+                        "toolTrace": tool_trace,
+                        "registeredTasks": registered_tasks or None,
                     },
-                    "toolTrace": tool_trace,
-                    "registeredTasks": registered_tasks or None,
-                }
+                    audit_ids,
+                )
 
     for _ in range(MAX_TOOL_ROUNDS):
         llm: LlmResponse = chat_completion(transcript, allowed_tools)
@@ -259,30 +402,51 @@ def run_agent_chat(
                     None,
                 )
                 if cards:
-                    return {
-                        "message": {
-                            "role": "assistant",
-                            "content": build_product_search_summary(cards["result"].get("data")),
+                    return _finalize_response(
+                        {
+                            "message": {
+                                "role": "assistant",
+                                "content": build_product_search_summary(cards["result"].get("data")),
+                            },
+                            "toolTrace": tool_trace,
+                            "registeredTasks": registered_tasks or None,
                         },
-                        "toolTrace": tool_trace,
-                        "registeredTasks": registered_tasks or None,
-                    }
+                        audit_ids,
+                    )
 
             if not tool_trace and user_preview:
                 if looks_like_fabricated_products(llm.content or ""):
-                    return {
-                        "message": {
-                            "role": "assistant",
-                            "content": "以上商品未走搜索接口，不可信。请换关键词重试，或使用选品标签。",
-                        }
-                    }
+                    _log_no_tool_response(
+                        user_preview,
+                        detail="fabricated_products",
+                        assistant_preview=llm.content,
+                        audit_ids=audit_ids,
+                    )
+                    return _finalize_response(
+                        {
+                            "message": {
+                                "role": "assistant",
+                                "content": "以上商品未走搜索接口，不可信。请换关键词重试，或使用选品标签。",
+                            },
+                        },
+                        audit_ids,
+                    )
                 if looks_like_fabricated_followup(llm.content or ""):
-                    return {
-                        "message": {
-                            "role": "assistant",
-                            "content": "催单未走接口，不可信。请点「催单」标签并附上订单号后重试。",
-                        }
-                    }
+                    _log_no_tool_response(
+                        user_preview,
+                        detail="fabricated_followup",
+                        assistant_preview=llm.content,
+                        audit_ids=audit_ids,
+                    )
+                    return _finalize_response(
+                        {
+                            "message": {
+                                "role": "assistant",
+                                "content": "催单未走接口，不可信。请点「催单」标签并附上订单号后重试。",
+                            },
+                        },
+                        audit_ids,
+                    )
 
                 followup_route = resolve_order_followup_route(user_preview, allowed_names, context, intent)
                 if followup_route:
@@ -293,13 +457,18 @@ def run_agent_chat(
                         tool_trace,
                         context,
                         registered_tasks,
+                        user_preview=user_preview,
+                        audit_ids=audit_ids,
                     )
                     if fr and fr.get("short_circuit"):
-                        return {
-                            "message": {"role": "assistant", "content": fr["content"]},
-                            "toolTrace": tool_trace,
-                            "registeredTasks": registered_tasks or None,
-                        }
+                        return _finalize_response(
+                            {
+                                "message": {"role": "assistant", "content": fr["content"]},
+                                "toolTrace": tool_trace,
+                                "registeredTasks": registered_tasks or None,
+                            },
+                            audit_ids,
+                        )
 
                 compare_route = resolve_product_compare_route(user_preview, allowed_names)
                 if compare_route:
@@ -310,13 +479,18 @@ def run_agent_chat(
                         tool_trace,
                         context,
                         registered_tasks,
+                        user_preview=user_preview,
+                        audit_ids=audit_ids,
                     )
                     if cr and cr.get("short_circuit"):
-                        return {
-                            "message": {"role": "assistant", "content": cr["content"]},
-                            "toolTrace": tool_trace,
-                            "registeredTasks": registered_tasks or None,
-                        }
+                        return _finalize_response(
+                            {
+                                "message": {"role": "assistant", "content": cr["content"]},
+                                "toolTrace": tool_trace,
+                                "registeredTasks": registered_tasks or None,
+                            },
+                            audit_ids,
+                        )
                 elif extract_image_urls(user_preview) and "product_image_search" in allowed_names:
                     ir = _run_single_tool(
                         "product_image_search",
@@ -325,13 +499,18 @@ def run_agent_chat(
                         tool_trace,
                         context,
                         registered_tasks,
+                        user_preview=user_preview,
+                        audit_ids=audit_ids,
                     )
                     if ir and ir.get("short_circuit"):
-                        return {
-                            "message": {"role": "assistant", "content": ir["content"]},
-                            "toolTrace": tool_trace,
-                            "registeredTasks": registered_tasks or None,
-                        }
+                        return _finalize_response(
+                            {
+                                "message": {"role": "assistant", "content": ir["content"]},
+                                "toolTrace": tool_trace,
+                                "registeredTasks": registered_tasks or None,
+                            },
+                            audit_ids,
+                        )
                 elif "product_text_search" in allowed_names and (
                     looks_like_product_find(user_preview) or looks_like_fabricated_products(llm.content or "")
                 ):
@@ -345,33 +524,57 @@ def run_agent_chat(
                         tool_trace,
                         context,
                         registered_tasks,
+                        user_preview=user_preview,
+                        audit_ids=audit_ids,
                     )
                     if sr and sr.get("short_circuit"):
-                        return {
-                            "message": {"role": "assistant", "content": sr["content"]},
-                            "toolTrace": tool_trace,
-                            "registeredTasks": registered_tasks or None,
-                        }
+                        return _finalize_response(
+                            {
+                                "message": {"role": "assistant", "content": sr["content"]},
+                                "toolTrace": tool_trace,
+                                "registeredTasks": registered_tasks or None,
+                            },
+                            audit_ids,
+                        )
 
-            return {
-                "message": {
-                    "role": "assistant",
-                    "content": (llm.content or "").strip() or "（模型未返回内容）",
+            if not tool_trace:
+                _log_no_tool_response(
+                    user_preview,
+                    assistant_preview=llm.content,
+                    audit_ids=audit_ids,
+                )
+
+            return _finalize_response(
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": (llm.content or "").strip() or "（模型未返回内容）",
+                    },
+                    "toolTrace": tool_trace or None,
+                    "registeredTasks": registered_tasks or None,
                 },
-                "toolTrace": tool_trace or None,
-                "registeredTasks": registered_tasks or None,
-            }
+                audit_ids,
+            )
 
         transcript.append(build_assistant_tool_call_message(llm.tool_calls))
         for call in llm.tool_calls:
             denied = grants is not None and not is_tool_allowed(call.name, grants)
             result = _tool_denied(call.name) if denied else execute_tool(call.name, call.arguments, context)
+            owner = resolve_skill_id_for_tool(call.name)
+            task = None
             if not denied:
-                task = register_task_from_tool(
-                    resolve_skill_id_for_tool(call.name), call.name, call.arguments, result
-                )
+                task = register_task_from_tool(owner, call.name, call.arguments, result)
                 if task:
                     registered_tasks.append(task)
+            _log_tool_invocation(
+                owner,
+                call.name,
+                result,
+                denied,
+                user_preview,
+                task_id=str(task["id"]) if task else None,
+                audit_ids=audit_ids,
+            )
             tool_trace.append({"tool": call.name, "arguments": call.arguments, "result": result})
             tool_content = result.get("markdown") or json.dumps(
                 {"success": result.get("success"), "error": result.get("error"), "data": result.get("data")},
@@ -397,14 +600,17 @@ def run_agent_chat(
             None,
         )
         if product_cards:
-            return {
-                "message": {
-                    "role": "assistant",
-                    "content": build_product_search_summary(product_cards["result"].get("data")),
+            return _finalize_response(
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": build_product_search_summary(product_cards["result"].get("data")),
+                    },
+                    "toolTrace": tool_trace,
+                    "registeredTasks": registered_tasks or None,
                 },
-                "toolTrace": tool_trace,
-                "registeredTasks": registered_tasks or None,
-            }
+                audit_ids,
+            )
 
         long_running = next(
             (
@@ -422,21 +628,27 @@ def run_agent_chat(
             None,
         )
         if long_running:
-            return {
-                "message": {
-                    "role": "assistant",
-                    "content": long_running["result"].get("markdown") or "已提交，请到任务中心查看进度。",
+            return _finalize_response(
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": long_running["result"].get("markdown") or "已提交，请到任务中心查看进度。",
+                    },
+                    "toolTrace": tool_trace,
+                    "registeredTasks": registered_tasks or None,
                 },
-                "toolTrace": tool_trace,
-                "registeredTasks": registered_tasks or None,
-            }
+                audit_ids,
+            )
 
     final = chat_completion(transcript, allowed_tools)
-    return {
-        "message": {
-            "role": "assistant",
-            "content": (final.content or "").strip() or "处理完成，请查看上方工具结果。",
+    return _finalize_response(
+        {
+            "message": {
+                "role": "assistant",
+                "content": (final.content or "").strip() or "处理完成，请查看上方工具结果。",
+            },
+            "toolTrace": tool_trace,
+            "registeredTasks": registered_tasks or None,
         },
-        "toolTrace": tool_trace,
-        "registeredTasks": registered_tasks or None,
-    }
+        audit_ids,
+    )

@@ -13,6 +13,7 @@ from app.services.evolution.store import (
     get_patches,
     get_reports,
     update_patch_status,
+    update_patch_content,
 )
 from app.services.evolution.skill_registry import get_all_evolution_skills, get_domain_summary
 
@@ -52,6 +53,16 @@ def rollback_patch(patch_id: str) -> Optional[dict[str, Any]]:
 def discard_patch(patch_id: str) -> Optional[dict[str, Any]]:
     """废弃补丁。"""
     return update_patch_status(patch_id, "discarded")
+
+
+def revise_patch(
+    patch_id: str,
+    content: str,
+    *,
+    payload: Optional[dict[str, Any]] = None,
+) -> Optional[dict[str, Any]]:
+    """修改补丁正文。"""
+    return update_patch_content(patch_id, content, payload=payload)
 
 
 def get_overview() -> dict[str, Any]:

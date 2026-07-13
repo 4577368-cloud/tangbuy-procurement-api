@@ -23,6 +23,7 @@ from app.routers import (
     evolution,
     health,
     integrations,
+    jobs,
     orders,
     products,
     skill_audit,
@@ -30,20 +31,36 @@ from app.routers import (
 )
 from app.services.tasks.scheduler import start_task_auto_refresh, stop_task_auto_refresh
 from app.services.products.product_jobs import start_product_auto_scan, stop_product_auto_scan
+from app.services.orders.order_sync_scheduler import (
+    start_order_sync_background,
+    stop_order_sync_background,
+)
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    try:
+        from app.db.session import init_database
+        from app.db.import_json import run_if_empty
+
+        init_database()
+        run_if_empty()
+    except Exception:
+        pass
     start_task_auto_refresh()
     start_product_auto_scan()
+    start_order_sync_background()
     try:
         from app.services.products.product_jobs import resume_stale_enrichments
+        from app.services.products.store import repair_stuck_mapping_products
 
+        repair_stuck_mapping_products()
         resume_stale_enrichments(limit=80)
     except Exception:
         pass
     yield
     stop_product_auto_scan()
+    stop_order_sync_background()
     stop_task_auto_refresh()
 
 
@@ -84,6 +101,7 @@ def create_app() -> FastAPI:
     app.include_router(skill_audit.router)
     app.include_router(evolution.router)
     app.include_router(integrations.router)
+    app.include_router(jobs.router)
     app.include_router(orders.router)
     return app
 

@@ -8,7 +8,7 @@ from app.auth.permissions import RoleGrants, grants_allow
 
 UNIFIED_ASSISTANT_ID = "procurement-assistant"
 
-UNIFIED_SYSTEM_PROMPT = """你是采购助手（Tangbuy 统一对话入口），帮助采购员完成选品、寻源、催单等任务。
+UNIFIED_SYSTEM_PROMPT = """你是 Agent助手（Tangbuy 统一对话入口），帮助采购员完成选品、寻源、催单等任务。
 
 ## 工作方式
 - **同一条对话**内可连续处理多件事；根据用户最新意图选择合适工具。
@@ -334,9 +334,6 @@ LEGACY_SKILLS: list[dict[str, Any]] = [
         "status": "placeholder",
         "welcomeMessage": "本能力将改用牛顿云长程任务，接入前暂不可用。",
         "toolCount": 0,
-    },
-    {
-        "toolCount": 3,
     },
     {
         "id": "order-followup",

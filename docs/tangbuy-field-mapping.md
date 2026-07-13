@@ -54,3 +54,31 @@
 2. 列表队列用 `resolveOrderQueueFromOrdLine(row)` 或直接用 `ord_line_stat_nm` 展示。
 3. 采购助手 URL / 上下文用 `mapOrdLineToAgentContext(row)`。
 4. 新页面字段先登记 `field-catalog.ts`，再写 UI。
+
+## 本地履约库列名（SQLite / PostgreSQL）
+
+本地库 **有宽表对应关系的列** 使用 `field-catalog.ts` 中的 `dbField`；JSON 扩展列用 `_json` / `_row` 后缀；时间列统一 `crt_time` / `upd_time`。
+
+| 表 | 列 | 宽表 / 契约字段 | 说明 |
+|----|-----|-----------------|------|
+| `ord_line_snapshot` | `ord_line_no` | `ord_line_no` | 子单主键 |
+| | `ord_no` | `ord_no` | |
+| | `ord_line_stat` | `ord_line_stat` | |
+| | `pay_time` | `pay_time` | |
+| | `item_id` | `item_id` | |
+| | `splr_item_id` | `splr_item_id` | |
+| | `item_nm` | `item_nm` | |
+| | `proc_queue` | — | 应用层队列（由 `ord_line_stat` 推导） |
+| | `ord_line_row` | — | 完整宽表行 JSON |
+| | `upd_time` | `upd_time` | 快照更新时间 |
+| `product_record` | `item_id` | `item_id` | 商品中心主键 |
+| | `splr_item_id` | `splr_item_id` | |
+| | `item_nm` | `item_nm` | |
+| | `ctgy_map_stat` | — | 品类映射工作流（app_only） |
+| | `item_ext_json` | — | 商品中心完整文档 |
+| `procurement_pipeline_state` | `pipeline_step` | `pipeline_step` | |
+| | `pipeline_blockers` | `pipeline_blockers` | |
+| `procurement_audit_log` | `crt_time` | — | 审计时间 |
+| `product_ord_line_link` | `crt_time` | `crt_time` | 关联创建时间 |
+
+仓储层读出时仍映射为商品中心 UI 字段（`tangbuy_product_id` / `product_name` 等），见 `catalog_repos._product_to_dict`。

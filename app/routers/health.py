@@ -6,6 +6,7 @@ from typing import Any
 from fastapi import APIRouter
 
 from app.core.config import get_settings
+from app.db.session import check_db_connection
 from app.integrations.tangbuy_admin.token_store import resolve_admin_token
 
 router = APIRouter(tags=["health"])
@@ -56,9 +57,11 @@ def health() -> dict[str, object]:
     dns = _admin_dns_probe(host)
     connect = _admin_connect_probe(host, connect_ip)
     admin_reachable = connect.get("ok") is True or dns.get("ok") is True
+    db = check_db_connection()
     return {
         "status": "ok",
         "service": "tangbuy-procurement-api",
+        "database": db,
         "admin_configured": admin_configured,
         "admin_base_url": settings.tangbuy_admin_base_url,
         "admin_connect_ip": connect_ip or None,

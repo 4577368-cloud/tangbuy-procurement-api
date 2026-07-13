@@ -81,18 +81,15 @@ def _rerank_candidates_with_vision(
         if not lookup.get("success"):
             return None
         reason = str(parsed.get("reason") or "图片与标题综合判断")
-        sem = current.get("semantic_candidates") or []
-        reranked = []
+        sem = list(current.get("semantic_candidates") or [])
+        reranked: list[dict[str, Any]] = []
         for c in sem:
             row = dict(c)
             if int(row.get("category_id") or 0) == picked_id:
                 row["reason"] = reason
-                row["rank"] = 0
-                row["confidence"] = 0.9
-            else:
-                row["rank"] = int(row.get("rank") or 1) + 1
+                row["confidence"] = max(float(row.get("confidence") or 0), 0.9)
             reranked.append(row)
-        reranked.sort(key=lambda x: int(x.get("rank") or 99))
+        reranked.sort(key=lambda x: float(x.get("confidence") or 0), reverse=True)
         for i, row in enumerate(reranked):
             row["rank"] = i + 1
 
@@ -112,21 +109,45 @@ def _rerank_candidates_with_vision(
         return None
 
 
+def _vision_conflicts_with_pick(
+    vision_keywords: list[str],
+    top: dict[str, Any],
+) -> bool:
+    """识图/标题已指向包袋，但当前首选却是玩具等非包类目。"""
+    if not vision_keywords:
+        return False
+    bag_signals = ("包", "胸包", "斜挎", "斜跨", "背包", "挎包", "腰包", "拎包")
+    toy_signals = ("玩具", "益智", "积木", "玩偶")
+    apparel_signals = ("卫衣", "毛衣", "针织", "T恤", "连衣裙")
+    kw_blob = " ".join(vision_keywords)
+    has_bag_signal = any(s in kw_blob for s in bag_signals)
+    if not has_bag_signal:
+        return False
+    top_blob = f"{top.get('category_cn_name') or ''} {top.get('declare_cn_name') or ''}"
+    has_bag_cat = any(s in top_blob for s in bag_signals)
+    has_toy_cat = any(s in top_blob for s in toy_signals)
+    has_apparel_cat = any(s in top_blob for s in apparel_signals)
+    return (has_toy_cat or has_apparel_cat) and not has_bag_cat
+
+
 def run_category_mapping_suggest_with_vision(
     title: str,
     *,
     hint: Optional[str] = None,
     goods_id: Optional[str] = None,
     image_url: Optional[str] = None,
+    skip_history: bool = False,
+    hint_as_reference: bool = False,
 ) -> dict[str, Any]:
     vision_summary: Optional[str] = None
     vision_keywords: list[str] = []
     used_vision = False
-    merged_hint = (hint or "").strip()
+    platform_hint = (hint or "").strip()
+    merged_hint = platform_hint
 
     image = (image_url or "").strip()
     if image and get_settings().llm_configured:
-        analysis = _analyze_product_image(image, title, merged_hint or None)
+        analysis = _analyze_product_image(image, title, platform_hint or None)
         if analysis:
             used_vision = True
             vision_summary = analysis.get("visual_summary") or None
@@ -138,8 +159,9 @@ def run_category_mapping_suggest_with_vision(
                 ]
                 if x
             ]
-            extra = "，".join(vision_keywords)
-            merged_hint = "，".join([x for x in [merged_hint, extra] if x])
+            if not hint_as_reference:
+                extra = "，".join(vision_keywords)
+                merged_hint = "，".join([x for x in [merged_hint, extra] if x])
 
     result = dict(
         run_category_suggest(
@@ -148,16 +170,23 @@ def run_category_mapping_suggest_with_vision(
             goods_id=goods_id,
             image_url=image_url,
             vision_keywords=vision_keywords or None,
+            skip_history=skip_history,
+            hint_as_reference=hint_as_reference,
+            platform_hint=platform_hint or None,
         )
     )
 
-    if (
+    should_rerank = (
         used_vision
         and image
         and result.get("success")
-        and result.get("decision") == "ambiguous_semantics"
-        and (result.get("semantic_candidates") or result.get("candidates"))
-    ):
+        and len((result.get("semantic_candidates") or result.get("candidates") or [])) >= 2
+        and (
+            result.get("decision") != "history_hit"
+            or _vision_conflicts_with_pick(vision_keywords, result)
+        )
+    )
+    if should_rerank:
         reranked = _rerank_candidates_with_vision(image, title, vision_summary or "", result)
         if reranked:
             result = reranked

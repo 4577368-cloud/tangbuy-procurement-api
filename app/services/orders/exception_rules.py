@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, Optional
 
-from app.services.orders.purchase_cost import resolve_purchase_cost_basis
+from app.services.orders.purchase_cost import resolve_purchase_cost_basis, resolve_margin_threshold_pct
 from app.services.orders.procurement_scope import (
     allows_finance_reason,
     is_in_procurement_scope,
@@ -12,6 +12,7 @@ from app.services.orders.procurement_scope import (
 from app.services.orders.queue_filters import resolve_order_queue
 
 EPS = 0.02
+# 兼容旧引用；新逻辑请用 resolve_margin_threshold_pct()
 MARGIN_THRESHOLD = 5.0
 
 ExceptionBand = Literal["action", "attention", "observe"]
@@ -81,8 +82,9 @@ def classify_exception_reason(
     cost = resolve_purchase_cost_basis(row)
     purchase_payable = _num(cost.get("purchase_payable"))
     suggested_gap = _num(cost.get("suggested_price_gap"))
+    cost_basis = str(cost.get("purchase_cost_basis") or "")
 
-    if suggested_gap > EPS and queue == "pending_procurement":
+    if suggested_gap > EPS and queue == "pending_procurement" and cost_basis != "platform":
         return "attention", "采购价高于建议"
 
     customer_paid = resolve_customer_paid(row)
@@ -95,7 +97,7 @@ def classify_exception_reason(
     elif abs(margin) < EPS:
         if allows_finance_reason(queue, "零毛利"):
             return "action", "零毛利"
-    elif margin_pct + EPS < MARGIN_THRESHOLD:
+    elif margin_pct + EPS < resolve_margin_threshold_pct():
         if allows_finance_reason(queue, "低毛利"):
             return "attention", "低毛利"
 

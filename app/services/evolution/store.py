@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Any, Optional
 
 from app.core.paths import data_dir
+from app.db.ops_repos import append_event_stream, read_event_stream, write_event_stream
+from app.db.session import is_db_enabled
 
 # ─── 路径常量 ───
 
@@ -16,6 +18,9 @@ EVOLUTION_DIR = data_dir() / "evolution"
 FEEDBACK_PATH = EVOLUTION_DIR / "feedback.jsonl"
 ANALYSIS_PATH = EVOLUTION_DIR / "analysis-reports.jsonl"
 PATCHES_PATH = EVOLUTION_DIR / "patches.jsonl"
+STREAM_FEEDBACK = "evolution_feedback"
+STREAM_ANALYSIS = "evolution_analysis"
+STREAM_PATCHES = "evolution_patches"
 
 MAX_FEEDBACK = 10000
 MAX_REPORTS = 500
@@ -29,6 +34,16 @@ def _new_id(prefix: str) -> str:
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    if is_db_enabled():
+        stream_map = {
+            FEEDBACK_PATH: STREAM_FEEDBACK,
+            ANALYSIS_PATH: STREAM_ANALYSIS,
+            PATCHES_PATH: STREAM_PATCHES,
+        }
+        stream = stream_map.get(path)
+        if stream:
+            limit = MAX_FEEDBACK if stream == STREAM_FEEDBACK else MAX_REPORTS if stream == STREAM_ANALYSIS else MAX_PATCHES
+            return read_event_stream(stream, limit=limit)
     if not path.exists():
         return []
     items: list[dict[str, Any]] = []
@@ -43,12 +58,32 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
 
 
 def _write_jsonl(path: Path, items: list[dict[str, Any]]) -> None:
+    if is_db_enabled():
+        stream_map = {
+            FEEDBACK_PATH: STREAM_FEEDBACK,
+            ANALYSIS_PATH: STREAM_ANALYSIS,
+            PATCHES_PATH: STREAM_PATCHES,
+        }
+        stream = stream_map.get(path)
+        if stream:
+            write_event_stream(stream, items)
+            return
     path.parent.mkdir(parents=True, exist_ok=True)
     text = "\n".join(json.dumps(i, ensure_ascii=False) for i in items)
     path.write_text(text + ("\n" if text else ""), encoding="utf-8")
 
 
 def _append_jsonl(path: Path, item: dict[str, Any]) -> None:
+    if is_db_enabled():
+        stream_map = {
+            FEEDBACK_PATH: STREAM_FEEDBACK,
+            ANALYSIS_PATH: STREAM_ANALYSIS,
+            PATCHES_PATH: STREAM_PATCHES,
+        }
+        stream = stream_map.get(path)
+        if stream:
+            append_event_stream(stream, item)
+            return
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(item, ensure_ascii=False) + "\n")
@@ -277,6 +312,38 @@ def update_patch_status(
     return None
 
 
+def update_patch_content(
+    patch_id: str,
+    content: str,
+    *,
+    payload: Optional[dict[str, Any]] = None,
+) -> Optional[dict[str, Any]]:
+    """更新补丁正文；已生效的补丁修改后退回待生效，需重新部署。"""
+    from datetime import datetime, timezone
+
+    text = (content or "").strip()
+    if not text:
+        return None
+
+    patches = _load_patches()
+    for p in patches:
+        if p.get("id") != patch_id:
+            continue
+        status = str(p.get("status") or "")
+        if status in ("discarded", "rolled_back"):
+            return None
+        p["content"] = text
+        if payload is not None:
+            p["payload"] = payload
+        p["updated_at"] = datetime.now(timezone.utc).isoformat()
+        if status == "deployed":
+            p["status"] = "approved"
+            p["active"] = False
+        _persist_patches(patches)
+        return p
+    return None
+
+
 # ─── 进化总览 ───
 
 
@@ -287,6 +354,7 @@ def get_evolution_overview() -> dict[str, Any]:
     patches = _load_patches()
 
     pending_patches = [p for p in patches if p.get("status") in ("draft", "pending")]
+    approved_patches = [p for p in patches if p.get("status") == "approved"]
     active_patches = [p for p in patches if p.get("active")]
     deployed_patches = [p for p in patches if p.get("status") == "deployed"]
 
@@ -307,6 +375,7 @@ def get_evolution_overview() -> dict[str, Any]:
         "feedback_stats": feedback_stats,
         "recent_reports": [r.get("id") for r in reports],
         "pending_patches": len(pending_patches),
+        "approved_patches": len(approved_patches),
         "active_patches": len(active_patches),
         "deployed_patches": len(deployed_patches),
         "skill_stats": skill_stats,

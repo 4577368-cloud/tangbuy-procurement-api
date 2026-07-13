@@ -48,6 +48,8 @@ class SuggestBody(BaseModel):
     item_id: Optional[str] = None
     mapping_id: Optional[str] = None
     external_order_no: Optional[str] = None
+    remap: bool = False
+    hint_as_reference: bool = False
 
 
 @router.get("/suggest")
@@ -65,6 +67,8 @@ def suggest_meta() -> dict[str, Any]:
             "semantic_candidates",
             "matched_keywords",
             "vision_summary",
+            "similar",
+            "authoritative_near",
         ],
     }
 
@@ -81,6 +85,8 @@ def suggest_run(body: SuggestBody) -> dict[str, Any]:
         hint=body.source_category_hint,
         goods_id=body.goods_id,
         image_url=body.image_url,
+        skip_history=body.remap,
+        hint_as_reference=body.remap or body.hint_as_reference,
     )
     return {
         "result": result,

@@ -10,10 +10,14 @@ from pathlib import Path
 from typing import Any, Optional
 
 from app.core.paths import data_dir
+from app.db.ops_repos import append_event_stream, read_event_stream, write_event_stream
+from app.db.session import is_db_enabled
 from app.services.skill_audit.evolution_bridge import bridge_badcase_to_evolution
 
 INVOCATIONS_PATH = data_dir() / "agent" / "skill-invocations.jsonl"
 TUNING_PATH = data_dir() / "agent" / "skill-tuning.jsonl"
+STREAM_INVOCATIONS = "skill_invocation"
+STREAM_TUNING = "skill_tuning"
 MAX_INVOCATIONS = 5000
 
 _cache: list[dict[str, Any]] | None = None
@@ -24,6 +28,10 @@ def _new_id(prefix: str) -> str:
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    if is_db_enabled():
+        stream = STREAM_INVOCATIONS if path == INVOCATIONS_PATH else STREAM_TUNING if path == TUNING_PATH else None
+        if stream:
+            return read_event_stream(stream, limit=MAX_INVOCATIONS if stream == STREAM_INVOCATIONS else 5000)
     if not path.exists():
         return []
     items: list[dict[str, Any]] = []
@@ -38,18 +46,32 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
 
 
 def _write_jsonl(path: Path, items: list[dict[str, Any]]) -> None:
+    if is_db_enabled():
+        stream = STREAM_INVOCATIONS if path == INVOCATIONS_PATH else STREAM_TUNING if path == TUNING_PATH else None
+        if stream:
+            write_event_stream(stream, items)
+            return
     path.parent.mkdir(parents=True, exist_ok=True)
     text = "\n".join(json.dumps(i, ensure_ascii=False) for i in items)
     path.write_text(text + ("\n" if text else ""), encoding="utf-8")
 
 
 def _append_jsonl(path: Path, item: dict[str, Any]) -> None:
+    if is_db_enabled():
+        stream = STREAM_INVOCATIONS if path == INVOCATIONS_PATH else STREAM_TUNING if path == TUNING_PATH else None
+        if stream:
+            append_event_stream(stream, item)
+            return
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(item, ensure_ascii=False) + "\n")
 
 
 def _load_invocations() -> list[dict[str, Any]]:
+    if is_db_enabled():
+        records = [_normalize_invocation(r) for r in _read_jsonl(INVOCATIONS_PATH)]
+        records.sort(key=lambda r: r.get("at", ""), reverse=True)
+        return records
     global _cache
     if _cache is not None:
         return _cache
@@ -95,6 +117,38 @@ def _in_period(iso: str, days: int) -> bool:
 
 def _outcome(inv: dict[str, Any]) -> str:
     return str(inv.get("outcome") or ("api_ok" if inv.get("success") else "api_fail"))
+
+
+def log_skill_invocation(
+    *,
+    skill_id: str,
+    tool: str,
+    outcome: str,
+    error: Optional[str] = None,
+    user_message_preview: Optional[str] = None,
+    response_preview: Optional[str] = None,
+    task_id: Optional[str] = None,
+) -> dict[str, Any]:
+    """记录一次 Skill 工具调用，供 Agent 审计页复核。"""
+    record = _normalize_invocation(
+        {
+            "id": _new_id("inv"),
+            "skill_id": skill_id,
+            "tool": tool,
+            "outcome": outcome,
+            "success": outcome == "api_ok",
+            "error": error,
+            "user_message_preview": (user_message_preview or "")[:300] or None,
+            "response_preview": (response_preview or "")[:600] or None,
+            "task_id": task_id,
+            "at": datetime.now(timezone.utc).isoformat(),
+            "audit_status": "pending",
+        }
+    )
+    records = _load_invocations()
+    records.insert(0, record)
+    _persist_invocations(records[:MAX_INVOCATIONS])
+    return record
 
 
 def _stat_for_skill(

@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from app.api.deps import require_auth
+from app.config.demo_submit import is_demo_submit_always_success, skill_audit_stub
 from app.services.skill_audit import store as audit_store
 
 router = APIRouter(prefix="/api/agent/skill-audit", tags=["skill-audit"])
@@ -39,6 +40,8 @@ def audit_action(request: Request, body: AuditBody) -> dict[str, Any]:
             raise HTTPException(status_code=400, detail="缺少 invocation_id")
         inv = audit_store.audit_invocation_ok(body.invocation_id.strip())
         if not inv:
+            if is_demo_submit_always_success():
+                return skill_audit_stub(body.invocation_id.strip(), audit_status="ok")
             raise HTTPException(status_code=404, detail="执行记录不存在")
         return {"invocation": inv}
     if body.action == "audit_tune":
@@ -51,6 +54,11 @@ def audit_action(request: Request, body: AuditBody) -> dict[str, Any]:
             created_by=user.account,
         )
         if outcome.get("error"):
+            if is_demo_submit_always_success():
+                return {
+                    **skill_audit_stub(body.invocation_id.strip(), audit_status="tuned"),
+                    "evolution": {"demo_submit_stub": True},
+                }
             raise HTTPException(status_code=400, detail=outcome["error"])
         return outcome
     if body.action == "audit_badcase":
@@ -62,6 +70,11 @@ def audit_action(request: Request, body: AuditBody) -> dict[str, Any]:
             created_by=user.account,
         )
         if outcome.get("error"):
+            if is_demo_submit_always_success():
+                return {
+                    **skill_audit_stub(body.invocation_id.strip(), audit_status="badcase"),
+                    "evolution": {"demo_submit_stub": True},
+                }
             raise HTTPException(status_code=400, detail=outcome["error"])
         return outcome
     raise HTTPException(status_code=400, detail="未知 action")

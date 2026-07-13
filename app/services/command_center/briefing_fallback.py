@@ -66,7 +66,13 @@ def render_briefing_fallback(*, facts: dict[str, Any], delta: dict[str, Any]) ->
             d = int(qd.get(key) or 0)
             if d != 0:
                 since_lines.append(f"- {label} {_fmt_delta(d)}件")
-        sd = delta.get("signal_counts") if isinstance(delta.get("signal_counts"), dict) else {}
+        sd = (
+            delta.get("board_signal_counts_action")
+            if isinstance(delta.get("board_signal_counts_action"), dict)
+            else {}
+        )
+        if not sd:
+            sd = delta.get("signal_counts") if isinstance(delta.get("signal_counts"), dict) else {}
         for key, label in SIGNAL_LABELS.items():
             d = int(sd.get(key) or 0)
             if d != 0:
@@ -108,11 +114,17 @@ def render_briefing_fallback(*, facts: dict[str, Any], delta: dict[str, Any]) ->
         yest_lines.append("- 暂无昨日遗留待处理信号")
     sections.append("## 昨日遗留\n" + "\n".join(yest_lines[:4]))
 
-    # 重点关注
-    sc = facts.get("signal_counts") if isinstance(facts.get("signal_counts"), dict) else {}
+    # 重点关注（与订单处理看板「待处理」卡片同源）
+    sc = (
+        facts.get("board_signal_counts_action")
+        if isinstance(facts.get("board_signal_counts_action"), dict)
+        else {}
+    )
     focus_lines: list[str] = []
     pay_gap = int(sc.get("PAY_AMOUNT_GAP") or 0)
-    ship_over = int(sc.get("SHIP_OVERDUE") or 0) or int(facts.get("ship_overdue_estimated") or 0)
+    ship_over = int(sc.get("SHIP_OVERDUE") or 0) or int(
+        facts.get("ship_overdue_estimated") or 0
+    )
     if pay_gap > 0:
         focus_lines.append(f"- 负毛利 {pay_gap}件，建议优先复核补款与放行")
     if ship_over > 0:

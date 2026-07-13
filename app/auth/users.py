@@ -34,8 +34,7 @@ SEED_USERS: list[AppUser] = [
     AppUser(account="lydia", name="Lydia", role="bd"),
     AppUser(account="kevin", name="Kevin", role="bd"),
     AppUser(account="sunyutian", name="孙玉田", role="buyer"),
-    AppUser(account="guifeng", name="贵峰", role="admin"),
-    AppUser(account="laok", name="老K", role="admin"),
+    AppUser(account="admin", name="管理员", role="admin"),
     AppUser(account="xuezhi", name="雪芝", role="admin"),
 ]
 

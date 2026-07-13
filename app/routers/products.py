@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from app.api.deps import require_auth
@@ -18,7 +19,12 @@ from app.services.products.service import (
     save_mapping_draft,
     set_product_shipping,
 )
-from app.services.products.store import confirm_product_mapping, update_product
+from app.services.products.store import (
+    confirm_product_mapping,
+    finalize_product_mapping_confirm,
+    persist_product_mapping_side_effects,
+    update_product,
+)
 
 router = APIRouter(prefix="/api/products", tags=["products"])
 
@@ -46,16 +52,43 @@ class SwitchSupplierBody(BaseModel):
     ord_line_no: Optional[str] = None
     signal_type: Optional[str] = None
     note: Optional[str] = None
+    reason_key: Optional[str] = None
+
+
+class TriggerMappingBody(BaseModel):
+    wait: bool = False
+
+
+class QuoteTranslateTitlesBody(BaseModel):
+    titles: list[str]
+    target_lang: str = "en"
+
+
+@router.post("/quote/translate-titles")
+def quote_translate_titles(request: Request, body: QuoteTranslateTitlesBody) -> dict[str, Any]:
+    """报价单标题清洗 + 英/法翻译（买家可见文案）。"""
+    require_auth(request)
+    from app.services.products.quote_title import translate_quote_titles as do_translate
+
+    titles = [str(t or "").strip() for t in body.titles if str(t or "").strip()]
+    if not titles:
+        raise HTTPException(status_code=400, detail="缺少标题")
+    lang = (body.target_lang or "en").strip().lower()
+    if lang not in ("en", "fr"):
+        raise HTTPException(status_code=400, detail="仅支持 en / fr")
+    try:
+        translated = do_translate(titles, target_lang=lang)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return {"titles": translated, "target_lang": lang}
 
 
 @router.get("")
 def list_products() -> dict[str, Any]:
-    from app.services.products.store import repair_stuck_mapping_products
-
-    repair_stuck_mapping_products()
+    items = product_service.list_products()
     return {
-        "products": product_service.list_products(),
-        "stats": product_service.get_product_stats(),
+        "products": items,
+        "stats": {"total": len(items)},
     }
 
 
@@ -78,6 +111,7 @@ def switch_supplier(request: Request, body: SwitchSupplierBody) -> dict[str, Any
             operator=getattr(user, "name", None) or getattr(user, "username", None),
             signal_type=body.signal_type,
             note=body.note,
+            reason_key=body.reason_key,
         )
     except SwitchSupplierError as exc:
         status = 404 if exc.code == "not_found" else 400
@@ -117,6 +151,7 @@ class SyncFromOrdersBody(BaseModel):
     auto_map: Optional[bool] = True
     all_pages: Optional[bool] = False
     max_pages: Optional[int] = 100
+    wait: bool = False
 
 
 class ProductPushBody(BaseModel):
@@ -136,21 +171,29 @@ def list_find_cache(request: Request, q: Optional[str] = None, limit: int = 100)
 
 
 @router.post("/sync-from-orders")
-def sync_from_orders(request: Request, body: SyncFromOrdersBody) -> dict[str, Any]:
+def sync_from_orders(request: Request, body: SyncFromOrdersBody):
     require_auth(request)
-    from app.services.products.order_sync import sync_products_from_orders
+    from app.services.background_jobs import create_job, run_job
+    from app.services.products.sync_jobs import execute_products_sync_from_orders
 
-    result = sync_products_from_orders(
-        queue=(body.queue or "pending_procurement").strip(),
-        page=max(1, int(body.page or 1)),
-        page_size=max(1, min(500, int(body.page_size or 200))),
-        auto_map=body.auto_map is not False,
-        all_pages=body.all_pages is True,
-        max_pages=max(1, min(200, int(body.max_pages or 100))),
+    payload = {
+        "queue": (body.queue or "pending_procurement").strip(),
+        "page": body.page,
+        "page_size": body.page_size,
+        "auto_map": body.auto_map is not False,
+        "all_pages": body.all_pages is True,
+        "max_pages": body.max_pages,
+    }
+    if body.wait:
+        return execute_products_sync_from_orders(**payload)
+
+    label = (body.queue or "orders").strip() or "orders"
+    job_id = create_job("product_sync", label=label)
+    run_job(job_id, lambda: execute_products_sync_from_orders(**payload))
+    return JSONResponse(
+        status_code=202,
+        content={"job_id": job_id, "status": "pending", "kind": "product_sync"},
     )
-    stats = dict(result.get("stats") or {})
-    stats["products_total"] = product_service.get_product_stats().get("total", 0)
-    return {**result, "stats": stats}
 
 
 @router.get("/push-targets")
@@ -230,6 +273,10 @@ def push_product(request: Request, product_id: str, body: ProductPushBody) -> di
         raise HTTPException(status_code=403, detail="无推送权限")
     existing = product_service.get_product_by_id(product_id)
     if not existing:
+        from app.config.demo_submit import demo_submit_stub, is_demo_submit_always_success
+
+        if is_demo_submit_always_success():
+            return demo_submit_stub(message="已记录推送")
         raise HTTPException(status_code=404, detail="商品不存在")
 
     from app.services.products.push_presets import find_preset, record_product_push
@@ -255,16 +302,46 @@ def push_product(request: Request, product_id: str, body: ProductPushBody) -> di
     return {"ok": True, "push": entry, "message": "已记录推送（待接正式上架授权接口）"}
 
 
+@router.get("/{product_id}")
+def get_product(product_id: str) -> dict[str, Any]:
+    product = product_service.get_product_by_id(product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="商品不存在")
+    return {"product": product}
+
+
 @router.post("/{product_id}")
-def trigger_mapping(request: Request, product_id: str) -> dict[str, Any]:
+def trigger_mapping(
+    request: Request,
+    product_id: str,
+    body: TriggerMappingBody = TriggerMappingBody(),
+):
     user = require_auth(request)
     grants = get_role_grants(user.role)
     if not grants_allow(grants, "product.category_mapping", "edit"):
         raise HTTPException(status_code=403, detail="无「品类映射」权限")
-    product = map_product_category_by_id(product_id)
-    if not product:
-        raise HTTPException(status_code=404, detail="商品不存在")
-    return {"product": product}
+    wait = body.wait
+    if wait:
+        product = map_product_category_by_id(product_id)
+        if not product:
+            raise HTTPException(status_code=404, detail="商品不存在")
+        return {"product": product}
+
+    from app.services.background_jobs import create_job, run_job
+
+    job_id = create_job("product_mapping", label=product_id)
+
+    def _run() -> dict[str, Any]:
+        product = map_product_category_by_id(product_id)
+        if not product:
+            raise RuntimeError("商品不存在")
+        return {"product": product}
+
+    run_job(job_id, _run)
+    return JSONResponse(
+        status_code=202,
+        content={"job_id": job_id, "status": "pending", "kind": "product_mapping"},
+    )
 
 
 @router.post("/{product_id}/admin-writeback")
@@ -274,8 +351,11 @@ def trigger_admin_writeback(request: Request, product_id: str) -> dict[str, Any]
     grants = get_role_grants(user.role)
     if not grants_allow(grants, "product.category_mapping", "edit"):
         raise HTTPException(status_code=403, detail="无「品类映射」权限")
-    from app.services.category_mapping.admin_writeback import schedule_admin_writeback
-    from app.services.products.store import get_product_by_id, is_valid_hs_mapping, _now_iso
+    from app.services.category_mapping.admin_writeback import (
+        prefetch_writeback_category_labels,
+        schedule_admin_writeback,
+    )
+    from app.services.products.store import get_product_by_id, is_valid_hs_mapping, _now_iso, update_product
 
     product = get_product_by_id(product_id)
     if not product:
@@ -284,9 +364,26 @@ def trigger_admin_writeback(request: Request, product_id: str) -> dict[str, Any]
     if not is_valid_hs_mapping(hs):
         raise HTTPException(status_code=400, detail="请先完成品类映射")
 
+    from app.services.category_mapping.admin_writeback import (
+        collect_item_nos,
+        should_skip_admin_writeback,
+    )
+
+    if should_skip_admin_writeback(product, hs, item_nos=collect_item_nos(product))[0]:
+        return {"product": product, "skipped_duplicate": True}
+
+    from_name, to_name, from_cid, to_cid = prefetch_writeback_category_labels(product, hs)
+
     def _mark_writing(p: dict[str, Any]) -> dict[str, Any]:
         mapping = dict(p.get("mapping_record") or {})
-        mapping["admin_writeback"] = {"status": "writing", "at": _now_iso()}
+        mapping["admin_writeback"] = {
+            "status": "writing",
+            "at": _now_iso(),
+            "from_category": from_name or None,
+            "to_category": to_name or None,
+            "from_cid": from_cid or None,
+            "to_cid": to_cid or None,
+        }
         p["mapping_record"] = mapping
         return p
 
@@ -302,6 +399,10 @@ def patch_product(request: Request, product_id: str, body: PatchProductBody) -> 
     grants = get_role_grants(user.role)
     existing = product_service.get_product_by_id(product_id)
     if not existing:
+        from app.config.demo_submit import demo_submit_stub, is_demo_submit_always_success
+
+        if is_demo_submit_always_success():
+            return demo_submit_stub(product={"tangbuy_product_id": product_id})
         raise HTTPException(status_code=404, detail="商品不存在")
 
     action = body.action or ""
@@ -318,14 +419,31 @@ def patch_product(request: Request, product_id: str, body: PatchProductBody) -> 
             product_id,
             lambda p: save_mapping_draft(p, body.record or {}),
         ) or existing
+        finalize_product_mapping_confirm(product, resolution="auto")
     elif action == "apply_mapping" and body.record:
+        record = body.record or {}
         try:
             product = update_product(
                 product_id,
-                lambda p: apply_mapping_record(p, body.record or {}),
+                lambda p: apply_mapping_record(p, record),
             ) or existing
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+        hs = record.get("suggested_hs") or record.get("corrected_hs") or {}
+        review = str(record.get("review_status") or "")
+        if review == "corrected":
+            resolution = "manual_correct"
+        elif review in ("confirmed", "pending"):
+            resolution = "manual_confirm"
+        else:
+            resolution = "auto"
+        persist_product_mapping_side_effects(
+            product,
+            hs if isinstance(hs, dict) else {},
+            manual=review == "corrected",
+            resolution=resolution,
+            skip_admin_writeback=body.save_to_product is False,
+        )
     elif action in ("confirm", "correct") and body.hs:
         product = update_product(
             product_id,
@@ -334,8 +452,18 @@ def patch_product(request: Request, product_id: str, body: PatchProductBody) -> 
                 body.hs,
                 reviewer_note=body.note,
                 manual=action == "correct",
+                resolution="manual_correct" if action == "correct" else "manual_confirm",
+                skip_admin_writeback=body.save_to_product is False,
+                defer_side_effects=True,
             ),
         ) or existing
+        persist_product_mapping_side_effects(
+            product,
+            body.hs,
+            manual=action == "correct",
+            resolution="manual_correct" if action == "correct" else "manual_confirm",
+            skip_admin_writeback=body.save_to_product is False,
+        )
     else:
         raise HTTPException(status_code=400, detail="无效操作")
     return {"product": product}

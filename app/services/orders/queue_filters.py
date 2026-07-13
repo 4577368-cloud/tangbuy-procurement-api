@@ -26,12 +26,11 @@ QUEUE_ORDER_STATUS: dict[str, int] = {
 def pending_procurement_admin_filters(event_type_pending: int = 5888) -> list[dict[str, Any]]:
     """待采购在 Admin 侧分散在多个 goodsStatus，需合并拉取。"""
     return [
+        # 有量桶优先（避免 goodsStatus=0 空请求导致后续桶失败）
+        {"goodsStatus": 23, "orderStatus": 2, "eventType": event_type_pending},
+        {"goodsStatus": 54, "orderStatus": None, "eventType": None},
         # 待接单（新支付订单常见 goodsStatus=0 / orderStatus=1）
         {"goodsStatus": 0, "orderStatus": 1, "eventType": None},
-        # 处理中（原筛选）
-        {"goodsStatus": 23, "orderStatus": 2, "eventType": event_type_pending},
-        # 1688 待生成
-        {"goodsStatus": 54, "orderStatus": None, "eventType": None},
     ]
 
 

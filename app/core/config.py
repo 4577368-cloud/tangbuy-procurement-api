@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     tangbuy_admin_base_url: str = "https://admin.tangbuy.cc/prod-api"
     tangbuy_admin_token: str = ""
     tangbuy_admin_storage_no: int = 1
+    tangbuy_admin_buyer_id: int = 1
+    tangbuy_admin_buyer_name: str = "admin"
+    tangbuy_admin_buyer_company_id: int = 100
+    tangbuy_admin_buyer_company_name: str = "tang"
     tangbuy_admin_event_type_pending: int = 5888
     # 部分海外机房 DNS 解析不了 admin.tangbuy.cc，用 IP + Host 头直连；留空则走域名
     tangbuy_admin_connect_ip: str = "47.242.247.65"
@@ -52,6 +56,9 @@ class Settings(BaseSettings):
     product_alt_scan_batch_size: int = 3
     # true=单商品点击同步扫完再返回（本地测试）；false=后台队列（线上防超时）
     product_alt_scan_sync: bool = False
+
+    # 履约作业态数据库（SQLite / PostgreSQL）；留空则回退 JSON 文件
+    database_url: str = ""
 
     @property
     def tangbuy_portal_configured(self) -> bool:

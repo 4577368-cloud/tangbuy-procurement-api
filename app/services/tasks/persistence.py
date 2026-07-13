@@ -1,4 +1,4 @@
-"""任务持久化（共用 data/agent/tasks.json）。"""
+"""任务持久化（DB 或 data/agent/tasks.json）。"""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from app.core.paths import data_dir
+from app.db.session import db_session, is_db_enabled
 
 RUNTIME_TASK_ID_RE = re.compile(r"^task-(newton|inq|src|ord|sc)-\d{10,}-[a-z0-9]+$")
 STORE_PATH = data_dir() / "agent" / "tasks.json"
@@ -53,7 +54,23 @@ def with_runtime_tasks(
     *,
     repair: bool = True,
 ) -> list[dict[str, Any]]:
-    """在文件锁内读取/修复/修改/写回 runtime 任务，避免并发覆盖丢数据。"""
+    """在锁内读取/修复/修改/写回 runtime 任务。"""
+    if is_db_enabled():
+        from app.db.ops_repos import AgentTaskRepository
+
+        with db_session() as session:
+            repo = AgentTaskRepository(session)
+            tasks = repo.load_all()
+            dirty = False
+            if repair:
+                dirty = any(repair_order_followup_task(t) for t in tasks)
+            if mutator is not None:
+                mutator(tasks)
+                dirty = True
+            if dirty or mutator is not None:
+                repo.save_all(tasks)
+            return tasks
+
     _ensure_dir()
     STORE_PATH.touch(exist_ok=True)
     with open(STORE_PATH, "r+", encoding="utf-8") as handle:
@@ -173,13 +190,16 @@ def upsert_runtime_task(task: dict[str, Any]) -> dict[str, Any]:
             ex_ref = str(existing.get("external_ref") or "").strip()
             ex_payload = existing.get("payload") or {}
             if external_ref and ex_ref == external_ref:
-                matched = existing
+                tasks[i] = {**existing, **task, "id": existing.get("id", task.get("id"))}
+                matched = tasks[i]
                 return
             if newton_id and str(ex_payload.get("newton_task_id") or "") == newton_id:
-                matched = existing
+                tasks[i] = {**existing, **task, "id": existing.get("id", task.get("id"))}
+                matched = tasks[i]
                 return
             if alphashop_id and str(ex_payload.get("alphashop_task_id") or "") == alphashop_id:
-                matched = existing
+                tasks[i] = {**existing, **task, "id": existing.get("id", task.get("id"))}
+                matched = tasks[i]
                 return
         tasks.insert(0, task)
         matched = task

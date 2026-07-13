@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from app.services.category_mapping.similar_enrich import enrich_suggest_response
 from app.services.category_mapping.vision_pipeline import run_category_mapping_suggest_with_vision
 from app.services.category_mapping.title_translate import prepare_title_for_mapping
 
@@ -14,14 +15,18 @@ def run_category_mapping_suggest(
     hint: Optional[str] = None,
     goods_id: Optional[str] = None,
     image_url: Optional[str] = None,
+    skip_history: bool = False,
+    hint_as_reference: bool = False,
 ) -> dict[str, Any]:
-    prep = prepare_title_for_mapping(title, hint=hint)
+    prep = prepare_title_for_mapping(title, hint=hint if not hint_as_reference else None)
     result = dict(
         run_category_mapping_suggest_with_vision(
             prep.title,
-            hint=prep.hint,
+            hint=hint,
             goods_id=goods_id,
             image_url=image_url,
+            skip_history=skip_history,
+            hint_as_reference=hint_as_reference,
         )
     )
 
@@ -35,4 +40,8 @@ def run_category_mapping_suggest(
         if not result.get("match_method"):
             result["match_method"] = "title_translated"
 
-    return result
+    return enrich_suggest_response(
+        result,
+        title=prep.title,
+        hint=hint if not hint_as_reference else None,
+    )

@@ -1,4 +1,4 @@
-"""配置中心（读 data/config/config-center.json，与 Next config-store 共用文件）。"""
+"""配置中心（DB 或 data/config/config-center.json）。"""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from app.auth.permissions import PermissionMatrix, RoleGrants, merge_matrix
 from app.auth.users import SEED_USERS, AppUser, Role, to_public_user
 from app.config.business_config import normalize_business_config
 from app.core.paths import data_dir
+from app.db.session import db_session, is_db_enabled
 
 _cache: dict[str, Any] | None = None
 
@@ -18,36 +19,57 @@ def _store_path() -> Path:
     return data_dir() / "config" / "config-center.json"
 
 
+def _normalize_loaded(raw: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "business": normalize_business_config(raw.get("business")),
+        "matrix": merge_matrix(raw.get("matrix")),
+        "user_roles": raw.get("userRoles") or raw.get("user_roles") or {},
+    }
+
+
 def _load() -> dict[str, Any]:
     global _cache
-    if _cache is not None:
+    if _cache is not None and not is_db_enabled():
         return _cache
 
     raw: dict[str, Any] = {}
-    path = _store_path()
-    if path.exists():
-        try:
-            raw = json.loads(path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            raw = {}
+    if is_db_enabled():
+        from app.db.catalog_repos import ConfigRepository
 
-    _cache = {
-        "business": normalize_business_config(raw.get("business")),
-        "matrix": merge_matrix(raw.get("matrix")),
-        "user_roles": raw.get("userRoles") or {},
-    }
-    return _cache
+        with db_session() as session:
+            stored = ConfigRepository(session).load()
+            if stored:
+                raw = stored
+    else:
+        path = _store_path()
+        if path.exists():
+            try:
+                raw = json.loads(path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                raw = {}
+
+    normalized = _normalize_loaded(raw)
+    if not is_db_enabled():
+        _cache = normalized
+    return normalized
 
 
 def _persist(data: dict[str, Any]) -> None:
     global _cache
-    path = _store_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "business": data["business"],
         "matrix": data["matrix"],
         "userRoles": data["user_roles"],
     }
+    if is_db_enabled():
+        from app.db.catalog_repos import ConfigRepository
+
+        with db_session() as session:
+            ConfigRepository(session).save(payload)
+        return
+
+    path = _store_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     tmp.replace(path)

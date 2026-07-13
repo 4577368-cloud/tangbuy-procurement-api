@@ -40,12 +40,35 @@ docs/                       # 集成与字段契约文档
 
 ## 启动
 
+macOS 请用 **Python 3.11+**（系统自带 3.9 + LibreSSL 会触发 urllib3 警告）：
+
 ```bash
 cd tangbuy-procurement-api
-python3 -m venv .venv && source .venv/bin/activate
+/Users/panda/.local/bin/python3.11 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env.local   # 配置 LLM、1688、CORS
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+或一键启动（自动使用 `.venv`，端口 8001，仅本机）：
+
+```bash
+./scripts/dev-api.sh
+```
+
+### 局域网预览（同事访问 `http://192.168.50.100:3001`）
+
+API **保持本机** `127.0.0.1:8001`（由 Next 代理，无需暴露 8001）。  
+在 `BACKEND_CORS_ORIGINS` 增加你的局域网前端地址，例如：
+
+`http://192.168.50.100:3001`
+
+前端需监听所有网卡：
+
+```bash
+cd ../tangbuy-procurement-web
+npm run dev:lan
 ```
 
 ## 线上部署（Render）
