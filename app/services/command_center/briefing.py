@@ -419,8 +419,41 @@ def _get_facts_cached(
     return facts
 
 
+def _empty_command_center_stats() -> dict[str, Any]:
+    """订单尚未同步时返回空看板，避免整页 500。"""
+    empty_queues = {
+        "pending_procurement": 0,
+        "pending_payment": 0,
+        "ordered": 0,
+        "shipped": 0,
+        "in_warehouse": 0,
+        "dispatched": 0,
+        "exception": 0,
+        "reverse": 0,
+        "all": 0,
+    }
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "queue_counts": empty_queues,
+        "signal_counts": {},
+        "board_signal_counts": {},
+        "board_signal_counts_action": {},
+        "board_band_counts": {},
+        "exception_bands": {},
+        "ship_overdue_estimated": 0,
+        "scanned_rows": 0,
+        "per_queue_scan": {},
+        "orders_source": "empty",
+    }
+
+
 def get_command_center_stats(*, force: bool = False) -> dict[str, Any]:
-    facts = _get_facts_cached(force=force, skip_sync=True)
+    try:
+        facts = _get_facts_cached(force=force, skip_sync=True)
+    except RuntimeError as exc:
+        if "订单缓存为空" in str(exc):
+            return _empty_command_center_stats()
+        raise
     signal_counts = dict(facts.get("signal_counts") or {})
     neg = int(signal_counts.pop("NEGATIVE_MARGIN", 0) or 0)
     if neg:

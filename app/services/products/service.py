@@ -121,8 +121,8 @@ def _reconcile_product_writeback(product: dict[str, Any]) -> dict[str, Any]:
 
 
 def list_products() -> list[dict[str, Any]]:
+    """列表只读。勿在 GET 上 reconcile/触发回写（易阻塞或死锁）。"""
     items = load_products()
-    items = [_reconcile_product_writeback(p) for p in items]
     return sorted(items, key=lambda p: p.get("created_at", ""), reverse=True)
 
 

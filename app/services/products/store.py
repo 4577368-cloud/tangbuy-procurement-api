@@ -15,7 +15,8 @@ from app.db.session import db_session, is_db_enabled
 from app.services.category_mapping.local_mappings import upsert_local_mapping
 
 _CENTER_PATH = data_dir() / "products" / "center.json"
-_io_lock = threading.Lock()
+# RLock：update_product 的 updater 内可能再调用 load_products（同线程），普通 Lock 会死锁
+_io_lock = threading.RLock()
 
 RESOLVED_MAPPING_STATUSES = frozenset({"auto_passed", "confirmed", "needs_review"})
 PROTECTED_PRODUCT_FIELDS = (

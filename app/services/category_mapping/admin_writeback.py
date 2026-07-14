@@ -606,19 +606,21 @@ def schedule_admin_writeback(
                 ignore_in_flight=True,
             )
             if skip:
+                # placeholder 可能打 Admin，须在 update_product 持锁之外
+                wb_skip_payload = resolve_admin_writeback_placeholder(
+                    product,
+                    hs,
+                    at=_now_iso(),
+                    resolution=resolution,
+                    item_nos=ids,
+                )
                 updated_skip = update_product(
                     pid,
                     lambda p: {
                         **p,
                         "mapping_record": {
                             **(p.get("mapping_record") or {}),
-                            "admin_writeback": resolve_admin_writeback_placeholder(
-                                p,
-                                hs,
-                                at=_now_iso(),
-                                resolution=resolution,
-                                item_nos=ids,
-                            ),
+                            "admin_writeback": wb_skip_payload,
                         },
                     },
                 )
@@ -631,10 +633,20 @@ def schedule_admin_writeback(
                     pass
                 return
 
-            updated = update_product(
-                pid,
-                lambda p: attach_admin_writeback(p, hs, resolution=resolution, item_nos=item_nos),
+            # 网络写回必须在 _io_lock 外，避免持锁打 Admin 卡住整站商品读写
+            result = push_category_to_admin(
+                product=product,
+                hs=hs,
+                resolution=resolution,
+                item_nos=item_nos,
             )
+
+            def _apply_writeback(p: dict[str, Any]) -> dict[str, Any]:
+                mapping = dict(p.get("mapping_record") or {})
+                mapping["admin_writeback"] = result
+                return {**p, "mapping_record": mapping}
+
+            updated = update_product(pid, _apply_writeback)
             wb = (updated or {}).get("mapping_record", {}).get("admin_writeback") or {}
             try:
                 from app.services.workflow.hooks import trace_admin_writeback
