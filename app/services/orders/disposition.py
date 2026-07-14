@@ -220,6 +220,76 @@ def submit_disposition(
             verify=None,
         )
 
+    if action_key == "urge_ship":
+        from app.services.agent.followup import (
+            DEFAULT_QUESTION,
+            execute_order_followup_send,
+            normalize_followup_order_id,
+        )
+
+        platform_oid = normalize_followup_order_id(
+            str(row.get("pur_no") or row.get("plt_ord_id") or "").strip()
+        )
+        if not platform_oid:
+            raise DispositionError("缺少 1688 订单号，无法催单", code="missing_platform_order")
+
+        question = (action_label or "").strip()
+        if len(question) < 4 or question in ("催发货", "催单", "联系卖家催发货"):
+            question = DEFAULT_QUESTION
+
+        sent = execute_order_followup_send(platform_oid, question)
+        if not sent.get("success"):
+            raise DispositionError(
+                str(sent.get("error") or "催单失败"),
+                code="urge_ship_failed",
+            )
+
+        now = datetime.now(timezone.utc).isoformat()
+        disposition_store.merge_override(
+            key,
+            {
+                "ship_urged_at": now,
+                "ship_urge_task_id": sent.get("taskId"),
+                "ship_urge_platform_oid": platform_oid,
+                "action_key": "urge_ship",
+                "signal_type": signal_type,
+                "operator": operator,
+                "ord_no": row.get("ord_no"),
+            },
+        )
+        disposition_store.append_audit(
+            {
+                "ord_line_no": key,
+                "ord_no": row.get("ord_no"),
+                "action_key": action_key,
+                "action_label": action_label or "催发货",
+                "signal_type": signal_type,
+                "feedback_type": feedback_type,
+                "operator": operator,
+                "admin_write": "urge_ship",
+                "platform_order_id": platform_oid,
+                "task_id": sent.get("taskId"),
+                "at": now,
+            }
+        )
+        try:
+            from app.services.command_center.scan_cache import invalidate_command_center_scan
+
+            invalidate_command_center_scan()
+        except Exception:
+            pass
+        return {
+            "ok": True,
+            "ord_line_no": key,
+            "stage_before": effective_stage or queue,
+            "stage_after": effective_stage or queue,
+            "admin_write": "urge_ship",
+            "action_key": action_key,
+            "task_id": sent.get("taskId"),
+            "platform_order_id": platform_oid,
+            "code": "urged",
+        }
+
     if action_key == "note_spec_modified":
         from app.services.orders import order_line_sync, pipeline_store
         from app.services.orders.note_spec_verify import verify_note_spec_alignment
