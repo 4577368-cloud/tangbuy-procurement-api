@@ -78,10 +78,35 @@ _HIGH_VALUE_PATTERNS: list[tuple[NoteTopic, re.Pattern[str]]] = [
         ),
     ),
     (
+        "size_change",
+        re.compile(
+            r"(实际|需要|要|请).{0,10}(采购|下单|发)?.{0,6}"
+            r"([Xx]{0,3}[SsMmLl]{1,3}|\d{2})\s*(码|尺码)?",
+            re.I,
+        ),
+    ),
+    (
         "color_change",
         re.compile(
             r"(换|改|更换|改成|换成|change|replace|changer|cambiar).{0,12}"
             r"(颜色|色|color|couleur|color)",
+            re.I,
+        ),
+    ),
+    (
+        "color_change",
+        # 实际采购粉色 / 要粉色 / 需要下单红色
+        re.compile(
+            r"(实际|需要|要|请|麻烦|务必).{0,12}(采购|下单|发|选)?.{0,8}"
+            r"(粉|红|黑|白|蓝|绿|黄|紫|灰|米|杏|银|金|橙|棕|咖|卡其|藏青|酒红)"
+            r".{0,2}色",
+            re.I,
+        ),
+    ),
+    (
+        "color_change",
+        re.compile(
+            r"(采购|下单|发货).{0,8}(粉|红|黑|白|蓝|绿|黄|紫|灰|米|杏)色",
             re.I,
         ),
     ),

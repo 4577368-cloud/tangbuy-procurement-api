@@ -9,6 +9,16 @@ data/products/*.bak*
 data/agent/tasks.json
 data/orders/line-cache.json
 data/orders/sync-state.json
+data/orders/*-cache.json
+data/orders/dispositions.jsonl
+data/orders/disposition-overrides.json
+data/orders/auto-releases.jsonl
+data/orders/pipeline-acks.jsonl
+data/orders/pipeline-state.jsonl
+data/orders/place-orders.jsonl
+data/orders/platform-orders.json
+data/command-center/briefing-snapshot.json
+data/evolution/
 data/tangbuy.db
 data/tangbuy.db-shm
 data/tangbuy.db-wal

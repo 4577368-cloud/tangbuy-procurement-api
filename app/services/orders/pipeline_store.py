@@ -211,6 +211,29 @@ def enrich_row_pipeline_fields(
 
         prep = evaluate_prepare_stage(row)
         blockers = prep.get("blockers") if isinstance(prep.get("blockers"), list) else []
+    elif stat == 0:
+        from app.config.business_config import normalize_business_config
+        from app.config.store import get_business_config
+        from app.services.orders.procurement_release import GENERIC_CATEGORIES
+
+        category = str(row.get("lvl1_ctgy_nm") or "").strip()
+        if not category or category in GENERIC_CATEGORIES:
+            auto_map = bool(
+                normalize_business_config(get_business_config())
+                .get("rules", {})
+                .get("auto_category_mapping", True)
+            )
+            blockers = [
+                {
+                    "key": "CATEGORY_OTHER",
+                    "label": "品类未映射",
+                    "stage": "accept",
+                    "auto_resolvable": auto_map,
+                    "requires_ack": False,
+                    "detail": category or "其他",
+                    "at": _now_iso(),
+                }
+            ]
     return {
         **row,
         "pipeline_step": _derive_pipeline_step(row),

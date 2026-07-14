@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 from app.services.category_mapping.mapping_quality import (
     assess_mapping_quality,
+    catalog_leaf_incoherent,
     hint_conflicts_title,
+    hs_aligns_with_agreement_terms,
     mapping_aligns_with_title,
+    title_vision_agreement_terms,
 )
+from app.services.category_mapping.vision_pipeline import _rerank_candidates_with_vision
 
 
 def test_pants_title_rejects_sweater_hs():
@@ -60,3 +66,144 @@ def test_local_cache_not_auto_pass_when_mismatch():
     }
     q = assess_mapping_quality(title, hs, match_method="local_item_mapped", confidence=1.0)
     assert not q["auto_pass_eligible"]
+
+
+def test_fish_pet_supplies_leaf_incoherent():
+    hs = {
+        "category_id": 50003251,
+        "category_cn_name": "鱼",
+        "declare_cn_name": "宠物用品",
+        "hs_code": "3926909090",
+    }
+    assert catalog_leaf_incoherent(hs)
+    title = "宠物厂家直销宠物用品亚马逊爆款宠物狗窝猫窝四季保暖毛绒宠物窝"
+    vision = ["宠物窝", "宠物用品", "狗窝", "猫窝"]
+    ok, detail, _ = mapping_aligns_with_title(title, hs, vision_keywords=vision)
+    assert not ok
+    assert "不一致" in detail or "不匹配" in detail or "印证" in detail
+    q = assess_mapping_quality(
+        title,
+        hs,
+        vision_keywords=vision,
+        match_method="image_vl_rerank",
+        confidence=0.9,
+    )
+    assert not q["auto_pass_eligible"]
+
+
+def test_title_vision_agreement_and_cat_bed_align():
+    title = "宠物厂家直销宠物用品亚马逊爆款宠物狗窝猫窝四季保暖毛绒宠物窝"
+    vision = ["宠物窝", "狗窝", "猫窝", "毛绒垫"]
+    agree = title_vision_agreement_terms(title, vision)
+    assert "猫窝" in agree or "狗窝" in agree or "宠物窝" in agree
+    hs_ok = {
+        "category_cn_name": "猫窝/屋/帐篷",
+        "declare_cn_name": "猫窝",
+        "hs_code": "9404909000",
+    }
+    assert hs_aligns_with_agreement_terms(hs_ok, agree)
+    q = assess_mapping_quality(
+        title,
+        hs_ok,
+        vision_keywords=vision,
+        match_method="image_vl_rerank",
+        confidence=0.9,
+    )
+    assert q["auto_pass_eligible"]
+
+
+def test_nan_hs_blocks_auto_pass():
+    title = "宠物狗窝猫窝四季保暖毛绒宠物窝"
+    vision = ["宠物窝", "猫窝"]
+    hs = {
+        "category_cn_name": "猫窝/屋/帐篷",
+        "declare_cn_name": "猫窝",
+        "hs_code": "nan",
+    }
+    q = assess_mapping_quality(
+        title,
+        hs,
+        vision_keywords=vision,
+        match_method="image_vl_rerank",
+        confidence=0.9,
+    )
+    assert not q["auto_pass_eligible"]
+    assert "HS" in q["detail"]
+
+
+def test_vision_only_match_not_auto_pass():
+    """标题无印证、仅识图词命中申报名 → 不过自动放行。"""
+    title = "春季新款时尚百搭"
+    vision = ["猫窝", "宠物窝"]
+    hs = {
+        "category_cn_name": "其他塑料制品",
+        "declare_cn_name": "宠物窝",
+        "hs_code": "3926909090",
+    }
+    q = assess_mapping_quality(
+        title,
+        hs,
+        vision_keywords=vision,
+        match_method="image_vl_rerank",
+        confidence=0.95,
+    )
+    assert not q["auto_pass_eligible"]
+
+
+def test_vl_rerank_merge_keeps_lookup_category():
+    current = {
+        "success": True,
+        "category_id": 50003251,
+        "category_cn_name": "鱼",
+        "declare_cn_name": "宠物用品",
+        "hs_code": "3926909090",
+        "semantic_candidates": [
+            {
+                "category_id": 201829117,
+                "category_cn_name": "猫窝/屋/帐篷",
+                "hs_code": "nan",
+                "confidence": 0.5,
+            },
+            {
+                "category_id": 50003251,
+                "category_cn_name": "鱼",
+                "hs_code": "3926909090",
+                "confidence": 0.8,
+            },
+        ],
+        "decision": "scored",
+    }
+    lookup = {
+        "success": True,
+        "category_id": 201829117,
+        "category_cn_name": "猫窝/屋/帐篷",
+        "category_en_name": "Cat bed",
+        "hs_code": "nan",
+        "declare_cn_name": "nan",
+        "declare_en_name": "nan",
+        "tariff": None,
+    }
+    with (
+        patch(
+            "app.services.category_mapping.vision_pipeline.vision_chat_completion",
+            return_value='{"category_id": 201829117, "reason": "毛绒宠物窝"}',
+        ),
+        patch(
+            "app.services.category_mapping.vision_pipeline.parse_json_from_llm",
+            return_value={"category_id": 201829117, "reason": "毛绒宠物窝"},
+        ),
+        patch(
+            "app.services.category_mapping.vision_pipeline.run_category_lookup",
+            return_value=lookup,
+        ),
+    ):
+        merged = _rerank_candidates_with_vision(
+            "https://example.com/a.jpg",
+            "宠物狗窝猫窝",
+            "毛绒宠物窝",
+            current,
+        )
+    assert merged is not None
+    assert merged["category_id"] == 201829117
+    assert merged["category_cn_name"] == "猫窝/屋/帐篷"
+    assert merged["vl_picked_category_id"] == 201829117

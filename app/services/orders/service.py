@@ -14,6 +14,8 @@ from app.services.orders.order_note_classify import enrich_row_note_fields
 from app.services.orders.order_sku_check import enrich_row_sku_fields
 from app.services.orders.purchase_cost import enrich_row_purchase_cost_fields
 from app.services.orders.queue_filters import (
+    QUEUE_GOODS_STATUS_BUCKETS,
+    QUEUE_ORDER_STATUS,
     _base_list_body,
     build_list_body,
     pending_procurement_admin_filters,
@@ -161,6 +163,28 @@ def _fetch_pending_procurement_rows(
     start = (max(page, 1) - 1) * page_size
     page_lines = lines[start : start + page_size]
     return page_lines, max(len(lines), total_hint)
+
+
+def fetch_queue_status_bucket(
+    *,
+    queue: str,
+    goods_status: int,
+    page: int,
+    page_size: int,
+    storage_no: Optional[int] = None,
+) -> tuple[list[dict[str, Any]], int]:
+    """按队列 + 指定 goodsStatus 拉一页（用于 shipped 等多状态桶）。"""
+    settings = get_settings()
+    sn = storage_no if storage_no is not None else settings.tangbuy_admin_storage_no
+    body = _base_list_body(page=page, page_size=page_size, storage_no=sn)
+    body["goodsStatus"] = goods_status
+    body["eventType"] = None
+    order_status = QUEUE_ORDER_STATUS.get(queue)
+    if order_status is not None:
+        body["orderStatus"] = order_status
+    else:
+        body["orderStatus"] = None
+    return _fetch_admin_rows(body)
 
 
 def fetch_pending_procurement_bucket(

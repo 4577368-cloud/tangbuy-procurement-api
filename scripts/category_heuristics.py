@@ -106,6 +106,15 @@ ANCHOR_STOPWORDS = {
     "男女", "成人", "儿童", "时尚", "经典", "新款",
 }
 
+# 申报名为书/刊物类时，标题/识图须有书类证据，否则主题词（海洋/艺术…）不可蹭到教育书
+BOOK_DECLARE_NAMES = frozenset(
+    {"教育书", "教育书籍", "书籍", "图书", "杂志", "教材", "读物", "教辅", "绘本"}
+)
+BOOK_EVIDENCE_MARKERS = (
+    "书", "书籍", "教材", "杂志", "读物", "图书", "教辅", "绘本", "课本", "手册",
+    "小说", "习题", "试卷", "辞典", "字典", "百科",
+)
+
 
 def cn_specialty_tokens(cn: str, dec: str = "") -> list[str]:
     """类目中文名相对申报名多出来的语义锚点（如 哺乳吊带 / 内衣 → 哺乳、吊带）。"""
@@ -318,6 +327,12 @@ def evidence_multiplier(
 
     mult = min(mult, seed_domain_multiplier(title, cn_name, dec_cn_name))
 
+    dec = (dec_cn_name or "").strip()
+    if dec in BOOK_DECLARE_NAMES or any(d in dec for d in ("教育书", "书籍", "图书")):
+        if not any(m in blob for m in BOOK_EVIDENCE_MARKERS):
+            # 主题词恰好等于 cn_name（如 海洋）不算书类证据
+            mult = min(mult, 0.08)
+
     anchors = cn_specialty_tokens(cn_name, dec_cn_name)
     missing = [a for a in anchors if a not in blob]
 
@@ -326,6 +341,9 @@ def evidence_multiplier(
         (dec_cn_name and len(dec_cn_name) >= 2 and dec_cn_name in blob)
         or (cn_name and len(cn_name) >= 2 and cn_name in blob)
     )
+    # 书类申报：仅命中主题 cn 不算 core
+    if dec in BOOK_DECLARE_NAMES and not any(m in blob for m in BOOK_EVIDENCE_MARKERS):
+        title_hits_core = bool(dec and dec in blob)
 
     if anchors and len(missing) == len(anchors):
         # 全缺失：若命中核心则放宽到 0.55，否则严厉 0.18
@@ -410,3 +428,221 @@ def label_fit_adjustment(term: str, cn: str, dec: str) -> float:
     if dec_only:
         mult *= declare_only_penalty(term, cn, dec)
     return mult
+
+
+# ── 历史订单惯例（从历史设置类目沉淀：term → 常用 cid）────────────────
+
+CONVENTIONS_FILE = DATA / "history-conventions.json"
+
+_HISTORY_TERM_STOP = ANCHOR_STOPWORDS | {
+    "厂家", "直销", "热卖", "爆款", "跨境", "亚马逊", "工厂", "批发", "包邮",
+    "新款", "春季", "夏季", "秋季", "冬季", "四季", "通用", "男女", "女士", "男士",
+    "小型", "大型", "小号", "大号", "可拆", "可调", "调节", "泰迪", "比熊",
+}
+
+# 商品实体后缀：滑动窗口抽词用（窝/垫/床…）
+_HISTORY_PRODUCT_SUFFIX = frozenset(
+    "窝垫床包袋盒杯壶碗锅鞋靴袜裤裙帽巾被毯枕罩架柜桶瓶刀剪"
+)
+
+
+def _history_title_terms(goods_name: str, catalog_by_cid: dict | None = None) -> list[str]:
+    """从历史标题抽商品实体词，用于惯例对照。
+
+    只保留：
+    - 2 字且以商品后缀结尾（猫窝/狗窝/垫子）
+    - 3 字且前缀为「宠物/猫砂」等（宠物窝/宠物床）
+    避免滑窗抽到「熊宠物垫」「狗床猫窝」等噪声。
+    """
+    del catalog_by_cid
+    text = str(goods_name or "").strip()
+    if not text:
+        return []
+    han = re.sub(r"[^\u4e00-\u9fff]", "", text)
+    if not han:
+        return []
+    found: list[str] = []
+    seen: set[str] = set()
+    allowed_3_prefix = ("宠物", "猫砂", "狗狗", "猫猫")
+
+    def _add(t: str) -> None:
+        if t in seen or t in _HISTORY_TERM_STOP:
+            return
+        if any(t != longer and t in longer for longer in seen):
+            return
+        seen.add(t)
+        found.append(t)
+
+    for i in range(0, len(han) - 1):
+        t = han[i : i + 2]
+        if t[-1] in _HISTORY_PRODUCT_SUFFIX:
+            _add(t)
+    for i in range(0, len(han) - 2):
+        t = han[i : i + 3]
+        if t[-1] not in _HISTORY_PRODUCT_SUFFIX:
+            continue
+        if not t.startswith(allowed_3_prefix):
+            continue
+        _add(t)
+        # 3 字「宠物窝」优先时，去掉被覆盖的 2 字「物窝」不会产生；但可去掉更短且被包含的
+    # 去掉被更长词包含的短词
+    filtered = []
+    for t in sorted(found, key=len, reverse=True):
+        if any(t != longer and t in longer for longer in filtered):
+            continue
+        filtered.append(t)
+    return filtered[:10]
+
+
+def build_history_conventions(
+    history_records: list[dict],
+    catalog_by_cid: dict | None = None,
+    *,
+    min_count: int = 3,
+    max_categories_per_term: int = 5,
+) -> dict:
+    """从历史订单归纳「标题词 → 实际选用类目」惯例。"""
+    by_cid = catalog_by_cid or {}
+    term_cid_counts: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    term_samples: dict[str, dict[str, list[str]]] = defaultdict(lambda: defaultdict(list))
+
+    for rec in history_records:
+        name = str(rec.get("goods_name") or "").strip()
+        try:
+            cid = str(int(rec.get("category_id")))
+        except (TypeError, ValueError):
+            continue
+        if not name or not cid:
+            continue
+        for term in _history_title_terms(name):
+            term_cid_counts[term][cid] += 1
+            samples = term_samples[term][cid]
+            if len(samples) < 3 and name not in samples:
+                samples.append(name[:80])
+
+    term_to_categories: dict[str, list[dict]] = {}
+    dominant: dict[str, dict] = {}
+
+    for term, cid_counts in term_cid_counts.items():
+        total = sum(cid_counts.values())
+        if total < min_count:
+            continue
+        ranked = sorted(cid_counts.items(), key=lambda x: (-x[1], x[0]))
+        rows: list[dict] = []
+        for cid, count in ranked[:max_categories_per_term]:
+            if count < min_count and not rows:
+                continue
+            if count < max(2, min_count // 2) and rows:
+                break
+            entry = by_cid.get(cid) or {}
+            if not entry and cid.isdigit():
+                entry = by_cid.get(int(cid)) or {}
+            share = round(count / total, 3)
+            row = {
+                "category_id": int(cid) if cid.isdigit() else cid,
+                "category_cn_name": str((entry or {}).get("cn_name") or ""),
+                "declare_cn_name": str((entry or {}).get("dec_cn_name") or ""),
+                "hs_code": str((entry or {}).get("hs_code") or ""),
+                "count": count,
+                "share": share,
+                "sample_titles": list(term_samples[term].get(cid) or [])[:2],
+            }
+            rows.append(row)
+        if not rows:
+            continue
+        term_to_categories[term] = rows
+        top = rows[0]
+        if top["share"] >= 0.35 and top["count"] >= min_count:
+            dominant[term] = {
+                "category_id": top["category_id"],
+                "category_cn_name": top["category_cn_name"],
+                "declare_cn_name": top["declare_cn_name"],
+                "hs_code": top["hs_code"],
+                "count": top["count"],
+                "share": top["share"],
+                "support": total,
+                "summary": (
+                    f"含「{term}」的历史商品 {total} 条中，"
+                    f"{top['count']} 条（{int(top['share'] * 100)}%）用「"
+                    f"{top['category_cn_name'] or top['category_id']}」"
+                ),
+            }
+
+    return {
+        "version": 1,
+        "history_count": len(history_records),
+        "term_count": len(term_to_categories),
+        "dominant_count": len(dominant),
+        "term_to_categories": term_to_categories,
+        "dominant": dominant,
+    }
+
+
+@lru_cache(maxsize=1)
+def load_history_conventions() -> dict:
+    if not CONVENTIONS_FILE.exists():
+        return {"term_to_categories": {}, "dominant": {}, "version": 0}
+    try:
+        data = json.loads(CONVENTIONS_FILE.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {"term_to_categories": {}, "dominant": {}}
+    except (OSError, json.JSONDecodeError):
+        return {"term_to_categories": {}, "dominant": {}}
+
+
+def clear_history_conventions_cache() -> None:
+    load_history_conventions.cache_clear()
+
+
+def lookup_history_conventions_for_text(
+    title: str,
+    vision_keywords: list[str] | None = None,
+) -> list[dict]:
+    """返回当前标题/识图可命中的历史惯例（按 share*count 排序）。"""
+    conv = load_history_conventions()
+    dominant = conv.get("dominant") or {}
+    term_map = conv.get("term_to_categories") or {}
+    blob = _title_blob(title, vision_keywords)
+    hits: list[dict] = []
+    seen_cid: set[str] = set()
+
+    # 先看 dominant（强惯例）
+    for term, dom in dominant.items():
+        if term not in blob:
+            continue
+        cid = str(dom.get("category_id"))
+        if cid in seen_cid:
+            continue
+        seen_cid.add(cid)
+        hits.append({**dom, "term": term, "strength": "dominant"})
+
+    # 再补 term_to_categories 前列
+    for term, rows in term_map.items():
+        if term not in blob:
+            continue
+        for row in (rows or [])[:2]:
+            cid = str(row.get("category_id"))
+            if cid in seen_cid:
+                continue
+            if int(row.get("count") or 0) < 3:
+                continue
+            seen_cid.add(cid)
+            hits.append(
+                {
+                    **row,
+                    "term": term,
+                    "strength": "support",
+                    "summary": (
+                        f"含「{term}」时常见「{row.get('category_cn_name') or cid}」"
+                        f"（{row.get('count')} 次，{int(float(row.get('share') or 0) * 100)}%）"
+                    ),
+                }
+            )
+
+    hits.sort(
+        key=lambda x: (
+            1 if x.get("strength") == "dominant" else 0,
+            float(x.get("share") or 0) * int(x.get("count") or 0),
+        ),
+        reverse=True,
+    )
+    return hits[:6]

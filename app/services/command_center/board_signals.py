@@ -100,6 +100,11 @@ def _detect_ship_overdue(row: dict[str, Any]) -> Optional[dict[str, Any]]:
         return None
     if row.get("ord_line_stat") not in (_ORDERED_STAT, str(_ORDERED_STAT)):
         return None
+    # 已有国内段运单 / 签收时间，不算超时未发货
+    if str(row.get("exprs_no") or row.get("pkg_exprs_no") or "").strip():
+        return None
+    if row.get("sign_time") or int(row.get("is_exprs_dlyd") or 0) == 1:
+        return None
     ref = _parse_iso(row.get("pur_time")) or _parse_iso(row.get("pay_time"))
     if not ref:
         return None
@@ -250,6 +255,15 @@ def row_to_board_signal(
     finance = _detect_finance_signal(row)
     if finance:
         return finance
+
+    # 规格备注优先于纯规格比对（与 Web orderToExceptionSignal 一致）
+    if row.get("note_block_procurement") and _row_queue(row) == "pending_procurement":
+        if str(row.get("note_signal_type") or "") == "SKU_MISMATCH":
+            return {
+                "signal_type": "SKU_MISMATCH",
+                "urgency": "today",
+                "is_blocking": True,
+            }
 
     sku = _detect_sku_mismatch(row)
     if sku:

@@ -8,7 +8,7 @@ from typing import Any
 def is_demo_submit_always_success() -> bool:
     from app.config.store import get_business_config
 
-    return bool(get_business_config().get("demo_submit_always_success", True))
+    return bool(get_business_config().get("demo_submit_always_success", False))
 
 
 def demo_submit_stub(**fields: Any) -> dict[str, Any]:

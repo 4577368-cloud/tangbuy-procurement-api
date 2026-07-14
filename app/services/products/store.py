@@ -424,6 +424,8 @@ def persist_product_mapping_side_effects(
         hs=hs,
         source="correct" if manual else "confirm",
     )
+    # 本地立即 overlay + resume，不等 Admin 回写；映射保存后自动重新接单/进入待下单
+    _resume_linked_orders_after_category(product, hs)
     pid = str(product.get("tangbuy_product_id") or "").strip()
     if skip_admin_writeback or not pid:
         return
@@ -451,6 +453,41 @@ def persist_product_mapping_side_effects(
         )
     except Exception:
         pass
+
+
+def _resume_linked_orders_after_category(product: dict[str, Any], hs: dict[str, Any]) -> None:
+    """映射确认后：先写子单品类 overlay，再 resume 流水线（接单闸门解除 → 待下单）。"""
+    try:
+        from app.services.category_mapping.admin_writeback import collect_item_nos
+        from app.services.orders import line_cache
+        from app.services.orders.procurement_pipeline import is_pipeline_active, resume_pipeline
+    except Exception:
+        return
+
+    lines = collect_item_nos(product)
+    if not lines:
+        lines = [
+            str(x).strip()
+            for x in (product.get("linked_ord_lines") or [])
+            if str(x).strip()
+        ]
+    if not lines:
+        return
+    try:
+        line_cache.apply_category_overlay_to_lines(lines, hs, source="category_confirm")
+    except Exception:
+        pass
+    # 流水线内自动映射已会继续接单，勿递归 resume
+    if is_pipeline_active():
+        return
+    for line_no in lines:
+        key = str(line_no or "").strip()
+        if not key:
+            continue
+        try:
+            resume_pipeline(key, operator="category_confirm")
+        except Exception:
+            pass
 
 
 def finalize_product_mapping_confirm(

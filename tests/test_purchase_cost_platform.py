@@ -36,3 +36,33 @@ def test_listing_when_no_platform_data():
     cost = resolve_purchase_cost_basis(row)
     assert cost["purchase_cost_basis"] == "suggested"
     assert cost["purchase_payable"] == 100.0
+
+
+def test_settlement_line_amount_not_multiplied_by_qty():
+    """TI26070000186 类：settlement_real_amt≈pur_amt 是行金额，×qty 会假放大。"""
+    row = {
+        "ord_cnt": 10,
+        "pur_prc": 226.8,
+        "pur_amt": 2154.6,
+        "post_fee": 0.0,
+        "settlement_real_amt": 2154.6,
+        "pur_comm_disc_amt": 37.8,
+    }
+    cost = resolve_purchase_cost_basis(row)
+    assert cost["purchase_cost_basis"] == "settlement"
+    assert cost["purchase_payable"] == pytest.approx(2116.8, abs=0.01)
+    assert cost["purchase_payable"] < 3000
+
+
+def test_settlement_unit_price_still_multiplied():
+    row = {
+        "ord_cnt": 10,
+        "pur_prc": 226.8,
+        "pur_amt": 2268.0,
+        "post_fee": 0.0,
+        "settlement_real_amt": 226.8,
+        "pur_comm_disc_amt": 0,
+    }
+    cost = resolve_purchase_cost_basis(row)
+    assert cost["purchase_cost_basis"] == "settlement"
+    assert cost["purchase_payable"] == pytest.approx(2268.0, abs=0.01)

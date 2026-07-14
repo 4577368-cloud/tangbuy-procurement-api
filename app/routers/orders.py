@@ -141,6 +141,7 @@ class OrderDispositionBody(BaseModel):
     feedback_type: Optional[str] = None
     override_reason: Optional[str] = None
     operator: Optional[str] = None
+    spec_before: Optional[str] = None
 
 
 @router.post("/disposition")
@@ -155,6 +156,7 @@ def submit_order_disposition(body: OrderDispositionBody) -> dict:
             feedback_type=body.feedback_type,
             override_reason=body.override_reason,
             operator=body.operator,
+            spec_before=body.spec_before,
         )
     except DispositionError as exc:
         from app.config.demo_submit import disposition_stub, is_demo_submit_always_success

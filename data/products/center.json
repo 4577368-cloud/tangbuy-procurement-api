@@ -1,12 +1,1257 @@
 [
   {
-    "tangbuy_product_id": "72858521010192",
+    "tangbuy_product_id": "107704408031264",
+    "source": "order",
+    "in_store": false,
+    "linked_ord_lines": [
+      "TI26070000158"
+    ],
+    "platform_category_hint": "假发梳子",
+    "category": "假发梳子",
+    "category_status": "auto_passed",
+    "tier_prices": [
+      {
+        "min_qty": 1,
+        "max_qty": 119,
+        "original_unit_price": 2.8,
+        "original_shipping": 5.0,
+        "tangbuy_unit_price": 3.36,
+        "tangbuy_shipping": 6.0
+      },
+      {
+        "min_qty": 120,
+        "max_qty": 1199,
+        "original_unit_price": 2.5,
+        "original_shipping": 5.0,
+        "tangbuy_unit_price": 3.0,
+        "tangbuy_shipping": 6.0
+      },
+      {
+        "min_qty": 1200,
+        "max_qty": null,
+        "original_unit_price": 2.3,
+        "original_shipping": 5.0,
+        "tangbuy_unit_price": 2.76,
+        "tangbuy_shipping": 6.0
+      }
+    ],
+    "created_at": "2026-07-11T13:34:56.430Z",
+    "source_url": "https://www.tangbuy.cc/product?dataSource=PREFERRED&id=107704408031264",
+    "tang_item_url": "https://www.tangbuy.cc/product?dataSource=PREFERRED&id=107704408031264",
+    "sold_count": 0,
+    "product_name": "多功能美发造型梳女顺发空气梳子按摩气垫防打结TT梳长柄八爪梳",
+    "image_url": "https://cbu01.alicdn.com/img/ibank/O1CN01DfsHew2JjohqOMDOR_!!2206562019458-0-cib.jpg",
+    "original_unit_price": 2.8,
+    "original_shipping": 5.0,
+    "tangbuy_unit_price": 3.36,
+    "tangbuy_shipping": 6.0,
+    "shipping_source": "api",
+    "shop_name": "工厂优选店铺",
+    "source_product_id": "776235024731",
+    "enrichment_status": "matched",
+    "mapping_record": {
+      "match_method": "keyword_catalog_strong",
+      "match_detail": "标题语义词「发梳」与类目「假发梳子」一致",
+      "decision": "semantic_agreement",
+      "history_hit": false,
+      "semantic_candidates": [
+        {
+          "label": "发梳",
+          "category_id": 121388029,
+          "category_cn_name": "假发梳子",
+          "category_en_name": "hairpiece comb",
+          "hs_code": "9615110000",
+          "declare_cn_name": "梳子",
+          "declare_en_name": "comb",
+          "score": 0.449,
+          "confidence": 0.516,
+          "dimensions": {
+            "term_match": 0.65,
+            "term_frequency": 0.0,
+            "label_fit": 0.79,
+            "catalog_fit": 0.005,
+            "term_specificity": 0.72,
+            "vision": 1.0,
+            "hint": 0.0,
+            "specificity": 1.0,
+            "feedback": 0.0
+          },
+          "kind": "specific",
+          "is_attribute": false,
+          "is_generic": false,
+          "matched_keywords": [
+            "发梳"
+          ],
+          "sources": [
+            "vision"
+          ],
+          "reason": "类目含领域词但标题未体现，已降权（×0.55）",
+          "rank": 1
+        },
+        {
+          "label": "美发造型",
+          "category_id": 125078004,
+          "category_cn_name": "美发造型",
+          "category_en_name": "Hair styling",
+          "hs_code": "nan",
+          "declare_cn_name": "nan",
+          "declare_en_name": "nan",
+          "score": 0.243,
+          "confidence": 0.499,
+          "dimensions": {
+            "term_match": 1.0,
+            "term_frequency": 0.45,
+            "label_fit": 0.594,
+            "catalog_fit": 0.032,
+            "term_specificity": 1.0,
+            "vision": 0.0,
+            "hint": 0.0,
+            "specificity": 1.0,
+            "feedback": 0.0
+          },
+          "kind": "specific",
+          "is_attribute": false,
+          "is_generic": false,
+          "matched_keywords": [
+            "美发造型"
+          ],
+          "sources": [
+            "title"
+          ],
+          "reason": "该候选类目缺少有效 HS 编码，已降权",
+          "rank": 2
+        },
+        {
+          "label": "按摩梳",
+          "category_id": 50002816,
+          "category_cn_name": "梳子/化妆梳/按摩梳",
+          "category_en_name": "comb",
+          "hs_code": "9615110000",
+          "declare_cn_name": "梳子",
+          "declare_en_name": "comb",
+          "score": 0.833,
+          "confidence": 0.476,
+          "dimensions": {
+            "term_match": 0.65,
+            "term_frequency": 0.0,
+            "label_fit": 0.565,
+            "catalog_fit": 0.033,
+            "term_specificity": 0.72,
+            "vision": 1.0,
+            "hint": 0.0,
+            "specificity": 1.0,
+            "feedback": 0.0
+          },
+          "kind": "specific",
+          "is_attribute": false,
+          "is_generic": false,
+          "matched_keywords": [
+            "按摩梳"
+          ],
+          "sources": [
+            "vision"
+          ],
+          "rank": 3
+        }
+      ],
+      "signal_scores": {
+        "title": 0.569,
+        "platform_category": 0.0,
+        "history": 0.0,
+        "image": 0.88,
+        "fused": 0.85
+      },
+      "matched_keywords": [
+        "发梳",
+        "按摩梳",
+        "塑料梳子",
+        "美发工具"
+      ],
+      "vision_summary": "黑色塑料材质长柄气垫按摩梳，带宽间距齿。",
+      "title_image_agreement_keywords": [
+        "发梳"
+      ],
+      "vision_keywords": [
+        "发梳",
+        "发梳",
+        "按摩梳",
+        "塑料梳子",
+        "美发工具"
+      ],
+      "skip_fusion": false,
+      "auto_resolved": true,
+      "mapped_at": "2026-07-11T13:35:27.214Z",
+      "suggested_hs": {
+        "category_id": 121388029,
+        "category_cn_name": "假发梳子",
+        "category_en_name": "hairpiece comb",
+        "hs_code": "9615110000",
+        "declare_cn_name": "梳子",
+        "declare_en_name": "comb",
+        "tariff": null
+      },
+      "suggested_category_path": "假发梳子 / 梳子 · HS 9615110000",
+      "suggested_category_id": "121388029",
+      "agent_confidence": 0.85,
+      "review_status": "confirmed",
+      "reviewed_at": "2026-07-11T13:35:27.214Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "writing",
+        "at": "2026-07-11T13:35:27.214Z"
+      }
+    },
+    "detail_enriched_at": "2026-07-11T13:34:58.655Z",
+    "detail_source": "tangbuy",
+    "shipping_to_city": "广东惠州市",
+    "inventory_total": 388189,
+    "stock_status": "in_stock",
+    "min_order_qty": 1,
+    "product_skus": [
+      {
+        "sku_id": "5479522367065",
+        "inventory": 92638,
+        "price": 3.36,
+        "attributes": [
+          {
+            "name": "颜色",
+            "value": "黑色"
+          }
+        ]
+      },
+      {
+        "sku_id": "5479522367066",
+        "inventory": 95614,
+        "price": 3.36,
+        "attributes": [
+          {
+            "name": "颜色",
+            "value": "粉色"
+          }
+        ]
+      },
+      {
+        "sku_id": "5479522367067",
+        "inventory": 94630,
+        "price": 3.36,
+        "attributes": [
+          {
+            "name": "颜色",
+            "value": "紫色"
+          }
+        ]
+      },
+      {
+        "sku_id": "5479522367068",
+        "inventory": 97694,
+        "price": 3.36,
+        "attributes": [
+          {
+            "name": "颜色",
+            "value": "绿色"
+          }
+        ]
+      },
+      {
+        "sku_id": "5511841272822",
+        "inventory": 6616,
+        "price": 3.36,
+        "attributes": [
+          {
+            "name": "颜色",
+            "value": "蓝色"
+          }
+        ]
+      }
+    ],
+    "spec_params": [
+      {
+        "name": "材质",
+        "value": "ABS;"
+      },
+      {
+        "name": "产品类别",
+        "value": "美发梳;"
+      },
+      {
+        "name": "适用人群",
+        "value": "普通人群;"
+      },
+      {
+        "name": "是否跨境出口专供货源",
+        "value": "是;"
+      },
+      {
+        "name": "有可授权的自有品牌",
+        "value": "否;"
+      },
+      {
+        "name": "颜色",
+        "value": "黑色;粉色;紫色;绿色;蓝色;"
+      },
+      {
+        "name": "主要下游平台",
+        "value": "wish;"
+      },
+      {
+        "name": "产地",
+        "value": "广州;"
+      },
+      {
+        "name": "尺寸",
+        "value": "20cm以上;"
+      },
+      {
+        "name": "货号",
+        "value": "W-688;"
+      },
+      {
+        "name": "品牌",
+        "value": "其它;"
+      },
+      {
+        "name": "是否进口",
+        "value": "否;"
+      }
+    ],
+    "supplier_metrics": {
+      "logistics_score": null,
+      "service_score": null,
+      "composite_score": null
+    },
+    "shipping_quoted_at": "2026-07-11T13:34:58.655Z",
+    "mapping_confidence": 0.85,
+    "mapping_mapped_at": "2026-07-11T13:35:27.214Z",
+    "hs_mapping": {
+      "category_id": 121388029,
+      "category_cn_name": "假发梳子",
+      "category_en_name": "hairpiece comb",
+      "hs_code": "9615110000",
+      "declare_cn_name": "梳子",
+      "declare_en_name": "comb",
+      "tariff": null
+    }
+  },
+  {
+    "tangbuy_product_id": "151548468559904",
+    "source": "order",
+    "in_store": false,
+    "linked_ord_lines": [
+      "TI26070000151"
+    ],
+    "platform_category_hint": "路由器",
+    "category": "路由器",
+    "category_status": "auto_passed",
+    "tier_prices": [
+      {
+        "min_qty": 1,
+        "max_qty": 1,
+        "original_unit_price": 189.0,
+        "original_shipping": 100.0,
+        "tangbuy_unit_price": 226.8,
+        "tangbuy_shipping": 120.0
+      },
+      {
+        "min_qty": 2,
+        "max_qty": null,
+        "original_unit_price": 188.0,
+        "original_shipping": 100.0,
+        "tangbuy_unit_price": 225.6,
+        "tangbuy_shipping": 120.0
+      }
+    ],
+    "created_at": "2026-07-10T06:35:13.307Z",
+    "source_url": "https://www.tangbuy.cc/product?dataSource=SHOP&id=151548468559904",
+    "tang_item_url": "https://www.tangbuy.cc/product?dataSource=SHOP&id=151548468559904",
+    "sold_count": 0,
+    "product_name": "暮云出品_无sku_民间老石槽厂家洗手台石磨盘踏步碎石老旧青石板景区老石条老石器",
+    "image_url": "https://cbu01.alicdn.com/img/ibank/O1CN01K0Q5jW1ewjsV9zYcd_!!2217578223936-0-cib.jpg",
+    "original_unit_price": 189.0,
+    "original_shipping": 100.0,
+    "tangbuy_unit_price": 226.8,
+    "tangbuy_shipping": 120.0,
+    "shipping_source": "api",
+    "shop_name": "Tangbuy官方合作行业领先制造工厂",
+    "source_product_id": "804336334825",
+    "enrichment_status": "matched",
+    "detail_enriched_at": "2026-07-10T06:35:13.991Z",
+    "detail_source": "tangbuy",
+    "shipping_to_city": "广东惠州市",
+    "inventory_total": 5277,
+    "stock_status": "in_stock",
+    "min_order_qty": 1,
+    "product_skus": [
+      {
+        "sku_id": "0",
+        "inventory": 5253,
+        "price": 226.8,
+        "attributes": []
+      }
+    ],
+    "spec_params": [
+      {
+        "name": "是否跨境出口专供货源",
+        "value": "否;"
+      },
+      {
+        "name": "老石器厂家",
+        "value": "民间老物件;"
+      },
+      {
+        "name": "铺路老旧青石板",
+        "value": "民间老石槽;"
+      },
+      {
+        "name": "品牌",
+        "value": "鑫瑞石业;"
+      },
+      {
+        "name": "工艺",
+        "value": "半手工半机械;"
+      },
+      {
+        "name": "是否专利货源",
+        "value": "否;"
+      },
+      {
+        "name": "老石槽",
+        "value": "铺路老石板;"
+      },
+      {
+        "name": "产品编号",
+        "value": "老石条;"
+      },
+      {
+        "name": "材质",
+        "value": "青石;"
+      },
+      {
+        "name": "造型",
+        "value": "多种;"
+      },
+      {
+        "name": "产地",
+        "value": "山东;"
+      },
+      {
+        "name": "尺寸",
+        "value": "咨询客服;"
+      },
+      {
+        "name": "货号",
+        "value": "老石器;"
+      },
+      {
+        "name": "净重",
+        "value": "咨询客服;"
+      },
+      {
+        "name": "适用场所",
+        "value": "园林  景区   庭院;"
+      },
+      {
+        "name": "雕刻工艺",
+        "value": "半手工 半机械;"
+      },
+      {
+        "name": "包装",
+        "value": "木架;"
+      },
+      {
+        "name": "是否进口",
+        "value": "否;"
+      },
+      {
+        "name": "类别",
+        "value": "雕塑;"
+      },
+      {
+        "name": "加工定制",
+        "value": "否;"
+      }
+    ],
+    "supplier_metrics": {
+      "logistics_score": null,
+      "service_score": null,
+      "composite_score": null
+    },
+    "shipping_quoted_at": "2026-07-10T06:35:13.991Z",
+    "mapping_record": {
+      "match_method": "keyword_catalog_strong",
+      "match_detail": "标题语义词「石槽」与类目「路由器」一致",
+      "decision": "semantic_agreement",
+      "history_hit": false,
+      "semantic_candidates": [
+        {
+          "rank": 1,
+          "label": "石槽",
+          "category_id": 110808,
+          "category_cn_name": "路由器",
+          "category_en_name": "router",
+          "hs_code": "8517623600",
+          "declare_cn_name": "路由器",
+          "declare_en_name": "router",
+          "score": 0.72,
+          "confidence": 0.634,
+          "kind": "specific",
+          "dimensions": {
+            "term_match": 1,
+            "term_frequency": 0.81,
+            "label_fit": 0.15,
+            "catalog_fit": 0.37,
+            "term_specificity": 1,
+            "vision": 1,
+            "hint": 0,
+            "specificity": 1,
+            "feedback": 0
+          },
+          "matched_keywords": [
+            "石槽"
+          ],
+          "sources": [
+            "vision"
+          ]
+        },
+        {
+          "rank": 2,
+          "label": "石磨盘",
+          "category_id": 110808,
+          "category_cn_name": "路由器",
+          "category_en_name": "router",
+          "hs_code": "8517623600",
+          "declare_cn_name": "路由器",
+          "declare_en_name": "router",
+          "score": 0.36,
+          "confidence": 0.576,
+          "kind": "specific",
+          "dimensions": {
+            "term_match": 1,
+            "term_frequency": 0.63,
+            "label_fit": 0.15,
+            "catalog_fit": 0.167,
+            "term_specificity": 1,
+            "vision": 1,
+            "hint": 0,
+            "specificity": 1,
+            "feedback": 0
+          },
+          "matched_keywords": [
+            "石磨盘"
+          ],
+          "sources": [
+            "vision"
+          ],
+          "reason": "与标题主商品「石槽」不一致，已降权"
+        },
+        {
+          "rank": 3,
+          "label": "磨盘",
+          "category_id": 121480041,
+          "category_cn_name": "磨盘",
+          "category_en_name": "Grinding wheel",
+          "hs_code": "nan",
+          "declare_cn_name": "nan",
+          "declare_en_name": "nan",
+          "score": 0.18,
+          "confidence": 0.516,
+          "kind": "specific",
+          "dimensions": {
+            "term_match": 1,
+            "term_frequency": 0.63,
+            "label_fit": 0.55,
+            "catalog_fit": 0.055,
+            "term_specificity": 1,
+            "vision": 0,
+            "hint": 0,
+            "specificity": 1,
+            "feedback": 0
+          },
+          "matched_keywords": [
+            "磨盘"
+          ],
+          "sources": [
+            "title"
+          ],
+          "reason": "该候选类目缺少有效 HS 编码，已降权"
+        }
+      ],
+      "signal_scores": {
+        "title": 0.84,
+        "platform_category": 0.158,
+        "history": 0,
+        "image": 0.88,
+        "fused": 0.85
+      },
+      "matched_keywords": [
+        "石槽",
+        "石磨盘",
+        "石制洗手盆",
+        "园林石器"
+      ],
+      "vision_summary": "堆叠的古旧青石材质石槽、石盆，用于洗手或园林景观。",
+      "title_image_agreement_keywords": [
+        "石槽",
+        "石磨盘"
+      ],
+      "vision_keywords": [
+        "石槽",
+        "石槽",
+        "石制洗手盆",
+        "园林石器",
+        "石磨盘"
+      ],
+      "skip_fusion": false,
+      "auto_resolved": true,
+      "mapped_at": "2026-07-10T08:25:14.825Z",
+      "suggested_hs": {
+        "category_id": 110808,
+        "category_cn_name": "路由器",
+        "category_en_name": "router",
+        "hs_code": "8517623600",
+        "declare_cn_name": "路由器",
+        "declare_en_name": "router",
+        "tariff": null
+      },
+      "suggested_category_path": "路由器 / 路由器 · HS 8517623600",
+      "suggested_category_id": "110808",
+      "agent_confidence": 0.85,
+      "review_status": "confirmed",
+      "reviewed_at": "2026-07-10T08:25:14.921Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-10T08:25:15.072Z",
+        "item_nos": [
+          "TI26070000151"
+        ],
+        "cid": 110808,
+        "goods_id": "804336334825",
+        "resolution": "manual_confirm",
+        "from_cid": 50010159,
+        "from_category": "卫衣",
+        "to_cid": 110808,
+        "to_category": "路由器"
+      },
+      "match_candidates": [
+        {
+          "label": "石槽",
+          "category_id": 110808,
+          "category_cn_name": "路由器",
+          "category_en_name": "router",
+          "hs_code": "8517623600",
+          "declare_cn_name": "路由器",
+          "declare_en_name": "router",
+          "score": 0.72,
+          "confidence": 0.634,
+          "dimensions": {
+            "term_match": 1,
+            "term_frequency": 0.81,
+            "label_fit": 0.15,
+            "catalog_fit": 0.37,
+            "term_specificity": 1,
+            "vision": 1,
+            "hint": 0,
+            "specificity": 1,
+            "feedback": 0
+          },
+          "kind": "specific",
+          "is_attribute": false,
+          "is_generic": false,
+          "matched_keywords": [
+            "石槽"
+          ],
+          "sources": [
+            "vision"
+          ],
+          "rank": 1
+        },
+        {
+          "label": "石磨盘",
+          "category_id": 110808,
+          "category_cn_name": "路由器",
+          "category_en_name": "router",
+          "hs_code": "8517623600",
+          "declare_cn_name": "路由器",
+          "declare_en_name": "router",
+          "score": 0.36,
+          "confidence": 0.576,
+          "dimensions": {
+            "term_match": 1,
+            "term_frequency": 0.63,
+            "label_fit": 0.15,
+            "catalog_fit": 0.167,
+            "term_specificity": 1,
+            "vision": 1,
+            "hint": 0,
+            "specificity": 1,
+            "feedback": 0
+          },
+          "kind": "specific",
+          "is_attribute": false,
+          "is_generic": false,
+          "matched_keywords": [
+            "石磨盘"
+          ],
+          "sources": [
+            "vision"
+          ],
+          "reason": "与标题主商品「石槽」不一致，已降权",
+          "rank": 2
+        },
+        {
+          "label": "磨盘",
+          "category_id": 121480041,
+          "category_cn_name": "磨盘",
+          "category_en_name": "Grinding wheel",
+          "hs_code": "nan",
+          "declare_cn_name": "nan",
+          "declare_en_name": "nan",
+          "score": 0.18,
+          "confidence": 0.516,
+          "dimensions": {
+            "term_match": 1,
+            "term_frequency": 0.63,
+            "label_fit": 0.55,
+            "catalog_fit": 0.055,
+            "term_specificity": 1,
+            "vision": 0,
+            "hint": 0,
+            "specificity": 1,
+            "feedback": 0
+          },
+          "kind": "specific",
+          "is_attribute": false,
+          "is_generic": false,
+          "matched_keywords": [
+            "磨盘"
+          ],
+          "sources": [
+            "title"
+          ],
+          "reason": "该候选类目缺少有效 HS 编码，已降权",
+          "rank": 3
+        }
+      ],
+      "checks": [
+        {
+          "key": "hs_code_valid",
+          "label": "海关编码有效",
+          "passed": true,
+          "detail": "HS 8517623600",
+          "source": "rule"
+        },
+        {
+          "key": "title_keyword",
+          "label": "标题意图匹配",
+          "passed": true,
+          "detail": "标题与识图一致：石槽、石磨盘",
+          "source": "agent"
+        },
+        {
+          "key": "tree_level",
+          "label": "品类与下单路径不冲突",
+          "passed": true,
+          "detail": "下单 路由器 ↔ 建议 路由器",
+          "source": "rule"
+        },
+        {
+          "key": "history",
+          "label": "历史映射可参考",
+          "passed": true,
+          "detail": "内部分类编号 110808，可与历史表对照",
+          "source": "agent"
+        },
+        {
+          "key": "restricted",
+          "label": "非禁运受限品类",
+          "passed": true,
+          "detail": "禁运/管制品类拦截",
+          "source": "rule"
+        },
+        {
+          "key": "declare_fields",
+          "label": "申报中英文字段齐全",
+          "passed": true,
+          "detail": "报关用中英描述需完整",
+          "source": "rule"
+        }
+      ]
+    },
+    "mapping_confidence": 0.85,
+    "mapping_mapped_at": "2026-07-10T08:25:14.921Z",
+    "hs_mapping": {
+      "category_id": 110808,
+      "category_cn_name": "路由器",
+      "category_en_name": "router",
+      "hs_code": "8517623600",
+      "declare_cn_name": "路由器",
+      "declare_en_name": "router",
+      "tariff": null
+    }
+  },
+  {
+    "tangbuy_product_id": "178365626262542541",
+    "created_at": "2026-07-10T04:04:22.625Z",
     "source": "order",
     "in_store": false,
     "linked_ord_lines": [
       "TI26050000356"
     ],
-    "platform_category_hint": "-1",
+    "platform_category_hint": "圣诞装饰品",
+    "category": "圣诞装饰品",
+    "category_status": "auto_passed",
+    "tier_prices": [
+      {
+        "min_qty": 1,
+        "max_qty": null,
+        "original_unit_price": 0.19,
+        "original_shipping": null,
+        "tangbuy_unit_price": 0.23,
+        "tangbuy_shipping": null
+      }
+    ],
+    "source_url": "https://detail.1688.com/offer/701812654087.html",
+    "sold_count": 100000,
+    "product_name": "DIY花环藤编圆环土伏藤葡萄藤圈藤环批发圣诞装饰品圣诞节花环",
+    "image_url": "https://cbu01.alicdn.com/img/ibank/O1CN01LzvPye1na8qAaCIoy_!!2207416415105-0-cib.jpg",
+    "original_unit_price": 0.19,
+    "original_shipping": 5.0,
+    "tangbuy_unit_price": 0.23,
+    "tangbuy_shipping": 6.0,
+    "shipping_source": "api",
+    "shop_name": "BBB7u0OsJVUcS97nPjfmSGAEg",
+    "source_product_id": "701812654087",
+    "replaced_from_product_id": "72858521010192",
+    "switch_supplier_at": "2026-07-10T04:04:22.625Z",
+    "replaced_by_product_id": null,
+    "replaced_by_offer_id": null,
+    "min_order_qty": 1,
+    "inventory_total": 931481,
+    "stock_status": "in_stock",
+    "product_skus": [
+      {
+        "sku_id": "5117855166778",
+        "inventory": 92072,
+        "price": 0.5,
+        "attributes": [
+          {
+            "name": "颜色",
+            "value": "咖啡色"
+          },
+          {
+            "name": "规格",
+            "value": "土茯藤圈外径6CM"
+          }
+        ]
+      },
+      {
+        "sku_id": "5117855166779",
+        "inventory": 91874,
+        "price": 0.6,
+        "attributes": [
+          {
+            "name": "颜色",
+            "value": "咖啡色"
+          },
+          {
+            "name": "规格",
+            "value": "土茯藤圈外径8CM"
+          }
+        ]
+      },
+      {
+        "sku_id": "5117855166780",
+        "inventory": 6242,
+        "price": 0.82,
+        "attributes": [
+          {
+            "name": "颜色",
+            "value": "咖啡色"
+          },
+          {
+            "name": "规格",
+            "value": "土茯藤圈外径10CM"
+          }
+        ]
+      },
+      {
+        "sku_id": "5117855166781",
+        "inventory": 83343,
+        "price": 1.24,
+        "attributes": [
+          {
+            "name": "颜色",
+            "value": "咖啡色"
+          },
+          {
+            "name": "规格",
+            "value": "土茯藤圈外径12CM"
+          }
+        ]
+      },
+      {
+        "sku_id": "5117855166782",
+        "inventory": 59231,
+        "price": 1.5,
+        "attributes": [
+          {
+            "name": "颜色",
+            "value": "咖啡色"
+          },
+          {
+            "name": "规格",
+            "value": "土茯藤圈外径15CM"
+          }
+        ]
+      },
+      {
+        "sku_id": "5117855166783",
+        "inventory": 61013,
+        "price": 2.34,
+        "attributes": [
+          {
+            "name": "颜色",
+            "value": "咖啡色"
+          },
+          {
+            "name": "规格",
+            "value": "土茯藤圈外径20CM"
+          }
+        ]
+      },
+      {
+        "sku_id": "5117855166784",
+        "inventory": 63751,
+        "price": 3.35,
+        "attributes": [
+          {
+            "name": "颜色",
+            "value": "咖啡色"
+          },
+          {
+            "name": "规格",
+            "value": "土茯藤圈外径25CM"
+          }
+        ]
+      },
+      {
+        "sku_id": "5117855166785",
+        "inventory": 79028,
+        "price": 4.45,
+        "attributes": [
+          {
+            "name": "颜色",
+            "value": "咖啡色"
+          },
+          {
+            "name": "规格",
+            "value": "土茯藤圈外径30CM"
+          }
+        ]
+      },
+      {
+        "sku_id": "5117855166786",
+        "inventory": 97151,
+        "price": 6.88,
+        "attributes": [
+          {
+            "name": "颜色",
+            "value": "咖啡色"
+          },
+          {
+            "name": "规格",
+            "value": "土茯藤圈外径35CM"
+          }
+        ]
+      },
+      {
+        "sku_id": "5117855166787",
+        "inventory": 98433,
+        "price": 7.88,
+        "attributes": [
+          {
+            "name": "颜色",
+            "value": "咖啡色"
+          },
+          {
+            "name": "规格",
+            "value": "土茯藤圈外径40CM"
+          }
+        ]
+      },
+      {
+        "sku_id": "5117855166788",
+        "inventory": 99494,
+        "price": 14.8,
+        "attributes": [
+          {
+            "name": "颜色",
+            "value": "咖啡色"
+          },
+          {
+            "name": "规格",
+            "value": "土茯藤圈外径50CM"
+          }
+        ]
+      },
+      {
+        "sku_id": "5117855166789",
+        "inventory": 99849,
+        "price": 0.2,
+        "attributes": [
+          {
+            "name": "颜色",
+            "value": "咖啡色"
+          },
+          {
+            "name": "规格",
+            "value": "本地松直径3-4CM"
+          }
+        ]
+      }
+    ],
+    "supplier_metrics": {
+      "logistics_score": null,
+      "service_score": null,
+      "composite_score": null
+    },
+    "detail_source": "tangbuy",
+    "enrichment_status": "matched",
+    "alt_supplier_scan_status": "idle",
+    "alternative_suppliers": [],
+    "hs_mapping": {
+      "category_id": 50025857,
+      "category_cn_name": "圣诞装饰品",
+      "category_en_name": "Christmas decorations",
+      "hs_code": "9505100090",
+      "declare_cn_name": "圣诞装饰品",
+      "declare_en_name": "Christmas decorations",
+      "tariff": null
+    },
+    "mapping_record": {
+      "match_method": "keyword_catalog_strong",
+      "match_detail": "标题语义词「装饰品」与类目「圣诞装饰品」一致",
+      "decision": "semantic_agreement",
+      "history_hit": false,
+      "semantic_candidates": [
+        {
+          "label": "装饰品",
+          "category_id": 50025857,
+          "category_cn_name": "圣诞装饰品",
+          "category_en_name": "Christmas decorations",
+          "hs_code": "9505100090",
+          "declare_cn_name": "圣诞装饰品",
+          "declare_en_name": "Christmas decorations",
+          "score": 0.512,
+          "confidence": 0.578,
+          "dimensions": {
+            "term_match": 1.0,
+            "term_frequency": 0.45,
+            "label_fit": 0.79,
+            "catalog_fit": 0.258,
+            "term_specificity": 1.0,
+            "vision": 0.0,
+            "hint": 0.0,
+            "specificity": 1.0,
+            "feedback": 0.0
+          },
+          "kind": "specific",
+          "is_attribute": false,
+          "is_generic": false,
+          "matched_keywords": [
+            "装饰品"
+          ],
+          "sources": [
+            "title"
+          ],
+          "reason": "与标题主商品「藤编花环底圈」不一致，已降权",
+          "rank": 1
+        },
+        {
+          "label": "葡萄",
+          "category_id": 50013003,
+          "category_cn_name": "葡萄酒",
+          "category_en_name": "wines",
+          "hs_code": "2204100000",
+          "declare_cn_name": "葡萄酒",
+          "declare_en_name": "wines",
+          "score": 0.48,
+          "confidence": 0.566,
+          "dimensions": {
+            "term_match": 1.0,
+            "term_frequency": 0.45,
+            "label_fit": 0.92,
+            "catalog_fit": 0.23,
+            "term_specificity": 0.72,
+            "vision": 0.0,
+            "hint": 0.0,
+            "specificity": 1.0,
+            "feedback": 0.0
+          },
+          "kind": "specific",
+          "is_attribute": false,
+          "is_generic": false,
+          "matched_keywords": [
+            "葡萄"
+          ],
+          "sources": [
+            "title"
+          ],
+          "reason": "与标题主商品「藤编花环底圈」不一致，已降权",
+          "rank": 2
+        },
+        {
+          "label": "藤环",
+          "category_id": 50025857,
+          "category_cn_name": "圣诞装饰品",
+          "category_en_name": "Christmas decorations",
+          "hs_code": "9505100090",
+          "declare_cn_name": "圣诞装饰品",
+          "declare_en_name": "Christmas decorations",
+          "score": 0.462,
+          "confidence": 0.558,
+          "dimensions": {
+            "term_match": 1.0,
+            "term_frequency": 0.63,
+            "label_fit": 0.15,
+            "catalog_fit": 0.258,
+            "term_specificity": 0.72,
+            "vision": 1.0,
+            "hint": 0.0,
+            "specificity": 1.0,
+            "feedback": 0.0
+          },
+          "kind": "specific",
+          "is_attribute": false,
+          "is_generic": false,
+          "matched_keywords": [
+            "藤环"
+          ],
+          "sources": [
+            "vision"
+          ],
+          "reason": "与标题主商品「藤编花环底圈」不一致，已降权",
+          "rank": 3
+        }
+      ],
+      "signal_scores": {
+        "title": 0.632,
+        "platform_category": 0.043,
+        "history": 0.0,
+        "image": 0.88,
+        "fused": 0.85
+      },
+      "matched_keywords": [
+        "藤环",
+        "装饰品",
+        "藤编花环底圈",
+        "花环底座",
+        "装饰用藤圈",
+        "手工编织环"
+      ],
+      "vision_summary": "不同直径的棕色天然藤条编织成的圆形环状装饰底座",
+      "title_image_agreement_keywords": [
+        "藤环"
+      ],
+      "vision_keywords": [
+        "藤编花环底圈",
+        "藤环",
+        "花环底座",
+        "装饰用藤圈",
+        "手工编织环"
+      ],
+      "skip_fusion": false,
+      "auto_resolved": true,
+      "mapped_at": "2026-07-10T04:04:39.631Z",
+      "suggested_hs": {
+        "category_id": 50025857,
+        "category_cn_name": "圣诞装饰品",
+        "category_en_name": "Christmas decorations",
+        "hs_code": "9505100090",
+        "declare_cn_name": "圣诞装饰品",
+        "declare_en_name": "Christmas decorations",
+        "tariff": null
+      },
+      "suggested_category_path": "圣诞装饰品 / 圣诞装饰品 · HS 9505100090",
+      "suggested_category_id": "50025857",
+      "agent_confidence": 0.85,
+      "review_status": "confirmed",
+      "reviewed_at": "2026-07-10T04:04:39.632Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-10T04:04:39.634Z",
+        "item_nos": [
+          "TI26050000356"
+        ],
+        "cid": 50025857,
+        "goods_id": "701812654087",
+        "resolution": "auto"
+      }
+    },
+    "mapping_confidence": 0.85,
+    "mapping_mapped_at": "2026-07-10T04:04:39.632Z",
+    "detail_enriched_at": "2026-07-10T04:04:40.554Z",
+    "shipping_to_city": "广东惠州市",
+    "spec_params": [
+      {
+        "name": "适用节庆",
+        "value": "圣诞节;"
+      },
+      {
+        "name": "产品编号",
+        "value": "TQ-TFTQ-001;"
+      },
+      {
+        "name": "材质",
+        "value": "木质;"
+      },
+      {
+        "name": "颜色",
+        "value": "咖啡色;"
+      },
+      {
+        "name": "风格",
+        "value": "田园;"
+      },
+      {
+        "name": "规格",
+        "value": "土茯藤圈外径6CM;土茯藤圈外径8CM;土茯藤圈外径10CM;土茯藤圈外径12CM;土茯藤圈外径15CM;土茯藤圈外径20CM;土茯藤圈外径25CM;土茯藤圈外径30CM;土茯藤圈外径35CM;土茯藤圈外径40CM;土茯藤圈外径50CM;本地松直径3-4CM;"
+      },
+      {
+        "name": "货号",
+        "value": "TQ-TFTQ;"
+      },
+      {
+        "name": "是否IP授权",
+        "value": "否;"
+      },
+      {
+        "name": "类别",
+        "value": "装饰;"
+      },
+      {
+        "name": "品牌",
+        "value": "榕和珍;"
+      },
+      {
+        "name": "重量",
+        "value": "定制;"
+      },
+      {
+        "name": "是否专利货源",
+        "value": "否;"
+      }
+    ],
+    "shipping_quoted_at": "2026-07-10T04:04:40.554Z",
+    "tang_item_url": "https://www.tangbuy.cc/product?dataSource=PREFERRED&id=72858521010192"
+  },
+  {
+    "tangbuy_product_id": "72858521010192",
+    "source": "order",
+    "in_store": false,
+    "linked_ord_lines": [],
+    "platform_category_hint": "其它",
     "category": "圣诞装饰品",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -308,7 +1553,149 @@
       "declare_cn_name": "圣诞装饰品",
       "declare_en_name": "Christmas decorations",
       "tariff": null
-    }
+    },
+    "alt_supplier_scan_status": "done",
+    "alt_supplier_scan_refresh": false,
+    "alt_search_query": "圣诞装饰花环 原木风",
+    "alt_search_subject": "圣诞花环",
+    "alt_search_category_hint": "圣诞装饰品",
+    "alt_search_hard_exclude": [
+      "铃铛",
+      "摆件"
+    ],
+    "alt_search_query_meta": {
+      "confidence": 0.95,
+      "reason": "标题核心销售主体为圣诞花环，原木风为风格属性",
+      "source": "llm"
+    },
+    "alternative_suppliers": [
+      {
+        "offer_id": "701812654087",
+        "title": "DIY花环藤编圆环土伏藤葡萄藤圈藤环批发圣诞装饰品圣诞节花环",
+        "shop_name": "南雄榕珍工艺品有限公司",
+        "detail_url": "https://detail.1688.com/offer/701812654087.html?&object_id=701812654087",
+        "image_url": "https://cbu01.alicdn.com/img/ibank/O1CN01LzvPye1na8qAaCIoy_!!2207416415105-0-cib.jpg",
+        "unit_price": 0.19,
+        "shipping": null,
+        "total_cost": 0.19,
+        "shipping_to_city": "广东惠州市",
+        "similarity_pct": 99.5,
+        "composite_score": 98.8,
+        "yx_index": 4.77,
+        "sold_count": 100000,
+        "sku_id": "5117855166780",
+        "sku_title": "咖啡色 土茯藤圈外径10CM",
+        "cate_id": null,
+        "industry_name": null,
+        "min_order_qty": 1,
+        "inventory": 1185862,
+        "stock_status": "in_stock",
+        "selling_points": [
+          {
+            "type": "industryCPV",
+            "value": "木质"
+          },
+          {
+            "type": "industryCPV",
+            "value": "田园"
+          }
+        ],
+        "service_tags": null,
+        "offer_tags": null,
+        "labels": [
+          "价格更低",
+          "销量较高",
+          "建议换供"
+        ],
+        "ranked_at": "2026-07-10T03:31:26.375Z"
+      },
+      {
+        "offer_id": "988784534867",
+        "title": "圣诞装饰品 干枝藤编花环DIY圣诞节装饰挂件藤环藤圈木质工艺品",
+        "shop_name": "义乌市奥圣岛工艺品有限公司",
+        "detail_url": "https://detail.1688.com/offer/988784534867.html?&object_id=988784534867",
+        "image_url": "https://cbu01.alicdn.com/img/ibank/O1CN01QUYs0I1m8pmb9gOg1_!!2215139324910-0-cib.jpg",
+        "unit_price": 0.82,
+        "shipping": null,
+        "total_cost": 0.82,
+        "shipping_to_city": "广东惠州市",
+        "similarity_pct": 92.8,
+        "composite_score": 92.9,
+        "yx_index": 3.91,
+        "sold_count": 6000,
+        "sku_id": "6121733095274",
+        "sku_title": "10cm",
+        "cate_id": null,
+        "industry_name": null,
+        "min_order_qty": 10,
+        "inventory": 3967,
+        "stock_status": "in_stock",
+        "selling_points": [
+          {
+            "type": "industryCPV",
+            "value": "圣诞风"
+          }
+        ],
+        "service_tags": null,
+        "offer_tags": null,
+        "labels": [
+          "价格更低",
+          "销量较高",
+          "建议换供"
+        ],
+        "ranked_at": "2026-07-10T03:31:26.375Z"
+      },
+      {
+        "offer_id": "535647368951",
+        "title": "圣诞装饰品 干枝藤编花环DIY圣诞节装饰挂件藤环藤圈木质工艺品",
+        "shop_name": "义乌市葆福工艺品有限公司",
+        "detail_url": "https://detail.1688.com/offer/535647368951.html?&object_id=535647368951",
+        "image_url": "https://cbu01.alicdn.com/img/ibank/O1CN01uUcBdr1X0NvVeq1im_!!2906872861-0-cib.jpg",
+        "unit_price": 1.41,
+        "shipping": null,
+        "total_cost": 1.41,
+        "shipping_to_city": "广东惠州市",
+        "similarity_pct": 92.2,
+        "composite_score": 84.9,
+        "yx_index": 4.0,
+        "sold_count": 1000,
+        "sku_id": "4895256769289",
+        "sku_title": "20CM",
+        "cate_id": null,
+        "industry_name": null,
+        "min_order_qty": 2,
+        "inventory": 46508,
+        "stock_status": "in_stock",
+        "selling_points": [
+          {
+            "type": "industryCPV",
+            "value": "木质"
+          },
+          {
+            "type": "industryCPV",
+            "value": "圣诞风"
+          }
+        ],
+        "service_tags": null,
+        "offer_tags": null,
+        "labels": [
+          "价格更低",
+          "销量较高",
+          "建议换供"
+        ],
+        "ranked_at": "2026-07-10T03:31:26.375Z"
+      }
+    ],
+    "alt_supplier_blocked_ids": [
+      "701812654087",
+      "988784534867",
+      "535647368951"
+    ],
+    "alt_supplier_scanned_at": "2026-07-10T03:31:26.386Z",
+    "alt_supplier_scan_error": null,
+    "replaced_by_product_id": "178365626262542541",
+    "replaced_by_offer_id": "701812654087",
+    "supplier_replaced_at": "2026-07-10T04:04:22.625Z"
   },
   {
     "tangbuy_product_id": "72530220482576",
@@ -317,7 +1704,7 @@
     "linked_ord_lines": [
       "TI26060000027"
     ],
-    "platform_category_hint": "224718763229213",
+    "platform_category_hint": "单肩包",
     "category": "单肩包",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -601,7 +1988,17 @@
       "agent_confidence": 0.968,
       "review_status": "confirmed",
       "reviewed_at": "2026-07-09T17:31:40.089Z",
-      "reviewer_note": null
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-10T05:21:00.639Z",
+        "item_nos": [
+          "TI26060000027"
+        ],
+        "cid": 121424021,
+        "goods_id": "679273221964",
+        "resolution": "manual_confirm"
+      }
     },
     "mapping_confidence": 0.968,
     "mapping_mapped_at": "2026-07-09T17:31:40.089Z",
@@ -620,9 +2017,12 @@
     "source": "order",
     "in_store": false,
     "linked_ord_lines": [
-      "TI26060000040"
+      "TI26060000040",
+      "TI26060000039",
+      "TI26060000037",
+      "TI26060000038"
     ],
-    "platform_category_hint": "224718762655765",
+    "platform_category_hint": "运动鞋",
     "category": "运动鞋",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -1326,7 +2726,20 @@
       "agent_confidence": 0.929,
       "review_status": "confirmed",
       "reviewed_at": "2026-07-09T17:31:24.271Z",
-      "reviewer_note": null
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-10T05:21:00.990Z",
+        "item_nos": [
+          "TI26060000040",
+          "TI26060000039",
+          "TI26060000037",
+          "TI26060000038"
+        ],
+        "cid": 50012341,
+        "goods_id": "1046527082006",
+        "resolution": "manual_confirm"
+      }
     },
     "mapping_confidence": 0.929,
     "mapping_mapped_at": "2026-07-09T17:31:24.271Z",
@@ -1357,7 +2770,7 @@
       "TI26060000012",
       "TI26060000011"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "运动沙滩鞋/凉鞋",
     "category": "运动沙滩鞋/凉鞋",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -1850,7 +3263,27 @@
       "agent_confidence": 0.867,
       "review_status": "confirmed",
       "reviewed_at": "2026-07-09T17:31:09.324Z",
-      "reviewer_note": null
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-10T05:21:01.399Z",
+        "item_nos": [
+          "TI26060000060",
+          "TI26060000059",
+          "TI26060000016",
+          "TI26060000017",
+          "TI26060000018",
+          "TI26060000019",
+          "TI26060000015",
+          "TI26060000014",
+          "TI26060000013",
+          "TI26060000012",
+          "TI26060000011"
+        ],
+        "cid": 50012048,
+        "goods_id": "728316300180",
+        "resolution": "manual_confirm"
+      }
     },
     "mapping_confidence": 0.867,
     "mapping_mapped_at": "2026-07-09T17:31:09.324Z",
@@ -1871,7 +3304,7 @@
     "linked_ord_lines": [
       "TI26060000062"
     ],
-    "platform_category_hint": "59557426937872",
+    "platform_category_hint": "其它",
     "category": "折叠椅/躺椅",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -2341,7 +3774,7 @@
     "linked_ord_lines": [
       "TI26060000063"
     ],
-    "platform_category_hint": "224718762754076",
+    "platform_category_hint": "其它",
     "category": "运动内衣",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -3906,7 +5339,7 @@
     "linked_ord_lines": [
       "TI26060000069"
     ],
-    "platform_category_hint": "224718767407134",
+    "platform_category_hint": "其它",
     "category": "毛绒玩具",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -4830,7 +6263,7 @@
     "linked_ord_lines": [
       "TI26060000100"
     ],
-    "platform_category_hint": "224718763229213",
+    "platform_category_hint": "其它",
     "category": "拎包/手提包",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -5461,7 +6894,7 @@
     "linked_ord_lines": [
       "TI26060000106"
     ],
-    "platform_category_hint": "224718763032606",
+    "platform_category_hint": "其它",
     "category": "运动鞋",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -5829,7 +7262,7 @@
     "linked_ord_lines": [
       "TI26060000107"
     ],
-    "platform_category_hint": "59557426937872",
+    "platform_category_hint": "其它",
     "category": "睡袋",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -6308,7 +7741,7 @@
     "linked_ord_lines": [
       "TI26060000112"
     ],
-    "platform_category_hint": "-1",
+    "platform_category_hint": "其它",
     "category": "免疫调节",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -7675,7 +9108,7 @@
     "linked_ord_lines": [
       "TI26060000125"
     ],
-    "platform_category_hint": "224718763573264",
+    "platform_category_hint": "其它",
     "category": "摆件",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -10020,7 +11453,7 @@
     "linked_ord_lines": [
       "TI26060000136"
     ],
-    "platform_category_hint": "224718763032600",
+    "platform_category_hint": "其它",
     "category": "运动鞋",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -11268,7 +12701,7 @@
     "linked_ord_lines": [
       "TI25110000017"
     ],
-    "platform_category_hint": "224718762770454",
+    "platform_category_hint": "其它",
     "category": "运动长裤",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -12216,7 +13649,7 @@
     "linked_ord_lines": [
       "TI25110000026"
     ],
-    "platform_category_hint": "224718763622416",
+    "platform_category_hint": "其它",
     "category": "其它仿真玩具",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -13261,7 +14694,7 @@
     "linked_ord_lines": [
       "TI25110000106"
     ],
-    "platform_category_hint": "224718763573274",
+    "platform_category_hint": "其它",
     "category": "娃娃/配件",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -13587,7 +15020,7 @@
     "linked_ord_lines": [
       "TI25110000110"
     ],
-    "platform_category_hint": "224718764933138",
+    "platform_category_hint": "其它",
     "category": "大码女装",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -13918,7 +15351,7 @@
     "linked_ord_lines": [
       "TI25110000236"
     ],
-    "platform_category_hint": "224718766637074",
+    "platform_category_hint": "其它",
     "category": "婴幼儿羊奶粉",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -14932,7 +16365,7 @@
     "linked_ord_lines": [
       "TI25080000091"
     ],
-    "platform_category_hint": "224718765031455",
+    "platform_category_hint": "帽子",
     "category": "袜子",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -15993,7 +17426,7 @@
     "linked_ord_lines": [
       "TI25110000284"
     ],
-    "platform_category_hint": "224718764916759",
+    "platform_category_hint": "其它",
     "category": "运动长裤",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -16381,7 +17814,7 @@
     "linked_ord_lines": [
       "TI25090000095"
     ],
-    "platform_category_hint": "1031910",
+    "platform_category_hint": "瑜伽袜子",
     "category": "连衣裙",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -16989,7 +18422,7 @@
       "TI25100000225"
     ],
     "platform_category_hint": "卫衣",
-    "category": "待映射",
+    "category": "卫衣",
     "category_status": "needs_review",
     "tier_prices": [
       {
@@ -17068,7 +18501,7 @@
       "vision_keywords": [],
       "skip_fusion": false,
       "auto_resolved": false,
-      "mapped_at": "2026-07-09T23:36:23.018Z",
+      "mapped_at": "2026-07-10T08:31:53.210Z",
       "suggested_hs": {
         "category_id": 50010159,
         "category_cn_name": "卫衣",
@@ -17081,12 +18514,115 @@
       "suggested_category_path": "卫衣 / 卫衣1 · HS 6110200090",
       "suggested_category_id": "50010159",
       "agent_confidence": 0.753,
-      "review_status": "pending"
+      "review_status": "pending",
+      "reviewed_at": "2026-07-10T08:31:51.412Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-10T08:31:51.907Z",
+        "item_nos": [
+          "TI25100000225"
+        ],
+        "cid": 50010159,
+        "goods_id": "0",
+        "resolution": "manual_confirm",
+        "from_cid": null,
+        "from_category": "卫衣",
+        "to_cid": 50010159,
+        "to_category": "卫衣"
+      },
+      "match_candidates": [
+        {
+          "label": "卫衣",
+          "category_id": 50010159,
+          "category_cn_name": "卫衣",
+          "category_en_name": "Sweater",
+          "hs_code": "6110200090",
+          "declare_cn_name": "卫衣1",
+          "declare_en_name": "Sweater1",
+          "score": 0.993,
+          "confidence": 0.703,
+          "dimensions": {
+            "term_match": 0.65,
+            "term_frequency": 0.45,
+            "label_fit": 1,
+            "catalog_fit": 0.543,
+            "term_specificity": 1,
+            "vision": 0,
+            "hint": 1,
+            "specificity": 1,
+            "feedback": 0
+          },
+          "kind": "specific",
+          "is_attribute": false,
+          "is_generic": false,
+          "matched_keywords": [
+            "卫衣"
+          ],
+          "sources": [
+            "hint"
+          ],
+          "rank": 1
+        }
+      ],
+      "checks": [
+        {
+          "key": "hs_code_valid",
+          "label": "海关编码有效",
+          "passed": true,
+          "detail": "HS 6110200090",
+          "source": "rule"
+        },
+        {
+          "key": "title_keyword",
+          "label": "标题意图匹配",
+          "passed": true,
+          "detail": "Agent 标题相关度 99%",
+          "source": "agent"
+        },
+        {
+          "key": "tree_level",
+          "label": "品类与下单路径不冲突",
+          "passed": true,
+          "detail": "下单 卫衣 ↔ 建议 卫衣",
+          "source": "rule"
+        },
+        {
+          "key": "history",
+          "label": "历史映射可参考",
+          "passed": true,
+          "detail": "内部分类编号 50010159，可与历史表对照",
+          "source": "agent"
+        },
+        {
+          "key": "restricted",
+          "label": "非禁运受限品类",
+          "passed": true,
+          "detail": "禁运/管制品类拦截",
+          "source": "rule"
+        },
+        {
+          "key": "declare_fields",
+          "label": "申报中英文字段齐全",
+          "passed": true,
+          "detail": "报关用中英描述需完整",
+          "source": "rule"
+        }
+      ]
     },
     "mapping_confidence": 0.753,
-    "mapping_mapped_at": "2026-07-09T23:36:23.018Z",
-    "detail_enriched_at": "2026-07-10T01:50:22.978Z",
-    "enrichment_error": "itemGet 无商品数据"
+    "mapping_mapped_at": "2026-07-10T08:31:53.210Z",
+    "detail_enriched_at": "2026-07-12T02:20:18.905Z",
+    "enrichment_error": "itemGet 无商品数据",
+    "hs_mapping": {
+      "category_id": 50010159,
+      "category_cn_name": "卫衣",
+      "category_en_name": "Sweater",
+      "hs_code": "6110200090",
+      "declare_cn_name": "卫衣1",
+      "declare_en_name": "Sweater1",
+      "tariff": 6103410000
+    }
   },
   {
     "tangbuy_product_id": "30492513124384",
@@ -17099,7 +18635,7 @@
       "TI26030000120",
       "TI26030000126"
     ],
-    "platform_category_hint": "224718764883988",
+    "platform_category_hint": "卫衣",
     "category": "连衣裙",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -17490,7 +19026,7 @@
     "linked_ord_lines": [
       "TI26050000089"
     ],
-    "platform_category_hint": "224718765096981",
+    "platform_category_hint": "其它",
     "category": "男士内裤",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -18117,7 +19653,7 @@
     "linked_ord_lines": [
       "TI26020000080"
     ],
-    "platform_category_hint": "224718764523543",
+    "platform_category_hint": "帽子",
     "category": "保温杯",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -19553,7 +21089,7 @@
       "TI26040000157",
       "TI25110000344"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "卫衣",
     "category": "摆件",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -20827,9 +22363,9 @@
     "linked_ord_lines": [
       "TI26060000035"
     ],
-    "platform_category_hint": "224718763048976",
-    "category": "待映射",
-    "category_status": "mapping",
+    "platform_category_hint": "马丁靴",
+    "category": "马丁靴",
+    "category_status": "auto_passed",
     "tier_prices": [
       {
         "min_qty": 1,
@@ -21078,7 +22614,45 @@
       "service_score": null,
       "composite_score": null
     },
-    "shipping_quoted_at": "2026-07-09T23:50:38.476Z"
+    "shipping_quoted_at": "2026-07-09T23:50:38.476Z",
+    "mapping_record": {
+      "match_detail": "1688 offer 828853691646 已有本地映射",
+      "match_method": "local_item_mapped",
+      "suggested_category_path": "马丁靴 / nan · HS 6403919990",
+      "suggested_hs": {
+        "category_id": 201305828,
+        "category_cn_name": "马丁靴",
+        "category_en_name": "Martin boots",
+        "hs_code": "6403919990",
+        "declare_cn_name": "nan",
+        "declare_en_name": "nan",
+        "tariff": null
+      },
+      "review_status": "confirmed",
+      "reviewed_at": "2026-07-10T04:04:59.321Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-10T04:04:59.323Z",
+        "item_nos": [
+          "TI26060000035"
+        ],
+        "cid": 201305828,
+        "goods_id": "828853691646",
+        "resolution": "auto"
+      }
+    },
+    "hs_mapping": {
+      "category_id": 201305828,
+      "category_cn_name": "马丁靴",
+      "category_en_name": "Martin boots",
+      "hs_code": "6403919990",
+      "declare_cn_name": "nan",
+      "declare_en_name": "nan",
+      "tariff": null
+    },
+    "mapping_confidence": 0.9,
+    "mapping_mapped_at": "2026-07-10T04:04:59.321Z"
   },
   {
     "tangbuy_product_id": "203132563537984",
@@ -21393,11 +22967,12 @@
     "source": "order",
     "in_store": false,
     "linked_ord_lines": [
-      "TI25110000307"
+      "TI25110000307",
+      "TI26010000115"
     ],
-    "platform_category_hint": "224718763081745",
-    "category": "待映射",
-    "category_status": "mapping",
+    "platform_category_hint": "靴子",
+    "category": "靴子",
+    "category_status": "auto_passed",
     "tier_prices": [
       {
         "min_qty": 1,
@@ -21676,7 +23251,46 @@
       "service_score": null,
       "composite_score": null
     },
-    "shipping_quoted_at": "2026-07-09T17:16:30.878Z"
+    "shipping_quoted_at": "2026-07-09T17:16:30.878Z",
+    "mapping_record": {
+      "match_detail": "1688 offer 810952663736 已有本地映射",
+      "match_method": "local_item_mapped",
+      "suggested_category_path": "靴子 / 靴子 · HS 6403919990",
+      "suggested_hs": {
+        "category_id": 50011743,
+        "category_cn_name": "靴子",
+        "category_en_name": "Boots",
+        "hs_code": "6403919990",
+        "declare_cn_name": "靴子",
+        "declare_en_name": "Boots",
+        "tariff": null
+      },
+      "review_status": "confirmed",
+      "reviewed_at": "2026-07-10T04:25:07.934Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-10T05:21:00.184Z",
+        "item_nos": [
+          "TI25110000307",
+          "TI26010000115"
+        ],
+        "cid": 50011743,
+        "goods_id": "810952663736",
+        "resolution": "manual_confirm"
+      }
+    },
+    "hs_mapping": {
+      "category_id": 50011743,
+      "category_cn_name": "靴子",
+      "category_en_name": "Boots",
+      "hs_code": "6403919990",
+      "declare_cn_name": "靴子",
+      "declare_en_name": "Boots",
+      "tariff": null
+    },
+    "mapping_confidence": 0.9,
+    "mapping_mapped_at": "2026-07-10T04:25:07.934Z"
   },
   {
     "tangbuy_product_id": "204050924650528",
@@ -24415,7 +26029,7 @@
       "TI26070000121",
       "TI26070000122"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "连衣裙",
     "category": "连衣裙",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -24955,11 +26569,30 @@
       "suggested_category_id": "50010850",
       "agent_confidence": 0.933,
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:20:25.341Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:31:21.521Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:31:21.671Z",
+        "item_nos": [
+          "TI26070000123",
+          "TI26070000124",
+          "TI26070000125",
+          "TI26070000120",
+          "TI26070000121",
+          "TI26070000122"
+        ],
+        "cid": 50010850,
+        "goods_id": "763560705758",
+        "resolution": "auto",
+        "from_cid": null,
+        "from_category": null,
+        "to_cid": 50010850,
+        "to_category": "连衣裙"
+      }
     },
     "mapping_confidence": 0.967,
-    "mapping_mapped_at": "2026-07-09T15:20:25.341Z",
+    "mapping_mapped_at": "2026-07-11T13:31:21.521Z",
     "hs_mapping": {
       "category_id": 50010850,
       "category_cn_name": "连衣裙",
@@ -24990,7 +26623,7 @@
       "TI26070000127",
       "TI26070000128"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "运动文胸",
     "category": "运动文胸",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -25415,11 +27048,38 @@
       "suggested_category_id": "125074041",
       "agent_confidence": 0.85,
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:19:49.544Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:31:16.697Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:31:16.842Z",
+        "item_nos": [
+          "TI26070000126",
+          "TI26070000134",
+          "TI26070000135",
+          "TI26070000136",
+          "TI26070000137",
+          "TI26070000131",
+          "TI26070000132",
+          "TI26070000133",
+          "TI26070000129",
+          "TI26070000130",
+          "TI26070000118",
+          "TI26070000119",
+          "TI26070000127",
+          "TI26070000128"
+        ],
+        "cid": 125074041,
+        "goods_id": "883785843282",
+        "resolution": "auto",
+        "from_cid": 50010159,
+        "from_category": "卫衣",
+        "to_cid": 125074041,
+        "to_category": "运动文胸"
+      }
     },
     "mapping_confidence": 0.89,
-    "mapping_mapped_at": "2026-07-09T15:19:49.544Z",
+    "mapping_mapped_at": "2026-07-11T13:31:16.697Z",
     "hs_mapping": {
       "category_id": 125074041,
       "category_cn_name": "运动文胸",
@@ -25863,11 +27523,27 @@
       "suggested_category_id": "50010850",
       "agent_confidence": 0.942,
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:23:38.494Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:44:33.134Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:44:33.277Z",
+        "item_nos": [
+          "TI26040000042",
+          "TI26040000041"
+        ],
+        "cid": 50010850,
+        "goods_id": "878717259145",
+        "resolution": "auto",
+        "from_cid": null,
+        "from_category": null,
+        "to_cid": 50010850,
+        "to_category": "连衣裙",
+        "skipped_duplicate": true
+      }
     },
     "mapping_confidence": 0.942,
-    "mapping_mapped_at": "2026-07-09T15:23:38.494Z",
+    "mapping_mapped_at": "2026-07-11T13:44:33.134Z",
     "detail_enriched_at": "2026-07-09T11:53:42.589Z",
     "shipping_to_city": "广东惠州市",
     "spec_params": [
@@ -26038,10 +27714,25 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:23:49.594Z",
+      "reviewed_at": "2026-07-11T13:45:45.141Z",
       "reviewer_note": null,
       "match_detail": "1688 offer 999620702996 已有本地映射",
-      "match_method": "local_item_mapped"
+      "match_method": "local_item_mapped",
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:45:45.329Z",
+        "item_nos": [
+          "TI26030000337"
+        ],
+        "cid": 50015377,
+        "goods_id": "999620702996",
+        "resolution": "auto",
+        "from_cid": null,
+        "from_category": null,
+        "to_cid": 50015377,
+        "to_category": "雨衣/雨裤/雨披",
+        "skipped_duplicate": true
+      }
     },
     "hs_mapping": {
       "category_id": 50015377,
@@ -26053,7 +27744,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:23:49.594Z",
+    "mapping_mapped_at": "2026-07-11T13:45:45.141Z",
     "alt_supplier_scan_status": "done",
     "alt_supplier_scan_refresh": false,
     "alt_search_query": "分体式雨衣雨裤套装 荧光黄",
@@ -26352,7 +28043,8 @@
     "source": "order",
     "in_store": false,
     "linked_ord_lines": [
-      "TI26030000303"
+      "TI26030000303",
+      "TI26030000304"
     ],
     "platform_category_hint": "其它",
     "category": "车载加热/保温杯",
@@ -26394,8 +28086,24 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:23:50.795Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:46:08.933Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:46:09.213Z",
+        "item_nos": [
+          "TI26030000303",
+          "TI26030000304"
+        ],
+        "cid": 50011858,
+        "goods_id": "792508964505",
+        "resolution": "auto",
+        "from_cid": 50011858,
+        "from_category": "车载加热/保温杯",
+        "to_cid": 50011858,
+        "to_category": "车载加热/保温杯",
+        "skipped_duplicate": true
+      }
     },
     "hs_mapping": {
       "category_id": 50011858,
@@ -26407,7 +28115,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:23:50.795Z",
+    "mapping_mapped_at": "2026-07-11T13:46:08.933Z",
     "alt_supplier_scan_status": "done",
     "alternative_suppliers": [
       {
@@ -27268,8 +28976,25 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:23:09.133Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:45:21.096Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:45:21.232Z",
+        "item_nos": [
+          "TI26030000369",
+          "TI26070000110",
+          "TI26030000449",
+          "TI26030000234"
+        ],
+        "cid": 50012372,
+        "goods_id": "920533039260",
+        "resolution": "auto",
+        "from_cid": 50012372,
+        "from_category": "吊带/背心",
+        "to_cid": 50012372,
+        "to_category": "吊带/背心"
+      }
     },
     "hs_mapping": {
       "category_id": 50012372,
@@ -27281,7 +29006,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:23:09.133Z",
+    "mapping_mapped_at": "2026-07-11T13:45:21.096Z",
     "alt_supplier_scan_status": "done",
     "alternative_suppliers": [
       {
@@ -27606,8 +29331,26 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:23:40.954Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:45:15.108Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:45:15.380Z",
+        "item_nos": [
+          "TI26030000370",
+          "TI26070000111",
+          "TI26070000112",
+          "TI26030000450",
+          "TI26030000235"
+        ],
+        "cid": 201581801,
+        "goods_id": "928043806165",
+        "resolution": "auto",
+        "from_cid": 201581801,
+        "from_category": "长筒袜",
+        "to_cid": 201581801,
+        "to_category": "长筒袜"
+      }
     },
     "hs_mapping": {
       "category_id": 201581801,
@@ -27619,7 +29362,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:23:40.954Z",
+    "mapping_mapped_at": "2026-07-11T13:45:15.108Z",
     "alt_supplier_scan_status": "done",
     "alternative_suppliers": [
       {
@@ -27920,8 +29663,27 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:23:35.810Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:44:54.505Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:44:54.657Z",
+        "item_nos": [
+          "TI26030000410",
+          "TI26030000383",
+          "TI26030000373",
+          "TI26030000294",
+          "TI26030000292"
+        ],
+        "cid": 162105,
+        "goods_id": "811563829713",
+        "resolution": "auto",
+        "from_cid": 162105,
+        "from_category": "小背心/小吊带",
+        "to_cid": 162105,
+        "to_category": "小背心/小吊带",
+        "skipped_duplicate": true
+      }
     },
     "hs_mapping": {
       "category_id": 162105,
@@ -27933,7 +29695,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:23:35.810Z",
+    "mapping_mapped_at": "2026-07-11T13:44:54.505Z",
     "alt_supplier_scan_status": "done",
     "alternative_suppliers": [
       {
@@ -28476,8 +30238,30 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:23:51.125Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:44:48.590Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:44:48.724Z",
+        "item_nos": [
+          "TI26030000411",
+          "TI26030000396",
+          "TI26030000384",
+          "TI26030000374",
+          "TI26030000297",
+          "TI26030000295",
+          "TI26030000293",
+          "TI26030000286",
+          "TI26030000284"
+        ],
+        "cid": 201581901,
+        "goods_id": "797824879151",
+        "resolution": "auto",
+        "from_cid": 201581901,
+        "from_category": "连裤袜/打底袜",
+        "to_cid": 201581901,
+        "to_category": "连裤袜/打底袜"
+      }
     },
     "hs_mapping": {
       "category_id": 201581901,
@@ -28489,7 +30273,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:23:51.125Z",
+    "mapping_mapped_at": "2026-07-11T13:44:48.590Z",
     "detail_enriched_at": "2026-07-09T11:04:27.349Z",
     "alt_supplier_scan_status": "done",
     "alt_search_query": "黑色超薄连裤袜 0D防勾丝",
@@ -29665,8 +31449,23 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:23:22.546Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:44:15.025Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:44:15.194Z",
+        "item_nos": [
+          "TI26040000090"
+        ],
+        "cid": 1000008612,
+        "goods_id": "847902059632",
+        "resolution": "auto",
+        "from_cid": 1000008612,
+        "from_category": "外套",
+        "to_cid": 1000008612,
+        "to_category": "外套",
+        "skipped_duplicate": true
+      }
     },
     "hs_mapping": {
       "category_id": 1000008612,
@@ -29678,7 +31477,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:23:22.546Z",
+    "mapping_mapped_at": "2026-07-11T13:44:15.025Z",
     "detail_enriched_at": "2026-07-08T15:01:25.008Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -29909,7 +31708,7 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:23:14.431Z",
+      "reviewed_at": "2026-07-11T13:44:09.620Z",
       "reviewer_note": null,
       "decision": "ambiguous_semantics",
       "history_hit": false,
@@ -30171,7 +31970,21 @@
       ],
       "auto_resolved": false,
       "mapped_at": "2026-07-09T11:06:25.193Z",
-      "suggested_category_id": "50015281"
+      "suggested_category_id": "50015281",
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:44:09.740Z",
+        "item_nos": [
+          "TI26040000103"
+        ],
+        "cid": 50015281,
+        "goods_id": "628046174298",
+        "resolution": "auto",
+        "from_cid": 50015281,
+        "from_category": "工作服/校服/商务服定制",
+        "to_cid": 50015281,
+        "to_category": "工作服/校服/商务服定制"
+      }
     },
     "hs_mapping": {
       "category_id": 50015281,
@@ -30183,7 +31996,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.587,
-    "mapping_mapped_at": "2026-07-09T15:23:14.431Z",
+    "mapping_mapped_at": "2026-07-11T13:44:09.620Z",
     "detail_enriched_at": "2026-07-09T11:04:27.052Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -33129,8 +34942,23 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:55.228Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:43:45.967Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:43:46.227Z",
+        "item_nos": [
+          "TI26040000131"
+        ],
+        "cid": 50005470,
+        "goods_id": "805476456577",
+        "resolution": "auto",
+        "from_cid": 50005470,
+        "from_category": "宠物用品",
+        "to_cid": 50005470,
+        "to_category": "宠物用品",
+        "skipped_duplicate": true
+      }
     },
     "hs_mapping": {
       "category_id": 50005470,
@@ -33142,7 +34970,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:55.228Z",
+    "mapping_mapped_at": "2026-07-11T13:43:45.967Z",
     "detail_enriched_at": "2026-07-08T15:01:24.509Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -33318,8 +35146,23 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-08T09:41:24.381Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:43:37.136Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:43:37.194Z",
+        "item_nos": [
+          "TI26040000137"
+        ],
+        "cid": 1000008653,
+        "goods_id": "742908724475",
+        "resolution": "auto",
+        "from_cid": 1000008653,
+        "from_category": "摆件饰品",
+        "to_cid": 1000008653,
+        "to_category": "摆件饰品",
+        "skipped_duplicate": true
+      }
     },
     "hs_mapping": {
       "category_id": 1000008653,
@@ -33331,7 +35174,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-08T09:41:24.381Z",
+    "mapping_mapped_at": "2026-07-11T13:43:37.136Z",
     "detail_enriched_at": "2026-07-09T11:04:36.830Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -33478,8 +35321,22 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:23:18.519Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:43:31.917Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:43:32.097Z",
+        "item_nos": [
+          "TI26040000138"
+        ],
+        "cid": 121484003,
+        "goods_id": "748131233166",
+        "resolution": "auto",
+        "from_cid": 121484003,
+        "from_category": "领针",
+        "to_cid": 121484003,
+        "to_category": "领针"
+      }
     },
     "hs_mapping": {
       "category_id": 121484003,
@@ -33491,7 +35348,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:23:18.519Z",
+    "mapping_mapped_at": "2026-07-11T13:43:31.917Z",
     "detail_enriched_at": "2026-07-08T15:01:24.776Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -33737,8 +35594,23 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:59.674Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:43:24.673Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:43:24.961Z",
+        "item_nos": [
+          "TI26040000174"
+        ],
+        "cid": 50006889,
+        "goods_id": "689592059628",
+        "resolution": "auto",
+        "from_cid": 50006889,
+        "from_category": "保温杯",
+        "to_cid": 50006889,
+        "to_category": "保温杯",
+        "skipped_duplicate": true
+      }
     },
     "hs_mapping": {
       "category_id": 50006889,
@@ -33750,7 +35622,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:59.674Z",
+    "mapping_mapped_at": "2026-07-11T13:43:24.673Z",
     "detail_enriched_at": "2026-07-09T11:04:36.795Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -33937,8 +35809,24 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:23:12.032Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:43:17.038Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:43:17.163Z",
+        "item_nos": [
+          "TI26040000178",
+          "TI26040000060"
+        ],
+        "cid": 50009283,
+        "goods_id": "1034678664126",
+        "resolution": "auto",
+        "from_cid": 50009283,
+        "from_category": "时尚烟灰缸",
+        "to_cid": 50009283,
+        "to_category": "时尚烟灰缸",
+        "skipped_duplicate": true
+      }
     },
     "hs_mapping": {
       "category_id": 50009283,
@@ -33950,7 +35838,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:23:12.032Z",
+    "mapping_mapped_at": "2026-07-11T13:43:17.038Z",
     "detail_enriched_at": "2026-07-09T11:04:37.336Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -34780,8 +36668,24 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:23:11.175Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:43:10.623Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:43:10.720Z",
+        "item_nos": [
+          "TI26040000179",
+          "TI26040000061"
+        ],
+        "cid": 125726007,
+        "goods_id": "872122261385",
+        "resolution": "auto",
+        "from_cid": 125726007,
+        "from_category": "短袜/打底袜/丝袜/美腿袜",
+        "to_cid": 125726007,
+        "to_category": "短袜/打底袜/丝袜/美腿袜",
+        "skipped_duplicate": true
+      }
     },
     "hs_mapping": {
       "category_id": 125726007,
@@ -34793,7 +36697,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:23:11.175Z",
+    "mapping_mapped_at": "2026-07-11T13:43:10.623Z",
     "detail_enriched_at": "2026-07-09T11:04:37.372Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -35111,8 +37015,23 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:23:02.933Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:43:04.284Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:43:04.663Z",
+        "item_nos": [
+          "TI26040000182"
+        ],
+        "cid": 50014227,
+        "goods_id": "857474773321",
+        "resolution": "auto",
+        "from_cid": 50014227,
+        "from_category": "耳饰",
+        "to_cid": 50014227,
+        "to_category": "耳饰",
+        "skipped_duplicate": true
+      }
     },
     "hs_mapping": {
       "category_id": 50014227,
@@ -35124,7 +37043,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:23:02.933Z",
+    "mapping_mapped_at": "2026-07-11T13:43:04.284Z",
     "detail_enriched_at": "2026-07-08T15:01:24.847Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -35276,8 +37195,23 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:29.131Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:42:55.295Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:42:55.353Z",
+        "item_nos": [
+          "TI26040000184"
+        ],
+        "cid": 50020050,
+        "goods_id": "573555334148",
+        "resolution": "auto",
+        "from_cid": 50020050,
+        "from_category": "瑜伽鞋",
+        "to_cid": 50020050,
+        "to_category": "瑜伽鞋",
+        "skipped_duplicate": true
+      }
     },
     "hs_mapping": {
       "category_id": 50020050,
@@ -35289,7 +37223,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:29.131Z",
+    "mapping_mapped_at": "2026-07-11T13:42:55.295Z",
     "detail_enriched_at": "2026-07-09T11:04:37.841Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -36940,8 +38874,23 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:51.852Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:42:49.310Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:42:49.706Z",
+        "item_nos": [
+          "TI26040000189",
+          "TI26050000371"
+        ],
+        "cid": 50012341,
+        "goods_id": "822048488722",
+        "resolution": "auto",
+        "from_cid": 50012341,
+        "from_category": "运动鞋",
+        "to_cid": 50012341,
+        "to_category": "运动鞋"
+      }
     },
     "hs_mapping": {
       "category_id": 50012341,
@@ -36953,7 +38902,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:51.852Z",
+    "mapping_mapped_at": "2026-07-11T13:42:49.310Z",
     "detail_enriched_at": "2026-07-08T15:01:24.871Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -37351,8 +39300,23 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:23:05.908Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:42:40.566Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:42:40.788Z",
+        "item_nos": [
+          "TI26040000190"
+        ],
+        "cid": 50112002,
+        "goods_id": "824148059021",
+        "resolution": "auto",
+        "from_cid": 50112002,
+        "from_category": "男鞋",
+        "to_cid": 50112002,
+        "to_category": "男鞋",
+        "skipped_duplicate": true
+      }
     },
     "hs_mapping": {
       "category_id": 50112002,
@@ -37364,7 +39328,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:23:05.908Z",
+    "mapping_mapped_at": "2026-07-11T13:42:40.566Z",
     "detail_enriched_at": "2026-07-09T11:04:37.890Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -37817,7 +39781,7 @@
       "TI26040000109",
       "TI26040000153"
     ],
-    "platform_category_hint": "卫衣",
+    "platform_category_hint": "其它",
     "category": "连裤袜/打底袜",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -37873,8 +39837,27 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:23:19.727Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:42:32.971Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:42:33.081Z",
+        "item_nos": [
+          "TI26040000191",
+          "TI26040000183",
+          "TI26040000113",
+          "TI26040000110",
+          "TI26040000109",
+          "TI26040000153"
+        ],
+        "cid": 201581901,
+        "goods_id": "665261848507",
+        "resolution": "auto",
+        "from_cid": 50010159,
+        "from_category": "卫衣",
+        "to_cid": 201581901,
+        "to_category": "连裤袜/打底袜"
+      }
     },
     "hs_mapping": {
       "category_id": 201581901,
@@ -37886,7 +39869,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:23:19.727Z",
+    "mapping_mapped_at": "2026-07-11T13:42:32.971Z",
     "detail_enriched_at": "2026-07-08T15:01:26.007Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -38227,8 +40210,22 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:43.123Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:42:28.230Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:42:28.301Z",
+        "item_nos": [
+          "TI26040000192"
+        ],
+        "cid": 201309706,
+        "goods_id": "827009819846",
+        "resolution": "auto",
+        "from_cid": 50010159,
+        "from_category": "卫衣",
+        "to_cid": 201309706,
+        "to_category": "休闲板鞋"
+      }
     },
     "hs_mapping": {
       "category_id": 201309706,
@@ -38240,7 +40237,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:43.123Z",
+    "mapping_mapped_at": "2026-07-11T13:42:28.230Z",
     "detail_enriched_at": "2026-07-08T15:01:26.149Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -38745,8 +40742,23 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:23:01.067Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:42:20.254Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:42:20.320Z",
+        "item_nos": [
+          "TI26040000194",
+          "TI26040000193"
+        ],
+        "cid": 50012341,
+        "goods_id": "837718356845",
+        "resolution": "auto",
+        "from_cid": 50012341,
+        "from_category": "运动鞋",
+        "to_cid": 50012341,
+        "to_category": "运动鞋"
+      }
     },
     "hs_mapping": {
       "category_id": 50012341,
@@ -38758,7 +40770,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:23:01.067Z",
+    "mapping_mapped_at": "2026-07-11T13:42:20.254Z",
     "detail_enriched_at": "2026-07-08T15:01:26.202Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -39336,8 +41348,23 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:33.492Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:42:06.809Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:42:07.018Z",
+        "item_nos": [
+          "TI26040000206"
+        ],
+        "cid": 50012784,
+        "goods_id": "782879521202",
+        "resolution": "auto",
+        "from_cid": 50012784,
+        "from_category": "肩带",
+        "to_cid": 50012784,
+        "to_category": "肩带",
+        "skipped_duplicate": true
+      }
     },
     "hs_mapping": {
       "category_id": 50012784,
@@ -39349,7 +41376,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:33.492Z",
+    "mapping_mapped_at": "2026-07-11T13:42:06.809Z",
     "detail_enriched_at": "2026-07-08T15:01:25.126Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -39575,8 +41602,24 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:23:01.454Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:41:58.910Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:41:58.978Z",
+        "item_nos": [
+          "TI26040000215",
+          "TI26040000161"
+        ],
+        "cid": 1000008612,
+        "goods_id": "693344661167",
+        "resolution": "auto",
+        "from_cid": 1000008612,
+        "from_category": "外套",
+        "to_cid": 1000008612,
+        "to_category": "外套",
+        "skipped_duplicate": true
+      }
     },
     "hs_mapping": {
       "category_id": 1000008612,
@@ -39588,7 +41631,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:23:01.454Z",
+    "mapping_mapped_at": "2026-07-11T13:41:58.910Z",
     "detail_enriched_at": "2026-07-08T15:01:25.364Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -39840,8 +41883,23 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:55.395Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:41:48.643Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:41:48.708Z",
+        "item_nos": [
+          "TI26040000223"
+        ],
+        "cid": 50026079,
+        "goods_id": "784756797761",
+        "resolution": "auto",
+        "from_cid": 50026079,
+        "from_category": "茶宠摆件",
+        "to_cid": 50026079,
+        "to_category": "茶宠摆件",
+        "skipped_duplicate": true
+      }
     },
     "hs_mapping": {
       "category_id": 50026079,
@@ -39853,7 +41911,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:55.395Z",
+    "mapping_mapped_at": "2026-07-11T13:41:48.643Z",
     "detail_enriched_at": "2026-07-08T15:01:25.147Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -39986,8 +42044,22 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:35.028Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:41:40.724Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:41:41.611Z",
+        "item_nos": [
+          "TI26040000229"
+        ],
+        "cid": 50012043,
+        "goods_id": "714035624086",
+        "resolution": "auto",
+        "from_cid": null,
+        "from_category": null,
+        "to_cid": 50012043,
+        "to_category": "板鞋/休闲鞋"
+      }
     },
     "hs_mapping": {
       "category_id": 50012043,
@@ -39999,7 +42071,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:35.028Z",
+    "mapping_mapped_at": "2026-07-11T13:41:40.724Z",
     "detail_enriched_at": "2026-07-09T15:11:03.879Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -42144,8 +44216,23 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-08T09:41:24.126Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:41:37.890Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:41:38.288Z",
+        "item_nos": [
+          "TI26040000239"
+        ],
+        "cid": 201174617,
+        "goods_id": "851898079887",
+        "resolution": "auto",
+        "from_cid": 201174617,
+        "from_category": "硅胶",
+        "to_cid": 201174617,
+        "to_category": "硅胶",
+        "skipped_duplicate": true
+      }
     },
     "hs_mapping": {
       "category_id": 201174617,
@@ -42157,7 +44244,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-08T09:41:24.126Z",
+    "mapping_mapped_at": "2026-07-11T13:41:37.890Z",
     "detail_enriched_at": "2026-07-09T15:11:02.887Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -42422,7 +44509,7 @@
       "TI26040000149",
       "TI25080000071"
     ],
-    "platform_category_hint": "卫衣",
+    "platform_category_hint": "其它",
     "category": "短袜/打底袜/丝袜/美腿袜",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -42462,8 +44549,26 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:36.208Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:41:22.027Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:41:22.887Z",
+        "item_nos": [
+          "TI26040000240",
+          "TI26040000203",
+          "TI26040000149",
+          "TI25080000071"
+        ],
+        "cid": 125726007,
+        "goods_id": "709763372657",
+        "resolution": "auto",
+        "from_cid": 50010159,
+        "from_category": "卫衣",
+        "to_cid": 125726007,
+        "to_category": "短袜/打底袜/丝袜/美腿袜",
+        "skipped_duplicate": true
+      }
     },
     "hs_mapping": {
       "category_id": 125726007,
@@ -42475,7 +44580,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:36.208Z",
+    "mapping_mapped_at": "2026-07-11T13:41:22.027Z",
     "detail_enriched_at": "2026-07-09T15:11:04.188Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -43026,8 +45131,22 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:40.062Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:41:06.919Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:41:11.216Z",
+        "item_nos": [
+          "TI26040000233"
+        ],
+        "cid": 50050431,
+        "goods_id": "877512134874",
+        "resolution": "auto",
+        "from_cid": 50050431,
+        "from_category": "杏仁",
+        "to_cid": 50050431,
+        "to_category": "杏仁"
+      }
     },
     "hs_mapping": {
       "category_id": 50050431,
@@ -43039,7 +45158,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:40.062Z",
+    "mapping_mapped_at": "2026-07-11T13:41:06.919Z",
     "detail_enriched_at": "2026-07-09T15:11:04.295Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -43335,8 +45454,24 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:35.100Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:40:36.672Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:40:36.925Z",
+        "item_nos": [
+          "TI26040000250",
+          "TI26040000249",
+          "TI26040000246"
+        ],
+        "cid": 50456005,
+        "goods_id": "848625028098",
+        "resolution": "auto",
+        "from_cid": 50010159,
+        "from_category": "卫衣",
+        "to_cid": 50456005,
+        "to_category": "毛绒玩具"
+      }
     },
     "hs_mapping": {
       "category_id": 50456005,
@@ -43348,7 +45483,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:35.100Z",
+    "mapping_mapped_at": "2026-07-11T13:40:36.672Z",
     "detail_enriched_at": "2026-07-08T15:01:25.737Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -43532,8 +45667,24 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:43.604Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:40:20.248Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:40:22.602Z",
+        "item_nos": [
+          "TI26040000261",
+          "TI26040000262"
+        ],
+        "cid": 122660003,
+        "goods_id": "619445109557",
+        "resolution": "auto",
+        "from_cid": 122660003,
+        "from_category": "电动车雨披",
+        "to_cid": 122660003,
+        "to_category": "电动车雨披",
+        "skipped_duplicate": true
+      }
     },
     "hs_mapping": {
       "category_id": 122660003,
@@ -43545,7 +45696,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:43.604Z",
+    "mapping_mapped_at": "2026-07-11T13:40:20.248Z",
     "detail_enriched_at": "2026-07-09T15:11:06.215Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -45076,8 +47227,23 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:22.583Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:40:07.332Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:40:09.087Z",
+        "item_nos": [
+          "TI26040000267",
+          "TI25120000278"
+        ],
+        "cid": 1623,
+        "goods_id": "860804799757",
+        "resolution": "auto",
+        "from_cid": 1623,
+        "from_category": "半身裙",
+        "to_cid": 1623,
+        "to_category": "半身裙"
+      }
     },
     "hs_mapping": {
       "category_id": 1623,
@@ -45089,7 +47255,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:22.583Z",
+    "mapping_mapped_at": "2026-07-11T13:40:07.332Z",
     "enrichment_status": "matched",
     "detail_enriched_at": "2026-07-09T15:11:03.246Z",
     "detail_source": "tangbuy",
@@ -46388,8 +48554,23 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:30.017Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:39:46.155Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:39:48.732Z",
+        "item_nos": [
+          "TI26040000268"
+        ],
+        "cid": 121416008,
+        "goods_id": "775870967323",
+        "resolution": "auto",
+        "from_cid": 121416008,
+        "from_category": "枕套",
+        "to_cid": 121416008,
+        "to_category": "枕套",
+        "skipped_duplicate": true
+      }
     },
     "hs_mapping": {
       "category_id": 121416008,
@@ -46401,7 +48582,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:30.017Z",
+    "mapping_mapped_at": "2026-07-11T13:39:46.155Z",
     "detail_enriched_at": "2026-07-09T15:11:03.768Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -46579,8 +48760,12 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:29.887Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:39:37.746Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "writing",
+        "at": "2026-07-11T13:39:37.746Z"
+      }
     },
     "hs_mapping": {
       "category_id": 201305305,
@@ -46592,7 +48777,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:29.887Z",
+    "mapping_mapped_at": "2026-07-11T13:39:37.746Z",
     "detail_enriched_at": "2026-07-09T15:11:05.160Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -46787,7 +48972,21 @@
       },
       "review_status": "confirmed",
       "reviewed_at": "2026-07-09T15:22:29.072Z",
-      "reviewer_note": null
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:39:27.489Z",
+        "item_nos": [
+          "TI26050000007"
+        ],
+        "cid": 162105,
+        "goods_id": "818832423622",
+        "resolution": "auto",
+        "from_cid": 50010159,
+        "from_category": "卫衣",
+        "to_cid": 162105,
+        "to_category": "小背心/小吊带"
+      }
     },
     "hs_mapping": {
       "category_id": 162105,
@@ -46989,8 +49188,22 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:38.324Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:39:19.689Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:39:20.438Z",
+        "item_nos": [
+          "TI26050000009"
+        ],
+        "cid": 50122002,
+        "goods_id": "727114334871",
+        "resolution": "auto",
+        "from_cid": 50122002,
+        "from_category": "女包",
+        "to_cid": 50122002,
+        "to_category": "女包"
+      }
     },
     "hs_mapping": {
       "category_id": 50122002,
@@ -47002,7 +49215,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:38.324Z",
+    "mapping_mapped_at": "2026-07-11T13:39:19.689Z",
     "detail_enriched_at": "2026-07-08T15:01:26.150Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -47219,8 +49432,23 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:21.794Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:39:09.806Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:39:10.385Z",
+        "item_nos": [
+          "TI26050000010"
+        ],
+        "cid": 50023107,
+        "goods_id": "745625121850",
+        "resolution": "auto",
+        "from_cid": 50023107,
+        "from_category": "运动长裤",
+        "to_cid": 50023107,
+        "to_category": "运动长裤",
+        "skipped_duplicate": true
+      }
     },
     "hs_mapping": {
       "category_id": 50023107,
@@ -47232,7 +49460,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:21.794Z",
+    "mapping_mapped_at": "2026-07-11T13:39:09.806Z",
     "detail_enriched_at": "2026-07-08T15:01:30.017Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -47764,7 +49992,12 @@
       "TI26030000405",
       "TI26030000408",
       "TI26010000414",
-      "TI26010000342"
+      "TI26010000342",
+      "TI26010000388",
+      "TI26010000389",
+      "TI26030000353",
+      "TI26010000334",
+      "TI26010000331"
     ],
     "platform_category_hint": "其它",
     "category": "床头靠垫",
@@ -48015,8 +50248,24 @@
         "tariff": 6103410000.0
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:23.310Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:38:50.407Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:38:50.789Z",
+        "item_nos": [
+          "TI26050000034",
+          "TI26030000237",
+          "TI26060000001"
+        ],
+        "cid": 50010159,
+        "goods_id": "582487292293",
+        "resolution": "auto",
+        "from_cid": 50010159,
+        "from_category": "卫衣",
+        "to_cid": 50010159,
+        "to_category": "卫衣"
+      }
     },
     "hs_mapping": {
       "category_id": 50010159,
@@ -48028,7 +50277,7 @@
       "tariff": 6103410000.0
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:23.310Z",
+    "mapping_mapped_at": "2026-07-11T13:38:50.407Z",
     "detail_enriched_at": "2026-07-08T15:01:26.353Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -48138,7 +50387,7 @@
     "linked_ord_lines": [
       "TI26050000239"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "情趣内衣",
     "category": "情趣内衣",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -48178,8 +50427,22 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:21:56.273Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:38:05.357Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:38:05.554Z",
+        "item_nos": [
+          "TI26050000239"
+        ],
+        "cid": 50019651,
+        "goods_id": "868601784992",
+        "resolution": "auto",
+        "from_cid": null,
+        "from_category": null,
+        "to_cid": 50019651,
+        "to_category": "情趣内衣"
+      }
     },
     "hs_mapping": {
       "category_id": 50019651,
@@ -48191,7 +50454,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:21:56.273Z",
+    "mapping_mapped_at": "2026-07-11T13:38:05.357Z",
     "detail_enriched_at": "2026-07-09T15:11:17.680Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -48311,7 +50574,7 @@
       "TI26050000094",
       "TI26050000081"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "打底裤",
     "category": "打底裤",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -48351,8 +50614,26 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:31.799Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:37:36.701Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:37:37.431Z",
+        "item_nos": [
+          "TI26050000248",
+          "TI26050000054",
+          "TI26070000113",
+          "TI26050000094",
+          "TI26050000081"
+        ],
+        "cid": 50007068,
+        "goods_id": "626487976579",
+        "resolution": "auto",
+        "from_cid": 50007068,
+        "from_category": "打底裤",
+        "to_cid": 50007068,
+        "to_category": "打底裤"
+      }
     },
     "hs_mapping": {
       "category_id": 50007068,
@@ -48364,7 +50645,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:31.799Z",
+    "mapping_mapped_at": "2026-07-11T13:37:36.701Z",
     "detail_enriched_at": "2026-07-09T15:11:18.846Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -49181,9 +51462,10 @@
       "TI26030000311",
       "TI26030000309",
       "TI26030000305",
-      "TI26030000302"
+      "TI26030000302",
+      "TI26030000345"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "西式",
     "category": "西式",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -49239,8 +51521,36 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:23:50.906Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:36:59.563Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:37:00.011Z",
+        "item_nos": [
+          "TI26050000265",
+          "TI26050000151",
+          "TI26040000069",
+          "TI26030000346",
+          "TI26030000343",
+          "TI26030000338",
+          "TI26030000330",
+          "TI26030000327",
+          "TI26030000318",
+          "TI26030000312",
+          "TI26030000311",
+          "TI26030000309",
+          "TI26030000305",
+          "TI26030000302",
+          "TI26030000345"
+        ],
+        "cid": 125304009,
+        "goods_id": "998588795309",
+        "resolution": "auto",
+        "from_cid": 125304009,
+        "from_category": "西式",
+        "to_cid": 125304009,
+        "to_category": "西式"
+      }
     },
     "hs_mapping": {
       "category_id": 125304009,
@@ -49252,7 +51562,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:23:50.906Z",
+    "mapping_mapped_at": "2026-07-11T13:36:59.563Z",
     "detail_enriched_at": "2026-07-08T15:01:26.215Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -54841,7 +57151,7 @@
       "TI26050000288",
       "TI26050000287"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "其它蜂产品",
     "category": "其它蜂产品",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -55006,7 +57316,7 @@
       "TI26070000138",
       "TI26060000008"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "亚克力",
     "category": "亚克力",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -55046,8 +57356,24 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:21:20.986Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:31:05.233Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:31:05.338Z",
+        "item_nos": [
+          "TI26050000308",
+          "TI26070000138",
+          "TI26060000008"
+        ],
+        "cid": 50015576,
+        "goods_id": "822251875151",
+        "resolution": "auto",
+        "from_cid": null,
+        "from_category": null,
+        "to_cid": 50015576,
+        "to_category": "亚克力"
+      }
     },
     "hs_mapping": {
       "category_id": 50015576,
@@ -55059,7 +57385,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:21:20.986Z",
+    "mapping_mapped_at": "2026-07-11T13:31:05.233Z",
     "detail_enriched_at": "2026-07-09T15:11:20.235Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -55162,9 +57488,10 @@
       "TI26050000312",
       "TI26050000266",
       "TI26050000267",
-      "TI26040000197"
+      "TI26040000197",
+      "TI26010000130"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "板鞋/休闲鞋",
     "category": "板鞋/休闲鞋",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -55204,8 +57531,26 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:46.702Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:35:47.432Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:35:48.914Z",
+        "item_nos": [
+          "TI26050000312",
+          "TI26050000266",
+          "TI26050000267",
+          "TI26040000197",
+          "TI26010000130"
+        ],
+        "cid": 50012043,
+        "goods_id": "718711091441",
+        "resolution": "auto",
+        "from_cid": 50012043,
+        "from_category": "板鞋/休闲鞋",
+        "to_cid": 50012043,
+        "to_category": "板鞋/休闲鞋"
+      }
     },
     "hs_mapping": {
       "category_id": 50012043,
@@ -55217,7 +57562,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:46.702Z",
+    "mapping_mapped_at": "2026-07-11T13:35:47.432Z",
     "detail_enriched_at": "2026-07-08T15:01:26.386Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -55410,7 +57755,7 @@
       "TI26050000295",
       "TI26060000034"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "衬衫",
     "category": "衬衫",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -55949,7 +58294,7 @@
     "linked_ord_lines": [
       "TI26050000324"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "折叠椅/躺椅",
     "category": "折叠椅/躺椅",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -56005,8 +58350,23 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:21:13.281Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:35:22.554Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:35:22.635Z",
+        "item_nos": [
+          "TI26050000324"
+        ],
+        "cid": 50015490,
+        "goods_id": "659438061435",
+        "resolution": "auto",
+        "from_cid": null,
+        "from_category": null,
+        "to_cid": 50015490,
+        "to_category": "折叠椅/躺椅",
+        "skipped_duplicate": true
+      }
     },
     "hs_mapping": {
       "category_id": 50015490,
@@ -56018,7 +58378,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:21:13.281Z",
+    "mapping_mapped_at": "2026-07-11T13:35:22.554Z",
     "detail_enriched_at": "2026-07-08T15:01:26.526Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -56166,7 +58526,7 @@
     "linked_ord_lines": [
       "TI26050000326"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "上衣",
     "category": "上衣",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -56206,8 +58566,22 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:20:44.654Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:35:14.020Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:35:14.438Z",
+        "item_nos": [
+          "TI26050000326"
+        ],
+        "cid": 50003509,
+        "goods_id": "775726469786",
+        "resolution": "auto",
+        "from_cid": 50003509,
+        "from_category": "上衣",
+        "to_cid": 50003509,
+        "to_category": "上衣"
+      }
     },
     "hs_mapping": {
       "category_id": 50003509,
@@ -56219,7 +58593,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:20:44.654Z",
+    "mapping_mapped_at": "2026-07-11T13:35:14.020Z",
     "detail_enriched_at": "2026-07-09T15:11:20.665Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -56648,7 +59022,7 @@
       "TI26050000322",
       "TI26050000323"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "矮凳",
     "category": "矮凳",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -56688,8 +59062,12 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:21:26.350Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:34:54.707Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "writing",
+        "at": "2026-07-11T13:34:54.707Z"
+      }
     },
     "hs_mapping": {
       "category_id": 50015494,
@@ -56701,7 +59079,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:21:26.350Z",
+    "mapping_mapped_at": "2026-07-11T13:34:54.707Z",
     "detail_enriched_at": "2026-07-09T15:11:20.073Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -56977,9 +59355,11 @@
       "TI26060000085",
       "TI26060000086",
       "TI26050000367",
-      "TI26050000357"
+      "TI26050000357",
+      "TI26050000255",
+      "TI26050000254"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "防晒",
     "category": "防晒",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -57035,8 +59415,35 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:21:59.363Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:34:40.872Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:34:41.340Z",
+        "item_nos": [
+          "TI26050000330",
+          "TI26050000331",
+          "TI26050000300",
+          "TI26050000261",
+          "TI26050000262",
+          "TI26050000252",
+          "TI26050000253",
+          "TI26060000084",
+          "TI26060000085",
+          "TI26060000086",
+          "TI26050000367",
+          "TI26050000357",
+          "TI26050000255",
+          "TI26050000254"
+        ],
+        "cid": 50011982,
+        "goods_id": "1027162362559",
+        "resolution": "auto",
+        "from_cid": 50011982,
+        "from_category": "防晒",
+        "to_cid": 50011982,
+        "to_category": "防晒"
+      }
     },
     "hs_mapping": {
       "category_id": 50011982,
@@ -57048,7 +59455,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:21:59.363Z",
+    "mapping_mapped_at": "2026-07-11T13:34:40.872Z",
     "detail_enriched_at": "2026-07-08T15:01:26.635Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -57258,9 +59665,10 @@
       "TI26050000369",
       "TI26050000368",
       "TI26050000366",
-      "TI26050000351"
+      "TI26050000351",
+      "TI26070000160"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "西式",
     "category": "西式",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -57300,8 +59708,49 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:23:08.537Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:38:40.579Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:38:40.930Z",
+        "item_nos": [
+          "TI26050000342",
+          "TI26050000339",
+          "TI26050000275",
+          "TI26050000276",
+          "TI26050000061",
+          "TI26050000058",
+          "TI26050000057",
+          "TI26050000047",
+          "TI26050000046",
+          "TI26050000045",
+          "TI26040000241",
+          "TI26040000134",
+          "TI26040000118",
+          "TI26040000119",
+          "TI26040000121",
+          "TI26050000062",
+          "TI26050000066",
+          "TI26060000131",
+          "TI26060000130",
+          "TI26060000089",
+          "TI26060000077",
+          "TI26060000076",
+          "TI26060000075",
+          "TI26050000369",
+          "TI26050000368",
+          "TI26050000366",
+          "TI26050000351",
+          "TI26070000160"
+        ],
+        "cid": 125304009,
+        "goods_id": "855629770550",
+        "resolution": "auto",
+        "from_cid": 125304009,
+        "from_category": "西式",
+        "to_cid": 125304009,
+        "to_category": "西式"
+      }
     },
     "hs_mapping": {
       "category_id": 125304009,
@@ -57313,7 +59762,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:23:08.537Z",
+    "mapping_mapped_at": "2026-07-11T13:38:40.579Z",
     "detail_enriched_at": "2026-07-08T15:01:26.715Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -57612,7 +60061,7 @@
       "TI26050000291",
       "TI26010000129"
     ],
-    "platform_category_hint": "鞋子",
+    "platform_category_hint": "运动鞋",
     "category": "运动鞋",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -57668,8 +60117,27 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:21:41.418Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:34:19.474Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:34:19.649Z",
+        "item_nos": [
+          "TI26050000353",
+          "TI26050000352",
+          "TI26050000289",
+          "TI26050000290",
+          "TI26050000291",
+          "TI26010000129"
+        ],
+        "cid": 50012341,
+        "goods_id": "836501153276",
+        "resolution": "auto",
+        "from_cid": 50006121,
+        "from_category": "鞋子",
+        "to_cid": 50012341,
+        "to_category": "运动鞋"
+      }
     },
     "hs_mapping": {
       "category_id": 50012341,
@@ -57681,7 +60149,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:21:41.418Z",
+    "mapping_mapped_at": "2026-07-11T13:34:19.474Z",
     "detail_enriched_at": "2026-07-08T15:01:26.980Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -58575,7 +61043,7 @@
     "linked_ord_lines": [
       "TI26050000359"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "睡袋",
     "category": "睡袋",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -58631,8 +61099,22 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:20:59.113Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:34:07.636Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:34:07.826Z",
+        "item_nos": [
+          "TI26050000359"
+        ],
+        "cid": 50013908,
+        "goods_id": "671504034622",
+        "resolution": "auto",
+        "from_cid": 50010159,
+        "from_category": "卫衣",
+        "to_cid": 50013908,
+        "to_category": "睡袋"
+      }
     },
     "hs_mapping": {
       "category_id": 50013908,
@@ -58644,7 +61126,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:20:59.113Z",
+    "mapping_mapped_at": "2026-07-11T13:34:07.636Z",
     "detail_enriched_at": "2026-07-08T15:01:26.774Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -58803,7 +61285,7 @@
       "TI26050000361",
       "TI26060000102"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "摆件",
     "category": "摆件",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -58858,8 +61340,23 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:20:56.520Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:34:02.816Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:34:02.948Z",
+        "item_nos": [
+          "TI26050000361",
+          "TI26060000102"
+        ],
+        "cid": 50013877,
+        "goods_id": "773412313606",
+        "resolution": "auto",
+        "from_cid": null,
+        "from_category": null,
+        "to_cid": 50013877,
+        "to_category": "摆件"
+      }
     },
     "hs_mapping": {
       "category_id": 50013877,
@@ -58871,7 +61368,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:20:56.520Z",
+    "mapping_mapped_at": "2026-07-11T13:34:02.816Z",
     "enrichment_status": "matched",
     "detail_enriched_at": "2026-07-08T15:01:27.048Z",
     "detail_source": "tangbuy",
@@ -58965,7 +61462,7 @@
     "linked_ord_lines": [
       "TI26050000363"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "摆件",
     "category": "摆件",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -59021,8 +61518,22 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:20:46.987Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:33:55.144Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:33:55.218Z",
+        "item_nos": [
+          "TI26050000363"
+        ],
+        "cid": 121394030,
+        "goods_id": "781943346464",
+        "resolution": "auto",
+        "from_cid": null,
+        "from_category": null,
+        "to_cid": 121394030,
+        "to_category": "摆件"
+      }
     },
     "hs_mapping": {
       "category_id": 121394030,
@@ -59034,7 +61545,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:20:46.987Z",
+    "mapping_mapped_at": "2026-07-11T13:33:55.144Z",
     "detail_enriched_at": "2026-07-08T15:01:26.960Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -59127,7 +61638,7 @@
     "linked_ord_lines": [
       "TI26050000364"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "礼品",
     "category": "礼品",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -59167,8 +61678,22 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:20:54.799Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:33:50.325Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:33:50.480Z",
+        "item_nos": [
+          "TI26050000364"
+        ],
+        "cid": 50014460,
+        "goods_id": "760309954234",
+        "resolution": "auto",
+        "from_cid": null,
+        "from_category": null,
+        "to_cid": 50014460,
+        "to_category": "礼品"
+      }
     },
     "hs_mapping": {
       "category_id": 50014460,
@@ -59180,7 +61705,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:20:54.799Z",
+    "mapping_mapped_at": "2026-07-11T13:33:50.325Z",
     "detail_enriched_at": "2026-07-09T15:11:19.165Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -59482,7 +62007,7 @@
     "linked_ord_lines": [
       "TI26050000365"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "篮球袜",
     "category": "篮球袜",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -59523,8 +62048,22 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:20:45.316Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:33:44.554Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:33:44.662Z",
+        "item_nos": [
+          "TI26050000365"
+        ],
+        "cid": 50017261,
+        "goods_id": "910101699273",
+        "resolution": "auto",
+        "from_cid": null,
+        "from_category": null,
+        "to_cid": 50017261,
+        "to_category": "篮球袜"
+      }
     },
     "hs_mapping": {
       "category_id": 50017261,
@@ -59536,7 +62075,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:20:45.316Z",
+    "mapping_mapped_at": "2026-07-11T13:33:44.554Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
     "inventory_total": 1057720,
@@ -60212,7 +62751,7 @@
     "linked_ord_lines": [
       "TI26050000370"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "史莱姆/起泡胶/水晶泥",
     "category": "史莱姆/起泡胶/水晶泥",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -60252,8 +62791,22 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:21:08.180Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:33:40.623Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:33:42.042Z",
+        "item_nos": [
+          "TI26050000370"
+        ],
+        "cid": 201699902,
+        "goods_id": "783041288551",
+        "resolution": "auto",
+        "from_cid": null,
+        "from_category": null,
+        "to_cid": 201699902,
+        "to_category": "史莱姆/起泡胶/水晶泥"
+      }
     },
     "hs_mapping": {
       "category_id": 201699902,
@@ -60265,7 +62818,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:21:08.180Z",
+    "mapping_mapped_at": "2026-07-11T13:33:40.623Z",
     "detail_enriched_at": "2026-07-09T15:11:21.271Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -61156,7 +63709,7 @@
       "TI26050000373",
       "TI26050000358"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "生日蛋糕",
     "category": "生日蛋糕",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -61212,8 +63765,23 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:20:58.275Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:33:35.734Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:33:35.811Z",
+        "item_nos": [
+          "TI26050000373",
+          "TI26050000358"
+        ],
+        "cid": 124900262,
+        "goods_id": "567011623220",
+        "resolution": "auto",
+        "from_cid": 50010159,
+        "from_category": "卫衣",
+        "to_cid": 124900262,
+        "to_category": "生日蛋糕"
+      }
     },
     "hs_mapping": {
       "category_id": 124900262,
@@ -61225,7 +63793,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:20:58.275Z",
+    "mapping_mapped_at": "2026-07-11T13:33:35.734Z",
     "detail_enriched_at": "2026-07-08T15:01:29.666Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -61326,7 +63894,7 @@
       "TI26050000375",
       "TI26050000362"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "卡通/动漫周边",
     "category": "卡通/动漫周边",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -61382,8 +63950,23 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:20:48.416Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:33:29.203Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:33:29.361Z",
+        "item_nos": [
+          "TI26050000375",
+          "TI26050000362"
+        ],
+        "cid": 122680006,
+        "goods_id": "728640626260",
+        "resolution": "auto",
+        "from_cid": 50010159,
+        "from_category": "卫衣",
+        "to_cid": 122680006,
+        "to_category": "卡通/动漫周边"
+      }
     },
     "hs_mapping": {
       "category_id": 122680006,
@@ -61395,7 +63978,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:20:48.416Z",
+    "mapping_mapped_at": "2026-07-11T13:33:29.203Z",
     "detail_enriched_at": "2026-07-08T15:01:29.666Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -61490,7 +64073,7 @@
       "TI26040000256",
       "TI26060000028"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "手机数据线",
     "category": "手机数据线",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -61530,8 +64113,24 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:29.960Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:33:24.907Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:33:25.053Z",
+        "item_nos": [
+          "TI26050000376",
+          "TI26040000256",
+          "TI26060000028"
+        ],
+        "cid": 50050366,
+        "goods_id": "749339470617",
+        "resolution": "auto",
+        "from_cid": 50010159,
+        "from_category": "卫衣",
+        "to_cid": 50050366,
+        "to_category": "手机数据线"
+      }
     },
     "hs_mapping": {
       "category_id": 50050366,
@@ -61543,7 +64142,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:29.960Z",
+    "mapping_mapped_at": "2026-07-11T13:33:24.907Z",
     "detail_enriched_at": "2026-07-09T15:11:19.261Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -62585,7 +65184,7 @@
     "linked_ord_lines": [
       "TI26070000081"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "减震",
     "category": "减震",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -62625,8 +65224,22 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:20:44.010Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:32:28.095Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:32:28.164Z",
+        "item_nos": [
+          "TI26070000081"
+        ],
+        "cid": 50014564,
+        "goods_id": "890876810068",
+        "resolution": "auto",
+        "from_cid": null,
+        "from_category": null,
+        "to_cid": 50014564,
+        "to_category": "减震"
+      }
     },
     "hs_mapping": {
       "category_id": 50014564,
@@ -62638,7 +65251,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:20:44.010Z",
+    "mapping_mapped_at": "2026-07-11T13:32:28.095Z",
     "detail_enriched_at": "2026-07-09T15:11:20.027Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -65212,8 +67825,8 @@
       "TI26070000080",
       "TI26070000085"
     ],
-    "platform_category_hint": "其它",
-    "category": "拉链",
+    "platform_category_hint": "拉链",
+    "category": "运动卫衣/套头衫",
     "category_status": "auto_passed",
     "tier_prices": [
       {
@@ -65241,31 +67854,49 @@
     "mapping_record": {
       "match_detail": "1688 offer 994043247112 已有本地映射",
       "match_method": "local_item_mapped",
-      "suggested_category_path": "拉链 / 拉链 · HS 9607110000",
+      "suggested_category_path": "运动卫衣/套头衫 / 卫衣 · HS 6110200090",
       "suggested_hs": {
-        "category_id": 50005030,
-        "category_cn_name": "拉链",
-        "category_en_name": "Zipper",
-        "hs_code": "9607110000",
-        "declare_cn_name": "拉链",
-        "declare_en_name": "Zipper",
-        "tariff": null
+        "category_id": 125694003,
+        "category_cn_name": "运动卫衣/套头衫",
+        "category_en_name": "Sports sweatshirt/pullover",
+        "hs_code": "6110200090",
+        "declare_cn_name": "卫衣",
+        "declare_en_name": "Sweater",
+        "tariff": 6103410000
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:20:28.138Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T14:28:32.625Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T14:28:32.717Z",
+        "item_nos": [
+          "TI26070000086",
+          "TI26070000084",
+          "TI26070000083",
+          "TI26070000080",
+          "TI26070000085"
+        ],
+        "cid": 125694003,
+        "goods_id": "994043247112",
+        "resolution": "auto",
+        "from_cid": 50005030,
+        "from_category": "拉链",
+        "to_cid": 125694003,
+        "to_category": "运动卫衣/套头衫"
+      }
     },
     "hs_mapping": {
-      "category_id": 50005030,
-      "category_cn_name": "拉链",
-      "category_en_name": "Zipper",
-      "hs_code": "9607110000",
-      "declare_cn_name": "拉链",
-      "declare_en_name": "Zipper",
-      "tariff": null
+      "category_id": 125694003,
+      "category_cn_name": "运动卫衣/套头衫",
+      "category_en_name": "Sports sweatshirt/pullover",
+      "hs_code": "6110200090",
+      "declare_cn_name": "卫衣",
+      "declare_en_name": "Sweater",
+      "tariff": 6103410000
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:20:28.138Z",
+    "mapping_mapped_at": "2026-07-11T14:28:32.625Z",
     "detail_enriched_at": "2026-07-08T15:01:29.864Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -66803,7 +69434,7 @@
       "TI26060000093",
       "TI26060000092"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "斜挎包",
     "category": "斜挎包",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -66859,8 +69490,25 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:20:12.485Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:31:56.853Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:31:56.984Z",
+        "item_nos": [
+          "TI26070000089",
+          "TI26070000088",
+          "TI26060000093",
+          "TI26060000092"
+        ],
+        "cid": 1000008623,
+        "goods_id": "848959297498",
+        "resolution": "auto",
+        "from_cid": null,
+        "from_category": null,
+        "to_cid": 1000008623,
+        "to_category": "斜挎包"
+      }
     },
     "hs_mapping": {
       "category_id": 1000008623,
@@ -66872,7 +69520,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:20:12.485Z",
+    "mapping_mapped_at": "2026-07-11T13:31:56.853Z",
     "detail_enriched_at": "2026-07-08T15:01:29.748Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -66980,7 +69628,7 @@
       "TI26060000137",
       "TI26060000133"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "运动鞋",
     "category": "板鞋/休闲鞋",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -67211,7 +69859,8 @@
     "source": "order",
     "in_store": false,
     "linked_ord_lines": [
-      "TI26070000091"
+      "TI26070000091",
+      "TI26070000146"
     ],
     "platform_category_hint": "卫衣",
     "category": "卫衣",
@@ -67437,7 +70086,7 @@
       "TI26070000094",
       "TI26070000087"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "女鞋",
     "category": "女鞋",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -67477,8 +70126,23 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:20:27.934Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-10T06:39:13.349Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-10T06:39:13.489Z",
+        "item_nos": [
+          "TI26070000094",
+          "TI26070000087"
+        ],
+        "cid": 50025431,
+        "goods_id": "872398451504",
+        "resolution": "auto",
+        "from_cid": 1205,
+        "from_category": "耳机/耳麦",
+        "to_cid": 50025431,
+        "to_category": "女鞋"
+      }
     },
     "hs_mapping": {
       "category_id": 50025431,
@@ -67490,7 +70154,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:20:27.934Z",
+    "mapping_mapped_at": "2026-07-10T06:39:13.349Z",
     "detail_enriched_at": "2026-07-08T15:01:29.638Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -67765,7 +70429,7 @@
       "TI26070000095"
     ],
     "platform_category_hint": "卫衣",
-    "category": "户外运动/休闲/传统玩具",
+    "category": "单肩包",
     "category_status": "auto_passed",
     "tier_prices": [
       {
@@ -67807,33 +70471,331 @@
     "source_product_id": "818761121687",
     "enrichment_status": "matched",
     "mapping_record": {
-      "match_detail": "1688 offer 818761121687 已有本地映射",
-      "match_method": "local_item_mapped",
-      "suggested_category_path": "户外运动/休闲/传统玩具 / 益智玩具 · HS 9503008900",
+      "match_detail": "标题明确提及为胸包，且图片展示的产品形态符合胸包/单肩包的特征。",
+      "match_method": "image_vl_rerank",
+      "suggested_category_path": "单肩包 / 单肩包 · HS 4202920000",
       "suggested_hs": {
-        "category_id": 2512,
-        "category_cn_name": "户外运动/休闲/传统玩具",
-        "category_en_name": "Outdoor Sports/Leisure/Traditional Toys",
-        "hs_code": "9503008900",
-        "declare_cn_name": "益智玩具",
-        "declare_en_name": "Souptoys",
+        "category_id": 121424021,
+        "category_cn_name": "单肩包",
+        "category_en_name": "Shoulder bag",
+        "hs_code": "4202920000",
+        "declare_cn_name": "单肩包",
+        "declare_en_name": "Shoulder bag",
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:20:26.407Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T14:14:44.556Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T14:14:44.639Z",
+        "item_nos": [
+          "TI26070000095"
+        ],
+        "cid": 121424021,
+        "goods_id": "818761121687",
+        "resolution": "auto",
+        "from_cid": 2512,
+        "from_category": "户外运动/休闲/传统玩具",
+        "to_cid": 121424021,
+        "to_category": "单肩包"
+      },
+      "decision": "semantic_agreement",
+      "history_hit": false,
+      "agent_confidence": 0.9,
+      "semantic_candidates": [
+        {
+          "rank": 1,
+          "label": "户外运动",
+          "category_id": 2512,
+          "category_cn_name": "户外运动/休闲/传统玩具",
+          "category_en_name": "Outdoor Sports/Leisure/Traditional Toys",
+          "hs_code": "9503008900",
+          "declare_cn_name": "益智玩具",
+          "declare_en_name": "Souptoys",
+          "score": 0.568,
+          "confidence": 0.579,
+          "kind": "specific",
+          "dimensions": {
+            "term_match": 1,
+            "term_frequency": 0.45,
+            "label_fit": 0.92,
+            "catalog_fit": 0.118,
+            "term_specificity": 1,
+            "vision": 0,
+            "hint": 0,
+            "specificity": 1,
+            "feedback": 0
+          },
+          "matched_keywords": [
+            "户外运动"
+          ],
+          "sources": [
+            "title"
+          ]
+        },
+        {
+          "rank": 2,
+          "label": "单肩包",
+          "category_id": 121424021,
+          "category_cn_name": "单肩包",
+          "category_en_name": "Shoulder bag",
+          "hs_code": "4202920000",
+          "declare_cn_name": "单肩包",
+          "declare_en_name": "Shoulder bag",
+          "score": 0.829,
+          "confidence": 0.563,
+          "kind": "specific",
+          "dimensions": {
+            "term_match": 0.65,
+            "term_frequency": 0,
+            "label_fit": 1,
+            "catalog_fit": 0.029,
+            "term_specificity": 0.72,
+            "vision": 1,
+            "hint": 0,
+            "specificity": 1,
+            "feedback": 0
+          },
+          "matched_keywords": [
+            "单肩包"
+          ],
+          "sources": [
+            "vision"
+          ]
+        },
+        {
+          "rank": 3,
+          "label": "胸包",
+          "category_id": 201241402,
+          "category_cn_name": "胸包",
+          "category_en_name": "Chest bag",
+          "hs_code": "nan",
+          "declare_cn_name": "nan",
+          "declare_en_name": "nan",
+          "score": 0.373,
+          "confidence": 0.9,
+          "kind": "specific",
+          "dimensions": {
+            "term_match": 1,
+            "term_frequency": 0.45,
+            "label_fit": 0.55,
+            "catalog_fit": 0.01,
+            "term_specificity": 0.72,
+            "vision": 1,
+            "hint": 0,
+            "specificity": 1,
+            "feedback": 0
+          },
+          "matched_keywords": [
+            "胸包"
+          ],
+          "sources": [
+            "title",
+            "vision"
+          ],
+          "reason": "标题明确提及为胸包，且图片展示的产品形态符合胸包/单肩包的特征。"
+        }
+      ],
+      "signal_scores": {
+        "title": 0.688,
+        "platform_category": 0,
+        "history": 0,
+        "image": 0.88,
+        "fused": 0.579
+      },
+      "matched_keywords": [
+        "户外运动",
+        "单肩包",
+        "背包",
+        "胸包",
+        "旅行包"
+      ],
+      "vision_summary": "灰色与黑色织物材质单肩背包，带背带，用于户外运动。",
+      "title_image_agreement_keywords": [
+        "胸包"
+      ],
+      "vision_keywords": [
+        "单肩包",
+        "背包",
+        "单肩包",
+        "胸包",
+        "旅行包"
+      ],
+      "skip_fusion": false,
+      "match_candidates": [
+        {
+          "label": "户外运动",
+          "category_id": 2512,
+          "category_cn_name": "户外运动/休闲/传统玩具",
+          "category_en_name": "Outdoor Sports/Leisure/Traditional Toys",
+          "hs_code": "9503008900",
+          "declare_cn_name": "益智玩具",
+          "declare_en_name": "Souptoys",
+          "score": 0.568,
+          "confidence": 0.579,
+          "dimensions": {
+            "term_match": 1,
+            "term_frequency": 0.45,
+            "label_fit": 0.92,
+            "catalog_fit": 0.118,
+            "term_specificity": 1,
+            "vision": 0,
+            "hint": 0,
+            "specificity": 1,
+            "feedback": 0
+          },
+          "kind": "specific",
+          "is_attribute": false,
+          "is_generic": false,
+          "matched_keywords": [
+            "户外运动"
+          ],
+          "sources": [
+            "title"
+          ],
+          "rank": 1
+        },
+        {
+          "label": "胸包",
+          "category_id": 201241402,
+          "category_cn_name": "胸包",
+          "category_en_name": "Chest bag",
+          "hs_code": "nan",
+          "declare_cn_name": "nan",
+          "declare_en_name": "nan",
+          "score": 0.373,
+          "confidence": 0.572,
+          "dimensions": {
+            "term_match": 1,
+            "term_frequency": 0.45,
+            "label_fit": 0.55,
+            "catalog_fit": 0.01,
+            "term_specificity": 0.72,
+            "vision": 1,
+            "hint": 0,
+            "specificity": 1,
+            "feedback": 0
+          },
+          "kind": "specific",
+          "is_attribute": false,
+          "is_generic": false,
+          "matched_keywords": [
+            "胸包"
+          ],
+          "sources": [
+            "title",
+            "vision"
+          ],
+          "reason": "该候选类目缺少有效 HS 编码，已降权",
+          "rank": 2
+        },
+        {
+          "label": "单肩包",
+          "category_id": 121424021,
+          "category_cn_name": "单肩包",
+          "category_en_name": "Shoulder bag",
+          "hs_code": "4202920000",
+          "declare_cn_name": "单肩包",
+          "declare_en_name": "Shoulder bag",
+          "score": 0.829,
+          "confidence": 0.563,
+          "dimensions": {
+            "term_match": 0.65,
+            "term_frequency": 0,
+            "label_fit": 1,
+            "catalog_fit": 0.029,
+            "term_specificity": 0.72,
+            "vision": 1,
+            "hint": 0,
+            "specificity": 1,
+            "feedback": 0
+          },
+          "kind": "specific",
+          "is_attribute": false,
+          "is_generic": false,
+          "matched_keywords": [
+            "单肩包"
+          ],
+          "sources": [
+            "vision"
+          ],
+          "rank": 3
+        }
+      ],
+      "checks": [
+        {
+          "key": "hs_code_valid",
+          "label": "海关编码有效",
+          "passed": true,
+          "detail": "HS 9503008900",
+          "source": "rule"
+        },
+        {
+          "key": "title_keyword",
+          "label": "标题意图匹配",
+          "passed": false,
+          "detail": "Agent 首选「胸包→胸包」（90%），与当前推荐分离明显",
+          "source": "agent"
+        },
+        {
+          "key": "platform_consistency",
+          "label": "与平台类目一致",
+          "passed": false,
+          "detail": "Agent 首选「胸包→胸包」（90%），与当前推荐分离明显",
+          "source": "agent"
+        },
+        {
+          "key": "evidence_sufficient",
+          "label": "标题/识图证据",
+          "passed": true,
+          "detail": "标题或识图有足够证据",
+          "source": "agent"
+        },
+        {
+          "key": "tree_level",
+          "label": "品类与下单路径不冲突",
+          "passed": true,
+          "detail": "下单 卫衣 ↔ 建议 户外运动/休闲/传统玩具",
+          "source": "rule"
+        },
+        {
+          "key": "history",
+          "label": "历史映射可参考",
+          "passed": true,
+          "detail": "内部分类编号 2512，可与历史表对照",
+          "source": "agent"
+        },
+        {
+          "key": "restricted",
+          "label": "非禁运受限品类",
+          "passed": true,
+          "detail": "禁运/管制品类拦截",
+          "source": "rule"
+        },
+        {
+          "key": "declare_fields",
+          "label": "申报中英文字段齐全",
+          "passed": true,
+          "detail": "报关用中英描述需完整",
+          "source": "rule"
+        }
+      ],
+      "auto_resolved": false,
+      "mapped_at": "2026-07-11T14:03:31.303Z",
+      "suggested_category_id": "2512"
     },
     "hs_mapping": {
-      "category_id": 2512,
-      "category_cn_name": "户外运动/休闲/传统玩具",
-      "category_en_name": "Outdoor Sports/Leisure/Traditional Toys",
-      "hs_code": "9503008900",
-      "declare_cn_name": "益智玩具",
-      "declare_en_name": "Souptoys",
+      "category_id": 121424021,
+      "category_cn_name": "单肩包",
+      "category_en_name": "Shoulder bag",
+      "hs_code": "4202920000",
+      "declare_cn_name": "单肩包",
+      "declare_en_name": "Shoulder bag",
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:20:26.407Z",
+    "mapping_mapped_at": "2026-07-11T14:14:44.556Z",
     "detail_enriched_at": "2026-07-08T15:01:29.750Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -67932,7 +70894,162 @@
       "composite_score": null
     },
     "shipping_quoted_at": "2026-07-08T15:01:29.750Z",
-    "tang_item_url": "https://www.tangbuy.cc/product?dataSource=PREFERRED&id=72895280087056"
+    "tang_item_url": "https://www.tangbuy.cc/product?dataSource=PREFERRED&id=72895280087056",
+    "alt_supplier_scan_status": "done",
+    "alt_supplier_scan_refresh": false,
+    "alt_search_query": "男士斜跨胸包 大容量运动包",
+    "alt_search_subject": "斜跨胸包",
+    "alt_search_category_hint": "包包",
+    "alt_search_hard_exclude": [
+      "卫衣",
+      "玩具"
+    ],
+    "alt_search_query_meta": {
+      "confidence": 0.95,
+      "reason": "标题核心销售主体为胸包/斜跨包，类目标签存在误判，以标题主体为准",
+      "source": "llm"
+    },
+    "alternative_suppliers": [
+      {
+        "offer_id": "742285156673",
+        "title": "防水耐磨男士胸包牛津布单肩斜挎小背包三层大容量斜跨包胸前",
+        "shop_name": "保定品牛箱包制造有限公司",
+        "detail_url": "https://detail.1688.com/offer/742285156673.html?&object_id=742285156673",
+        "image_url": "https://cbu01.alicdn.com/img/ibank/O1CN019NNNoN1p3kBJe9BWz_!!2201244105305-0-cib.jpg",
+        "unit_price": 6.44,
+        "shipping": null,
+        "total_cost": 6.44,
+        "shipping_to_city": "广东惠州市",
+        "similarity_pct": 98.4,
+        "composite_score": 86.4,
+        "yx_index": 4.2,
+        "sold_count": 2000,
+        "sku_id": "5164922033800",
+        "sku_title": "双层黑色",
+        "cate_id": null,
+        "industry_name": null,
+        "min_order_qty": 1,
+        "inventory": 10926,
+        "stock_status": "in_stock",
+        "selling_points": [
+          {
+            "type": "industryCPV",
+            "value": "牛津布"
+          },
+          {
+            "type": "industryCPV",
+            "value": "耐磨"
+          },
+          {
+            "type": "industryCPV",
+            "value": "涤纶"
+          }
+        ],
+        "service_tags": null,
+        "offer_tags": null,
+        "labels": [
+          "价格更低",
+          "销量较高",
+          "建议换供"
+        ],
+        "ranked_at": "2026-07-10T08:42:17.821Z"
+      },
+      {
+        "offer_id": "668559060476",
+        "title": "【】多层多口袋大容量男士胸包帆布耐磨斜跨胸前包斜挎轻便",
+        "shop_name": "保定煌雷箱包制造有限公司",
+        "detail_url": "https://detail.1688.com/offer/668559060476.html?&object_id=668559060476",
+        "image_url": "https://cbu01.alicdn.com/img/ibank/O1CN01Q1PtLq1cFZ538ctrH_!!2211097423571-0-cib.jpg",
+        "unit_price": 9.0,
+        "shipping": null,
+        "total_cost": 9.0,
+        "shipping_to_city": "广东惠州市",
+        "similarity_pct": 96.8,
+        "composite_score": 83.0,
+        "yx_index": 4.65,
+        "sold_count": 500,
+        "sku_id": "4985962586511",
+        "sku_title": "黑色",
+        "cate_id": null,
+        "industry_name": null,
+        "min_order_qty": 1,
+        "inventory": 170122,
+        "stock_status": "in_stock",
+        "selling_points": [
+          {
+            "type": "industryCPV",
+            "value": "耐磨"
+          },
+          {
+            "type": "industryCPV",
+            "value": "涤纶"
+          },
+          {
+            "type": "industryCPV",
+            "value": "车缝线"
+          }
+        ],
+        "service_tags": null,
+        "offer_tags": null,
+        "labels": [
+          "价格更低",
+          "销量较高",
+          "建议换供"
+        ],
+        "ranked_at": "2026-07-10T08:42:17.822Z"
+      },
+      {
+        "offer_id": "985390470762",
+        "title": "户外骑行运动斜跨包男多功能多层大容量胸包便携时尚通勤潮流腰包",
+        "shop_name": "高碑店市新城佰迈箱包厂(个体工商户)",
+        "detail_url": "https://detail.1688.com/offer/985390470762.html?&object_id=985390470762",
+        "image_url": "https://cbu01.alicdn.com/img/ibank/O1CN01tYxsad1h5Ys4Eh3Iy_!!2220929814226-0-cib.jpg",
+        "unit_price": 16.0,
+        "shipping": null,
+        "total_cost": 16.0,
+        "shipping_to_city": "广东惠州市",
+        "similarity_pct": 95.7,
+        "composite_score": 81.1,
+        "yx_index": 4.07,
+        "sold_count": 3000,
+        "sku_id": "5947895752624",
+        "sku_title": "黑色",
+        "cate_id": null,
+        "industry_name": null,
+        "min_order_qty": 1,
+        "inventory": 37460,
+        "stock_status": "in_stock",
+        "selling_points": [
+          {
+            "type": "industryCPV",
+            "value": "透气"
+          },
+          {
+            "type": "industryCPV",
+            "value": "涤纶"
+          },
+          {
+            "type": "industryCPV",
+            "value": "字母"
+          }
+        ],
+        "service_tags": null,
+        "offer_tags": null,
+        "labels": [
+          "价格更低",
+          "销量较高",
+          "建议换供"
+        ],
+        "ranked_at": "2026-07-10T08:42:17.822Z"
+      }
+    ],
+    "alt_supplier_blocked_ids": [
+      "742285156673",
+      "668559060476",
+      "985390470762"
+    ],
+    "alt_supplier_scanned_at": "2026-07-10T08:42:18.008Z",
+    "alt_supplier_scan_error": null
   },
   {
     "tangbuy_product_id": "204050788139040",
@@ -68609,7 +71726,7 @@
     "linked_ord_lines": [
       "TI26070000042"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "桌布",
     "category": "桌布",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -68649,8 +71766,22 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:20:56.724Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:33:10.139Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:33:10.215Z",
+        "item_nos": [
+          "TI26070000042"
+        ],
+        "cid": 121458013,
+        "goods_id": "741167714703",
+        "resolution": "auto",
+        "from_cid": 302910,
+        "from_category": "帽子",
+        "to_cid": 121458013,
+        "to_category": "桌布"
+      }
     },
     "hs_mapping": {
       "category_id": 121458013,
@@ -68662,7 +71793,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:20:56.724Z",
+    "mapping_mapped_at": "2026-07-11T13:33:10.139Z",
     "alt_supplier_scan_status": "done",
     "alternative_suppliers": [
       {
@@ -69669,9 +72800,14 @@
       "TI26060000073",
       "TI26060000074",
       "TI26060000052",
-      "TI26050000350"
+      "TI26050000350",
+      "TI26050000338",
+      "TI26050000257",
+      "TI26050000258",
+      "TI26050000195",
+      "TI26070000159"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "上衣",
     "category": "上衣",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -69727,8 +72863,71 @@
         "tariff": null
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:16.749Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:33:45.367Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:33:45.677Z",
+        "item_nos": [
+          "TI26070000044",
+          "TI26070000093",
+          "TI26050000328",
+          "TI26050000279",
+          "TI26050000277",
+          "TI26050000278",
+          "TI26050000280",
+          "TI26050000263",
+          "TI26050000256",
+          "TI26050000249",
+          "TI26050000242",
+          "TI26050000243",
+          "TI26050000190",
+          "TI26050000191",
+          "TI26050000246",
+          "TI26050000247",
+          "TI26050000226",
+          "TI26050000227",
+          "TI26050000228",
+          "TI26050000193",
+          "TI26050000194",
+          "TI26050000196",
+          "TI26050000197",
+          "TI26050000154",
+          "TI26050000153",
+          "TI26070000045",
+          "TI26070000092",
+          "TI26070000048",
+          "TI26070000047",
+          "TI26050000344",
+          "TI26050000340",
+          "TI26050000337",
+          "TI26050000332",
+          "TI26050000189",
+          "TI26050000223",
+          "TI26050000214",
+          "TI26060000116",
+          "TI26060000115",
+          "TI26060000097",
+          "TI26060000083",
+          "TI26060000082",
+          "TI26060000081",
+          "TI26060000073",
+          "TI26060000074",
+          "TI26060000052",
+          "TI26050000350",
+          "TI26050000338",
+          "TI26050000257",
+          "TI26050000258",
+          "TI26050000195"
+        ],
+        "cid": 50003509,
+        "goods_id": "1047334602315",
+        "resolution": "auto",
+        "from_cid": 50003509,
+        "from_category": "上衣",
+        "to_cid": 50003509,
+        "to_category": "上衣"
+      }
     },
     "hs_mapping": {
       "category_id": 50003509,
@@ -69740,7 +72939,7 @@
       "tariff": null
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:16.749Z",
+    "mapping_mapped_at": "2026-07-11T13:33:45.367Z",
     "detail_enriched_at": "2026-07-08T15:01:28.981Z",
     "detail_source": "tangbuy",
     "shipping_to_city": "广东惠州市",
@@ -70354,7 +73553,7 @@
       "TI26060000148",
       "TI26060000147"
     ],
-    "platform_category_hint": "其它",
+    "platform_category_hint": "运动裤",
     "category": "运动裤",
     "category_status": "auto_passed",
     "tier_prices": [
@@ -70393,8 +73592,44 @@
         "tariff": 6103410000.0
       },
       "review_status": "confirmed",
-      "reviewed_at": "2026-07-09T15:22:49.323Z",
-      "reviewer_note": null
+      "reviewed_at": "2026-07-11T13:32:36.842Z",
+      "reviewer_note": null,
+      "admin_writeback": {
+        "status": "ok",
+        "at": "2026-07-11T13:32:36.942Z",
+        "item_nos": [
+          "TI26070000057",
+          "TI26070000054",
+          "TI26070000050",
+          "TI26070000049",
+          "TI26070000059",
+          "TI26070000058",
+          "TI26070000056",
+          "TI26040000154",
+          "TI26070000069",
+          "TI26070000070",
+          "TI26070000071",
+          "TI26070000072",
+          "TI26070000064",
+          "TI26070000065",
+          "TI26070000066",
+          "TI26070000067",
+          "TI26070000068",
+          "TI26070000060",
+          "TI26070000061",
+          "TI26070000003",
+          "TI26060000149",
+          "TI26060000148",
+          "TI26060000147"
+        ],
+        "cid": 50023105,
+        "goods_id": "800451575891",
+        "resolution": "auto",
+        "from_cid": 50010159,
+        "from_category": "卫衣",
+        "to_cid": 50023105,
+        "to_category": "运动裤"
+      }
     },
     "hs_mapping": {
       "category_id": 50023105,
@@ -70406,7 +73641,7 @@
       "tariff": 6103410000.0
     },
     "mapping_confidence": 0.9,
-    "mapping_mapped_at": "2026-07-09T15:22:49.323Z",
+    "mapping_mapped_at": "2026-07-11T13:32:36.842Z",
     "enrichment_status": "matched",
     "detail_enriched_at": "2026-07-08T15:01:28.983Z",
     "detail_source": "tangbuy",

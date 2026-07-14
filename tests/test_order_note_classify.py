@@ -45,3 +45,11 @@ def test_high_value_size_change_es():
 def test_empty_note():
     r = classify_order_note("")
     assert r.tier == "none"
+
+
+def test_high_value_actual_buy_pink():
+    r = classify_order_note("实际采购粉色", item_attr="颜色:黑色", allow_llm=False)
+    assert r.tier == "high"
+    assert r.block_procurement is True
+    assert "color_change" in r.topics
+    assert r.signal_type == "SKU_MISMATCH"

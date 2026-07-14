@@ -16,6 +16,15 @@ QUEUE_GOODS_STATUS: dict[str, int] = {
     "reverse": 24,
 }
 
+# 同一作业队列在 Admin 侧可能分散多个 goodsStatus（增量要并集拉）
+QUEUE_GOODS_STATUS_BUCKETS: dict[str, tuple[int, ...]] = {
+    # 5 已发货 / 6 分开发货 / 8 已签收 — 都算 shipped，否则已签收进不了增量
+    "shipped": (5, 6, 8),
+    "in_warehouse": (9, 10, 28, 29, 37, 58),
+    "dispatched": (30, 31),
+    "pending_payment": (-2, -1, 2, 55),
+}
+
 QUEUE_ORDER_STATUS: dict[str, int] = {
     "pending_procurement": 2,
     "pending_payment": 2,

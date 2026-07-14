@@ -43,8 +43,8 @@ def summarize_sku_admin_error(msg: str) -> str:
 def summarize_admin_blocker_detail(key: str, label: str, msg: str) -> str:
     if key == "ADMIN_SKU" or label == "规格不符":
         return summarize_sku_admin_error(msg)
-    if key == "ADMIN_STOCK" or label == "库存不足":
-        return "货源库存不足，请换供或联系卖家"
+    if key == "ADMIN_STOCK" or label in ("库存不足", "疑似缺货"):
+        return "货源疑似下架或缺货，请换供或联系卖家"
     if key == "ADMIN_MOQ" or label == "起批量不满足":
         return "未满足卖家起批量"
     if key == "ADMIN_MARGIN" or "毛利" in label:

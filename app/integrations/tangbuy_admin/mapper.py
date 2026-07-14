@@ -117,7 +117,13 @@ def map_admin_line(order: dict[str, Any], item: dict[str, Any]) -> dict[str, Any
     destination = _first_text(order.get("destination"))
     destination_id = order.get("destinationId")
 
-    return {
+    express_no = _first_text(item.get("expressNo"), item.get("express_no"))
+    express_nm = _first_text(item.get("express"), item.get("expressName"), item.get("express_nm"))
+    purchase_no = _first_text(item.get("purchaseNo"), item.get("purchase_no"))
+    purchase_time = item.get("purchaseTime") or item.get("purchase_time")
+    sign_time = item.get("signedTime") or item.get("signTime") or item.get("signed_time")
+
+    out = {
         "ord_line_no": item.get("itemNo"),
         "ord_no": order.get("orderNo"),
         "out_ord_no": order.get("pluginOrderId"),
@@ -208,6 +214,18 @@ def map_admin_line(order: dict[str, Any], item: dict[str, Any]) -> dict[str, Any
         "_store_source": order.get("storeSource"),
         "_plugin_store_platform": ord_ext.get("dataSource") or item.get("dataSource"),
     }
+    if purchase_time:
+        out["pur_time"] = purchase_time
+    if purchase_no:
+        out["pur_no"] = purchase_no
+    if sign_time:
+        out["sign_time"] = sign_time
+    if express_no:
+        out["exprs_no"] = express_no
+        out["is_exprs_dlyd"] = 1
+    if express_nm:
+        out["exprs_nm"] = express_nm
+    return out
 
 
 def flatten_admin_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:

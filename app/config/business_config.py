@@ -26,8 +26,8 @@ DEFAULT_BUSINESS_CONFIG: dict[str, Any] = {
     "auto_accept_orders_enabled": True,
     # True=每次进入指挥中心重新生成简报；False=10 分钟内用缓存
     "briefing_always_refresh": True,
-    # 演示/接库前：写操作失败时按成功返回，避免 UI 卡在提交中
-    "demo_submit_always_success": True,
+    # 演示用：失败当成功。生产必须 false
+    "demo_submit_always_success": False,
 }
 
 RULE_KEYS = (

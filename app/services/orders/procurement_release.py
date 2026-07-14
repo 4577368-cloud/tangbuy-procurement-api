@@ -264,6 +264,37 @@ def _blocker(
     }
 
 
+def note_cleared_for_procurement(row: dict[str, Any], acked: set[str]) -> bool:
+    """规格/颜色类备注：仅 NOTE_HANDLED（或显式 flag）可放行；「已知晓」不算。"""
+    if not bool(row.get("note_block_procurement")):
+        return True
+    if bool(row.get("note_procurement_cleared")):
+        return True
+    if "NOTE_HANDLED" in acked:
+        return True
+    topics = row.get("note_topics") if isinstance(row.get("note_topics"), list) else []
+    signal = str(row.get("note_signal_type") or "")
+    tier = str(row.get("note_tier") or "").lower()
+    spec_note = (
+        tier == "high"
+        or signal in ("SKU_MISMATCH", "NOTE_REVIEW")
+        or any(
+            t in topics
+            for t in (
+                "color_change",
+                "size_change",
+                "spec_change",
+                "quantity_change",
+                "custom_request",
+            )
+        )
+    )
+    # 兼容旧 ack：仅非规格类备注仍可用 NOTE_BLOCK
+    if not spec_note and "NOTE_BLOCK" in acked:
+        return True
+    return False
+
+
 def evaluate_prepare_stage(
     row: dict[str, Any],
     *,
@@ -272,8 +303,11 @@ def evaluate_prepare_stage(
 ) -> dict[str, Any]:
     """处理中阶段拦截：品类、备注、渠道、关键字段；不拦毛利/MOQ/库存。"""
     from app.services.orders import pipeline_store
+    from app.services.orders.order_note_classify import enrich_row_note_fields
 
     cfg = normalize_business_config(config or get_business_config())
+    # 闸门前强制刷新备注分级（缓存行可能滞后于同步路径 allow_llm=False）
+    row = enrich_row_note_fields(dict(row), allow_llm=True)
     product = product if product is not None else find_product_for_ord_line(row)
     blockers: list[dict[str, Any]] = []
     conditions: list[dict[str, Any]] = []
@@ -304,17 +338,16 @@ def evaluate_prepare_stage(
     note_block = bool(row.get("note_block_procurement"))
     note_tier = str(row.get("note_tier") or "").lower()
     note_detail = str(row.get("note_classify_reason") or row.get("usr_rmk") or "备注需人工核对")
-    note_ok = not note_block or "NOTE_BLOCK" in acked
+    note_ok = note_cleared_for_procurement(row, acked)
     conditions.append(_condition("price_note", "备注已处理", note_ok, note_detail if note_block else "无阻塞备注"))
-    if note_block and "NOTE_BLOCK" not in acked:
-        requires_ack = note_tier in ("high", "block") or note_tier != "low"
+    if note_block and not note_ok:
         blockers.append(
             _blocker(
                 "NOTE_BLOCK",
                 "备注待核",
                 "prepare",
-                requires_ack=requires_ack,
-                auto_resolvable=note_tier == "low",
+                requires_ack=True,
+                auto_resolvable=False,
                 detail=note_detail,
             )
         )
@@ -337,7 +370,12 @@ def evaluate_prepare_stage(
     if not fields_ok:
         blockers.append(_blocker("FIELDS", "关键字段不完整", "prepare", detail=f"应付 {format_currency(payable)}"))
 
-    active_blockers = [b for b in blockers if b["key"] not in acked]
+    active_blockers = [
+        b
+        for b in blockers
+        if (b["key"] == "NOTE_BLOCK" and not note_ok)
+        or (b["key"] != "NOTE_BLOCK" and b["key"] not in acked)
+    ]
     return {
         "conditions": conditions,
         "blockers": active_blockers,

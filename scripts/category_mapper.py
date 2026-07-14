@@ -23,6 +23,7 @@ from category_heuristics import (
     generic_parent_terms,
     label_fit_adjustment,
     load_learned_anchor_penalties,
+    lookup_history_conventions_for_text,
     seed_domain_multiplier,
     term_catalog_extension_mismatch,
     term_catalog_extension_penalty,
@@ -54,6 +55,13 @@ GEOGRAPHIC_REGION_TERMS = {
     "非洲", "欧洲", "亚洲", "美洲", "大洋洲", "北欧", "南美", "北美", "东亚", "西欧",
     "东南亚", "中东", "日式", "韩式", "欧美", "法式", "英式", "美式", "中式", "港风",
     "非洲风", "波西米亚",
+}
+
+# 主题/系列修饰：标题里常作氛围词，会误撞同名词类目（如「海洋系列吊坠」→ 海洋·教育书）
+THEME_SERIES_TERMS = {
+    "海洋", "星空", "宇宙", "梦幻", "童话", "森系", "田园", "复古风", "民族风",
+    "卡通", "动漫", "宫廷", "欧式", "北欧风", "热带", "沙滩", "海边", "雪地",
+    "圣诞", "节日", "节日系", "海洋系", "星空系",
 }
 
 # 包袋类商品名词（长词优先匹配，避免「肩胸包斜跨包」整段误识别）
@@ -157,6 +165,11 @@ TITLE_SEMANTIC_NOISE = {
     "婴童",
     "成人",
     "学生",
+    # 系列/版型修饰，不是申报品类
+    "系列",
+    "混装",
+    "工厂",
+    "直销",
 }
 
 # 人群/受众词：出现在标题里但不是商品品类（如「孕妇款长袜」里的孕妇）
@@ -168,6 +181,12 @@ AUDIENCE_DESCRIPTOR_TERMS = {
 # 动物词：单独出现不是商品（羊绒袜里的「羊绒/羊羔绒」另当别论）
 ANIMAL_DESCRIPTOR_TERMS = {
     "羊羔", "羔羊", "小羊", "种羊", "活羊", "山羊", "绵羊", "牛犊", "仔猪", "雏鸡",
+}
+
+# 饰品/配件主商品词（避免「项链手链挂件」整段被当成单个主词）
+JEWELRY_PRODUCT_TERMS = {
+    "项链", "手链", "脚链", "挂件", "吊坠", "饰品", "饰品配件", "配饰",
+    "耳环", "耳钉", "耳坠", "手镯", "戒指", "胸针", "吊饰", "珠串",
 }
 
 # 英文标题 → 中文商品词干（用于频次统计）
@@ -267,6 +286,9 @@ def dominant_product_signals(title: str, hint: str = "") -> list[tuple[str, int]
     blob = title or ""
     for noun in extract_product_nouns(blob):
         counts[noun] = counts.get(noun, 0) + blob.count(noun)
+    for noun in sorted(JEWELRY_PRODUCT_TERMS, key=len, reverse=True):
+        if noun in blob:
+            counts[noun] = counts.get(noun, 0) + blob.count(noun)
     for en, zh in EN_PRODUCT_NOUN_MAP.items():
         n = len(re.findall(rf"\b{en}\b", blob.lower()))
         if n:
@@ -417,6 +439,8 @@ def classify_term(term: str) -> str:
     if term in SCENE_DESCRIPTOR_TERMS:
         return "attribute"
     if term in GEOGRAPHIC_REGION_TERMS:
+        return "attribute"
+    if term in THEME_SERIES_TERMS:
         return "attribute"
     if term in AUDIENCE_DESCRIPTOR_TERMS or term in ANIMAL_DESCRIPTOR_TERMS:
         return "attribute"
@@ -703,6 +727,8 @@ def extract_title_semantics(title: str) -> list[str]:
                 continue
             if product_nouns and seg in GEOGRAPHIC_REGION_TERMS:
                 continue
+            if product_nouns and seg in THEME_SERIES_TERMS:
+                continue
             raw.append(seg)
 
     # 英文商品词补入（如 socks → 袜）
@@ -959,6 +985,19 @@ def rank_semantic_candidates(
         item["score"] = round(float(item["score"]) * 0.15, 3)
         item["reason"] = f"「{label}」为地域/风格修饰，非商品品类，已降权"
 
+    # 主题/系列氛围词降权（如「海洋系列」不是海洋·教育书）
+    for item in by_label.values():
+        label = str(item.get("label", ""))
+        if label not in THEME_SERIES_TERMS:
+            continue
+        dims = dict(item.get("dimensions") or {})
+        for key in ("term_match", "term_frequency", "label_fit", "catalog_fit", "specificity"):
+            dims[key] = round(float(dims.get(key, 0.0)) * 0.12, 3)
+        item["dimensions"] = dims
+        item["confidence"] = confidence_from_dimensions(dims)
+        item["score"] = round(float(item["score"]) * 0.12, 3)
+        item["reason"] = f"「{label}」为主题/系列修饰，非商品品类，已降权"
+
     pool = _primary_pool(list(by_label.values()), title)
     ranked = sorted(pool, key=lambda x: float(x.get("confidence") or 0), reverse=True)[:3]
     for item in ranked:
@@ -976,7 +1015,113 @@ def rank_semantic_candidates(
             item["score"] = round(float(item["score"]) * penalty, 3)
             item["reason"] = f"类目含领域词但标题未体现，已降权（×{penalty}）"
     ranked.sort(key=lambda x: float(x.get("confidence") or 0), reverse=True)
+    ranked = _apply_history_conventions(ranked[:3], title, vision_keywords, catalog)
     return _finalize_semantic_candidate_ranks(ranked[:3])
+
+
+def _apply_history_conventions(
+    ranked: list[dict],
+    title: str,
+    vision_keywords: list[str] | None,
+    catalog: dict,
+) -> list[dict]:
+    """历史订单惯例：注入常见 cid，并在接近时按惯例决胜。"""
+    hits = lookup_history_conventions_for_text(title, vision_keywords)
+    if not hits:
+        return ranked
+
+    by_cid = catalog.get("by_cid") or {}
+    pool = {str(c.get("category_id")): dict(c) for c in ranked}
+
+    for hit in hits:
+        cid = str(hit.get("category_id") or "")
+        if not cid:
+            continue
+        entry = by_cid.get(cid) or (by_cid.get(int(cid)) if cid.isdigit() else None) or {}
+        share = float(hit.get("share") or 0)
+        count = int(hit.get("count") or 0)
+        # 惯例加分：强惯例（dominant + share≥0.4）更明显
+        boost = 0.18 + share * 0.55
+        if hit.get("strength") == "dominant":
+            boost += 0.12
+        conf_boost = min(0.92, 0.55 + share * 0.4 + min(count, 40) / 200)
+
+        if cid in pool:
+            row = pool[cid]
+            row["score"] = round(float(row.get("score") or 0) + boost, 3)
+            row["confidence"] = round(
+                min(0.96, max(float(row.get("confidence") or 0), conf_boost) + boost * 0.15),
+                3,
+            )
+            row["sources"] = list(dict.fromkeys([*(row.get("sources") or []), "history"]))
+            dims = dict(row.get("dimensions") or {})
+            dims["history"] = round(share, 3)
+            row["dimensions"] = dims
+            reason = str(hit.get("summary") or "")
+            if reason:
+                prev = str(row.get("reason") or "")
+                row["reason"] = f"{prev}；{reason}" if prev and reason not in prev else (reason or prev)
+            row["history_convention"] = hit
+            continue
+
+        if not entry and not hit.get("category_cn_name"):
+            continue
+        cn = str(entry.get("cn_name") or hit.get("category_cn_name") or "")
+        dec = str(entry.get("dec_cn_name") or hit.get("declare_cn_name") or "")
+        hs = str(entry.get("hs_code") or hit.get("hs_code") or "")
+        if not valid_hs(hs) and hit.get("strength") != "dominant":
+            continue
+        pool[cid] = {
+            "label": hit.get("term") or cn,
+            "category_id": int(cid) if cid.isdigit() else cid,
+            "category_cn_name": cn,
+            "category_en_name": entry.get("en_name", ""),
+            "hs_code": hs,
+            "declare_cn_name": dec,
+            "declare_en_name": entry.get("dec_en_name", ""),
+            "score": round(0.55 + share * 0.5, 3),
+            "confidence": round(conf_boost, 3),
+            "dimensions": {
+                "term_match": 0.8,
+                "history": round(share, 3),
+                "label_fit": 0.7,
+                "catalog_fit": 0.6 if valid_hs(hs) else 0.2,
+                "specificity": 0.7,
+                "vision": 0.5 if vision_keywords else 0.0,
+            },
+            "kind": "specific",
+            "is_attribute": False,
+            "is_generic": False,
+            "matched_keywords": [hit.get("term")] if hit.get("term") else [],
+            "sources": ["history"],
+            "reason": str(hit.get("summary") or "历史订单惯例"),
+            "history_convention": hit,
+        }
+
+    merged = list(pool.values())
+    merged.sort(key=lambda x: float(x.get("confidence") or 0), reverse=True)
+
+    # 接近决胜：top2 分差很小且第二名有更强历史惯例 → 提升惯例侧
+    if len(merged) >= 2:
+        a, b = merged[0], merged[1]
+        gap = float(a.get("confidence") or 0) - float(b.get("confidence") or 0)
+        ha = (a.get("history_convention") or {}) if isinstance(a.get("history_convention"), dict) else {}
+        hb = (b.get("history_convention") or {}) if isinstance(b.get("history_convention"), dict) else {}
+        if gap <= 0.12 and hb.get("strength") == "dominant" and ha.get("strength") != "dominant":
+            b["confidence"] = round(float(a.get("confidence") or 0) + 0.02, 3)
+            b["reason"] = (
+                f"{b.get('reason') or ''}；相近候选按历史惯例优先".strip("；")
+            )
+            merged.sort(key=lambda x: float(x.get("confidence") or 0), reverse=True)
+        elif gap <= 0.08 and float(hb.get("share") or 0) >= float(ha.get("share") or 0) + 0.15:
+            if int(hb.get("count") or 0) >= int(ha.get("count") or 0):
+                b["confidence"] = round(float(a.get("confidence") or 0) + 0.01, 3)
+                b["reason"] = (
+                    f"{b.get('reason') or ''}；相近候选按历史频次优先".strip("；")
+                )
+                merged.sort(key=lambda x: float(x.get("confidence") or 0), reverse=True)
+
+    return merged[:5]
 
 
 def _finalize_semantic_candidate_ranks(candidates: list[dict]) -> list[dict]:
@@ -1286,6 +1431,10 @@ def suggest(
         if agree_kws:
             image_s = max(image_s, 0.88)
             title_s = min(1.0, title_s + 0.12)
+        hist_conv = top.get("history_convention") if isinstance(top.get("history_convention"), dict) else {}
+        history_s = float(hist_conv.get("share") or 0.0)
+        if hist_conv.get("strength") == "dominant":
+            history_s = max(history_s, 0.75)
 
         base_conf = float(top.get("confidence") or score_to_confidence(top.get("score", 0)))
 
@@ -1308,15 +1457,20 @@ def suggest(
             if agree_kws:
                 # 图文一致，给足自动通过的底气
                 conf = max(conf, 0.85)
+            if history_s >= 0.5:
+                conf = max(conf, min(0.9, conf + 0.03))
+            detail = override_detail or f"标题语义词「{top['label']}」与类目「{top['category_cn_name']}」一致"
+            if hist_conv.get("summary"):
+                detail = f"{detail}；{hist_conv['summary']}"
             return pack_result(
                 cid,
                 conf,
                 "keyword_catalog_strong" if conf >= 0.75 else "keyword_catalog",
-                override_detail or f"标题语义词「{top['label']}」与类目「{top['category_cn_name']}」一致",
+                detail,
                 candidates=ranked,
                 title=title,
                 hint=scoring_hint or ref_hint,
-                signal_scores=fuse_signals(title_s, hint_s, 0.0, image_s),
+                signal_scores=fuse_signals(title_s, hint_s, history_s, image_s),
                 matched_keywords=list(dict.fromkeys([*agree_kws, top["label"], *vk]))[:10],
                 decision=decision,
                 semantic_candidates=ranked,
@@ -1329,6 +1483,8 @@ def suggest(
             if decision == "ambiguous_semantics"
             else f"标题语义词「{top['label']}」与类目「{top['category_cn_name']}」一致"
         )
+        if hist_conv.get("summary"):
+            detail = f"{detail}；{hist_conv['summary']}"
         method = "platform_reference" if is_fallback else "keyword_ambiguous"
         return pack_result(
             cid,
@@ -1338,7 +1494,7 @@ def suggest(
             candidates=ranked,
             title=title,
             hint=scoring_hint or ref_hint,
-            signal_scores=fuse_signals(title_s, hint_s, 0.0, image_s),
+            signal_scores=fuse_signals(title_s, hint_s, history_s, image_s),
             matched_keywords=list(dict.fromkeys([top["label"], *vk, *extract_title_semantics(title)]))[:10],
             decision=decision,
             semantic_candidates=ranked,

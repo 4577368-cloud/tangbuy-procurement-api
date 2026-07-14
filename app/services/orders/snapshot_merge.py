@@ -36,6 +36,8 @@ STATUS_FINGERPRINT_KEYS = (
     "dcl_cn_nm",
     "pur_no",
     "pay_time",
+    "exprs_no",
+    "sign_time",
 )
 
 

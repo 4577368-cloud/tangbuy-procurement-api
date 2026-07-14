@@ -93,15 +93,29 @@ def _rerank_candidates_with_vision(
         for i, row in enumerate(reranked):
             row["rank"] = i + 1
 
-        merged = {**lookup, **current}
+        # lookup 的类目字段覆盖 current，避免 VL 选中 cid 却仍沿用打分胜出的错误 HS
+        merged = dict(current)
+        for key in (
+            "category_id",
+            "category_cn_name",
+            "category_en_name",
+            "hs_code",
+            "declare_cn_name",
+            "declare_en_name",
+            "tariff",
+        ):
+            if lookup.get(key) is not None:
+                merged[key] = lookup[key]
         merged.update(
             {
+                "success": True,
                 "confidence": 0.9,
                 "match_method": "image_vl_rerank",
                 "match_detail": reason,
                 "semantic_candidates": reranked or sem,
                 "decision": "semantic_agreement",
                 "vision_summary": visual_summary,
+                "vl_picked_category_id": picked_id,
             }
         )
         return merged
@@ -194,10 +208,16 @@ def run_category_mapping_suggest_with_vision(
     if used_vision and result.get("success"):
         result["vision_summary"] = vision_summary
         result["vision_keywords"] = vision_keywords
+        from app.services.category_mapping.mapping_quality import title_vision_agreement_terms
+
+        agree = list(result.get("title_image_agreement_keywords") or [])
+        if not agree:
+            agree = title_vision_agreement_terms(title, vision_keywords)
+        result["title_image_agreement_keywords"] = agree
         merged_kw = [
             *(result.get("matched_keywords") or []),
             *vision_keywords,
-            *(result.get("title_image_agreement_keywords") or []),
+            *agree,
         ]
         result["matched_keywords"] = list(dict.fromkeys(merged_kw))[:12]
 

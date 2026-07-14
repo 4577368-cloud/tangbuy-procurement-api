@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextvars
 from datetime import datetime, timezone
 from typing import Any, Literal, Optional
 
@@ -11,7 +12,6 @@ from app.services.orders import line_cache, pipeline_store
 from app.services.orders.procurement_accept import (
     ProcurementAcceptError,
     accept_order_for_line,
-    scan_and_accept_pool,
 )
 from app.services.orders.procurement_place_order import (
     ProcurementPlaceOrderError,
@@ -26,9 +26,18 @@ from app.services.orders.procurement_release import (
 from app.services.orders.queue_filters import resolve_order_queue
 from app.services.orders.service import get_ord_line
 from app.services.orders.pipeline_blocker_copy import summarize_admin_blocker_detail
-from app.services.products.store import find_product_for_ord_line
+from app.services.orders.procurement_release import GENERIC_CATEGORIES
+from app.services.products.store import find_product_for_ord_line, is_valid_hs_mapping
 
 PipelineTrigger = Literal["sync", "manual", "ack", "category", "switch_supplier"]
+
+_PIPELINE_ACTIVE: contextvars.ContextVar[bool] = contextvars.ContextVar("pipeline_active", default=False)
+_READY_CATEGORY_STATUSES = frozenset({"auto_passed", "confirmed"})
+
+
+def is_pipeline_active() -> bool:
+    """当前线程是否正在 run_pipeline_for_line 内（映射副作用勿再 resume）。"""
+    return bool(_PIPELINE_ACTIVE.get())
 
 
 def _now_iso() -> str:
@@ -47,67 +56,135 @@ def parse_admin_error_blockers(message: str, *, stage: str = "place_order") -> l
     msg = str(message or "").strip()
     if not msg:
         return []
-    lower = msg.lower()
-    blockers: list[dict[str, Any]] = []
-    now = _now_iso()
+    from app.services.orders.admin_error_classify import classify_admin_error
 
-    def add(key: str, label: str, **kwargs: Any) -> None:
-        detail = kwargs.get("detail")
-        if detail is None:
-            detail = summarize_admin_blocker_detail(key, label, msg)
-        blockers.append(
-            {
-                "key": key,
-                "label": label,
-                "stage": stage,
-                "auto_resolvable": kwargs.get("auto_resolvable", False),
-                "requires_ack": kwargs.get("requires_ack", False),
-                "detail": detail,
-                "raw_detail": msg,
-                "at": now,
-            }
-        )
+    classified = classify_admin_error(msg, allow_llm=True)
+    detail = summarize_admin_blocker_detail(classified.key, classified.label, msg)
+    return [
+        {
+            "key": classified.key,
+            "label": classified.label,
+            "stage": stage,
+            "auto_resolvable": False,
+            "requires_ack": True,
+            "detail": detail,
+            "raw_detail": msg,
+            "classify_reason": classified.reason,
+            "classify_source": classified.source,
+            "classify_confidence": classified.confidence,
+            "at": _now_iso(),
+        }
+    ]
 
-    if any(k in msg for k in ("库存", "缺货", "stock")) or "out of stock" in lower:
-        add("ADMIN_STOCK", "库存不足", requires_ack=True)
-    if any(k in msg for k in ("起订", "起批量", "MOQ", "moq", "最小起")):
-        add("ADMIN_MOQ", "起批量不满足", requires_ack=True)
-    if any(k in msg for k in ("规格", "SKU", "sku", "属性")):
-        add("ADMIN_SKU", "规格不符", requires_ack=True)
-    if any(k in msg for k in ("毛利", "价格", "金额", "运费", "差价")):
-        add("ADMIN_MARGIN", "价格/毛利异常", requires_ack=True)
-    if not blockers:
-        add("ADMIN_ERROR", "平台下单失败", requires_ack=True)
-    return blockers
+
+def _row_category_ok(row: dict[str, Any]) -> bool:
+    category = str(row.get("lvl1_ctgy_nm") or "").strip()
+    return bool(category) and category not in GENERIC_CATEGORIES
+
+
+def _product_mapping_ready(product: Optional[dict[str, Any]]) -> bool:
+    if not product:
+        return False
+    if str(product.get("category_status") or "") not in _READY_CATEGORY_STATUSES:
+        return False
+    return is_valid_hs_mapping(product.get("hs_mapping"))
+
+
+def _category_blockers(row: dict[str, Any], *, stage: str = "accept") -> list[dict[str, Any]]:
+    category = str(row.get("lvl1_ctgy_nm") or "").strip()
+    cfg = normalize_business_config(get_business_config())
+    auto_map = bool(cfg.get("rules", {}).get("auto_category_mapping", True))
+    return [
+        {
+            "key": "CATEGORY_OTHER",
+            "label": "品类未映射",
+            "stage": stage,
+            "auto_resolvable": auto_map,
+            "requires_ack": False,
+            "detail": category or "其他",
+            "at": _now_iso(),
+        }
+    ]
+
+
+def _overlay_product_category(row: dict[str, Any], product: dict[str, Any]) -> dict[str, Any]:
+    """把商品中心已确认 HS 立即写到子单快照，不依赖 Admin 回写完成。"""
+    if not _product_mapping_ready(product):
+        return row
+    key = str(row.get("ord_line_no") or "").strip()
+    hs = product.get("hs_mapping")
+    if not key or not isinstance(hs, dict):
+        return row
+    try:
+        line_cache.apply_category_overlay_to_lines([key], hs, source="category_ensure")
+        refreshed = get_ord_line(key)
+        return refreshed or row
+    except Exception:
+        return row
+
+
+def _ensure_product_for_line(row: dict[str, Any]) -> Optional[dict[str, Any]]:
+    product = find_product_for_ord_line(row)
+    if product:
+        return product
+    try:
+        from app.services.products.order_sync import upsert_product_from_ord_line
+        from app.services.products.service import _new_product_id
+
+        product, _ = upsert_product_from_ord_line(row, new_id_fn=_new_product_id)
+        return product
+    except Exception:
+        return None
+
+
+def ensure_category_before_accept(row: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """接单前品类闸门：无商品则先从子单建档，尝试自动映射；仍失败则阻塞。
+
+    不再以「商品中心已有货」为前提跳过。识别通过 / Admin 品类已合规 → 无 blocker。
+    """
+    if _row_category_ok(row):
+        return row, []
+
+    cfg = normalize_business_config(get_business_config())
+    auto_map = bool(cfg.get("rules", {}).get("auto_category_mapping", True))
+    product = _ensure_product_for_line(row)
+    if product:
+        row = _overlay_product_category(row, product)
+        if _row_category_ok(row):
+            return row, []
+
+    if auto_map and product:
+        pid = str(product.get("tangbuy_product_id") or product.get("id") or "").strip()
+        if pid:
+            try:
+                from app.services.products.service import map_product_category_by_id
+                from app.services.orders import order_line_sync
+
+                mapped = map_product_category_by_id(pid, ord_row=row)
+                if mapped:
+                    product = mapped
+                    row = _overlay_product_category(row, product)
+                key = str(row.get("ord_line_no") or "").strip()
+                if key:
+                    try:
+                        order_line_sync.refresh_ord_lines([key])
+                    except Exception:
+                        pass
+                    row = get_ord_line(key) or row
+                    if product:
+                        row = _overlay_product_category(row, product)
+            except Exception:
+                pass
+
+    if _row_category_ok(row):
+        return row, []
+    return row, _category_blockers(row, stage="accept")
 
 
 def _try_auto_category_map(row: dict[str, Any]) -> dict[str, Any]:
-    cfg = normalize_business_config(get_business_config())
-    if not cfg.get("rules", {}).get("auto_category_mapping", True):
-        return row
-    category = str(row.get("lvl1_ctgy_nm") or "").strip()
-    from app.services.orders.procurement_release import GENERIC_CATEGORIES
-
-    if category and category not in GENERIC_CATEGORIES:
-        return row
-    product = find_product_for_ord_line(row)
-    if not product:
-        return row
-    pid = str(product.get("tangbuy_product_id") or product.get("id") or "").strip()
-    if not pid:
-        return row
-    try:
-        from app.services.products.service import map_product_category_by_id
-        from app.services.orders import order_line_sync
-
-        map_product_category_by_id(pid, ord_row=row)
-        key = str(row.get("ord_line_no") or "").strip()
-        if key:
-            order_line_sync.refresh_ord_lines([key])
-            return get_ord_line(key) or row
-    except Exception:
-        pass
-    return row
+    """兼容旧调用：尝试映射后返回行；阻塞由调用方 evaluate。"""
+    updated, _ = ensure_category_before_accept(row)
+    return updated
 
 
 def _save_state(
@@ -252,6 +329,19 @@ def run_pipeline_for_line(
     if not key:
         raise ValueError("ord_line_no required")
 
+    token = _PIPELINE_ACTIVE.set(True)
+    try:
+        return _run_pipeline_for_line_inner(key, trigger=trigger, operator=operator)
+    finally:
+        _PIPELINE_ACTIVE.reset(token)
+
+
+def _run_pipeline_for_line_inner(
+    key: str,
+    *,
+    trigger: PipelineTrigger = "sync",
+    operator: Optional[str] = None,
+) -> dict[str, Any]:
     row = get_ord_line(key)
     if not row:
         return {"ok": False, "code": "not_found", "ord_line_no": key}
@@ -260,6 +350,21 @@ def run_pipeline_for_line(
     results: list[dict[str, Any]] = []
 
     if stat == 0:
+        row, category_blockers = ensure_category_before_accept(row)
+        if category_blockers:
+            state = _save_state(
+                key,
+                pipeline_step="accept",
+                ord_line_stat=0,
+                blockers=category_blockers,
+            )
+            return {
+                "ok": False,
+                "ord_line_no": key,
+                "step": "accept",
+                "blockers": category_blockers,
+                "state": state,
+            }
         try:
             accept_result = accept_order_for_line(key, operator=operator or "system")
             results.append({"step": "accept", **accept_result})
@@ -314,9 +419,27 @@ def run_pipeline_for_line(
             return {"ok": False, "ord_line_no": key, "step": "pre_purchase", "error": str(exc), "state": state}
 
     if stat == 54:
-        eligible, _ = is_1688_place_order_eligible(row)
+        eligible, code = is_1688_place_order_eligible(row)
         if not eligible:
-            state = _save_state(key, pipeline_step="place_order", ord_line_stat=54, blockers=[])
+            # 勿在此函数内再 import evaluate_prepare_stage，会遮蔽模块级绑定并触发
+            # UnboundLocalError（stat=23 预订购路径直接失败，品类回写后 resume 也会挂）。
+            prep = evaluate_prepare_stage(row)
+            blockers = prep.get("blockers") if isinstance(prep.get("blockers"), list) else []
+            state = _save_state(
+                key,
+                pipeline_step="place_order" if not blockers else "blocked",
+                ord_line_stat=54,
+                blockers=blockers,
+            )
+            if blockers:
+                return {
+                    "ok": False,
+                    "ord_line_no": key,
+                    "step": "place_order",
+                    "code": code,
+                    "blockers": blockers,
+                    "state": state,
+                }
             return {"ok": True, "ord_line_no": key, "step": "place_order", "code": "skip", "state": state}
         try:
             place_result = submit_1688_place_order(
@@ -375,14 +498,7 @@ def run_pipeline_batch(
     *,
     trigger: PipelineTrigger = "sync",
 ) -> dict[str, Any]:
-    cfg = normalize_business_config(get_business_config())
-    pool_accept: dict[str, Any] = {"accepted": []}
-    if cfg.get("auto_accept_orders_enabled", True) and trigger == "sync":
-        try:
-            pool_accept = scan_and_accept_pool(operator="system")
-        except ProcurementAcceptError as exc:
-            pool_accept = {"error": str(exc)}
-
+    """批量推进履约。接单一律走 run_pipeline_for_line（含品类闸门），不再盲扫接单池。"""
     if ord_line_nos:
         keys = [str(k).strip() for k in ord_line_nos if str(k).strip()]
     else:
@@ -405,7 +521,7 @@ def run_pipeline_batch(
             errors.append({"ord_line_no": key, "error": str(exc)})
 
     return {
-        "pool_accept": pool_accept,
+        "pool_accept": {"accepted": [], "skipped": "gated_by_line_pipeline"},
         "candidates": len(keys),
         "advanced": advanced,
         "blocked": blocked,
@@ -423,7 +539,11 @@ def ack_blocker_and_resume(
     *,
     operator: Optional[str] = None,
 ) -> dict[str, Any]:
-    pipeline_store.ack_blocker(ord_line_no, blocker_key, operator=operator)
+    key = blocker_key.strip()
+    # 备注类：软确认写 NOTE_HANDLED，否则仍会拦预订购/下单
+    if key in ("NOTE_BLOCK", "NOTE_REVIEW", "NOTE_HANDLED"):
+        pipeline_store.ack_blocker(ord_line_no, "NOTE_HANDLED", operator=operator)
+    pipeline_store.ack_blocker(ord_line_no, key, operator=operator)
     return resume_pipeline(ord_line_no, operator=operator)
 
 
@@ -445,11 +565,14 @@ def get_pipeline_view(ord_line_no: str) -> dict[str, Any]:
         elif stat and stat >= 5:
             step = "done"
         prep = evaluate_prepare_stage(row) if stat == 23 else None
+        blockers = (prep or {}).get("blockers") or []
+        if stat == 0 and not _row_category_ok(row):
+            blockers = _category_blockers(row, stage="accept")
         return {
             "ord_line_no": key,
             "pipeline_step": step,
             "ord_line_stat": stat,
-            "blockers": (prep or {}).get("blockers") or [],
+            "blockers": blockers,
             "prepare": prep,
         }
     return state or {"ord_line_no": key, "pipeline_step": "unknown", "blockers": []}

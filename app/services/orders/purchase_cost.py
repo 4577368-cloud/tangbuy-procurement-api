@@ -68,6 +68,32 @@ def _resolve_platform_payable(row: dict[str, Any]) -> Optional[dict[str, float]]
     }
 
 
+def _settlement_as_unit_price(
+    settlement: float,
+    *,
+    pur_prc: float,
+    listing_product: float,
+    qty: float,
+) -> bool:
+    """Admin settlementRealAmount：现网多为行金额（≈pur_amt），宽表注释写成了单价。
+
+    仅当其明显接近单价 pur_prc、且明显不像行合计时，才按单价 × 数量。
+    """
+    if settlement <= 0:
+        return False
+    if qty <= 1:
+        return True
+    if listing_product > 0 and abs(settlement - listing_product) <= max(0.05, listing_product * 0.02):
+        return False
+    if pur_prc > 0 and abs(settlement - pur_prc) <= max(0.05, pur_prc * 0.02):
+        return True
+    if listing_product > 0 and settlement >= listing_product * 0.5:
+        return False
+    if pur_prc > 0 and settlement <= pur_prc * 2.5:
+        return True
+    return False
+
+
 def _resolve_estimated_cost_basis(
     row: dict[str, Any],
     listing_product: float,
@@ -77,7 +103,8 @@ def _resolve_estimated_cost_basis(
 ) -> dict[str, Any]:
     qty = max(1.0, _num(row.get("ord_cnt"), 1))
     suggested_unit = _num(row.get("pur_sugg_prc"))
-    settlement_unit = _num(row.get("settlement_real_amt"))
+    settlement_raw = _num(row.get("settlement_real_amt"))
+    pur_prc = _num(row.get("pur_prc"))
 
     if suggested_unit > 0:
         product_amt = round(max(0.0, suggested_unit * qty - discount), 2)
@@ -92,8 +119,17 @@ def _resolve_estimated_cost_basis(
             "suggested_price_gap": round(max(0.0, payable - listing_payable), 2),
         }
 
-    if settlement_unit > 0:
-        product_amt = round(max(0.0, settlement_unit * qty - discount), 2)
+    if settlement_raw > 0:
+        if _settlement_as_unit_price(
+            settlement_raw,
+            pur_prc=pur_prc,
+            listing_product=listing_product,
+            qty=qty,
+        ):
+            product_amt = round(max(0.0, settlement_raw * qty - discount), 2)
+        else:
+            # 行金额：勿再 × qty（否则会出现「放大数量倍」的假补款）
+            product_amt = round(max(0.0, settlement_raw - discount), 2)
         payable = round(product_amt + listing_shipping, 2)
         return {
             "purchase_cost_basis": "settlement",

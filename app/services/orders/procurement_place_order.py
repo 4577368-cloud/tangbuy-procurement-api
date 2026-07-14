@@ -51,6 +51,14 @@ def is_1688_place_order_eligible(row: dict[str, Any]) -> tuple[bool, str]:
         return False, "channel_not_1688"
     if not str(row.get("ord_no") or "").strip():
         return False, "missing_ord_no"
+    from app.services.orders.procurement_release import evaluate_prepare_stage
+
+    prep = evaluate_prepare_stage(row)
+    if not prep.get("all_clear"):
+        note_hits = [b for b in (prep.get("blockers") or []) if b.get("key") == "NOTE_BLOCK"]
+        if note_hits:
+            return False, "note_blocked"
+        return False, "prepare_blocked"
     return True, "ok"
 
 

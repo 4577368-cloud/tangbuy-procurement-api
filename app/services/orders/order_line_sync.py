@@ -11,12 +11,17 @@ import time
 from app.core.config import get_settings
 from app.services.orders import line_cache
 from app.services.orders import service as order_service
+from app.services.orders.queue_filters import QUEUE_GOODS_STATUS_BUCKETS
 
 DEFAULT_PAGE_SIZE = 100
 INCREMENTAL_PAGES = 3
 BACKFILL_QUEUES = line_cache.SYNC_QUEUES
 # Admin 待采购桶 pageSize>~170 会返回 fail
 PENDING_PROCUREMENT_MAX_PAGE = 100
+# 本地仍标「已订购」的单，按子单号 live 回刷条数（捕获已发货/已签收跃迁）
+STALE_ORDERED_REVALIDATE_LIMIT = 40
+STALE_ORDERED_HOURS = 48
+_ORDERED_STAT = 22
 
 
 def _now_iso() -> str:
@@ -114,6 +119,42 @@ def _fetch_page(queue: Optional[str], page: int, page_size: int) -> dict[str, An
         except Exception as exc:
             return {"items": [], "total": 0, "error": str(exc)}
 
+    # shipped / in_warehouse / …：首页合并多 goodsStatus 桶，避免已签收等状态漏同步
+    buckets = QUEUE_GOODS_STATUS_BUCKETS.get(queue or "") if queue else None
+    if buckets and page == 1 and len(buckets) > 1:
+        try:
+            merged_rows: dict[str, dict[str, Any]] = {}
+            total_hint = 0
+            with ThreadPoolExecutor(max_workers=min(len(buckets), 6)) as pool:
+                futures = {
+                    pool.submit(
+                        order_service.fetch_queue_status_bucket,
+                        queue=queue,
+                        goods_status=gs,
+                        page=1,
+                        page_size=page_size,
+                    ): gs
+                    for gs in buckets
+                }
+                for fut in as_completed(futures):
+                    try:
+                        rows, total = fut.result()
+                        total_hint = max(total_hint, int(total or 0))
+                        for row in rows:
+                            key = str(row.get("ord_line_no") or "")
+                            if key:
+                                merged_rows[key] = row
+                    except Exception:
+                        pass
+            rows = sorted(
+                merged_rows.values(),
+                key=lambda r: str(r.get("pay_time") or r.get("pur_time") or ""),
+                reverse=True,
+            )
+            return {"items": _enrich_items(rows), "total": max(total_hint, len(rows))}
+        except Exception as exc:
+            return {"items": [], "total": 0, "error": str(exc)}
+
     q = None if queue == "all" else queue
     res = order_service.list_ord_lines(queue=q, page=page, page_size=page_size)
     if res.get("error"):
@@ -192,6 +233,73 @@ def _fetch_queue_pages(
     return stats, errors
 
 
+def _parse_iso_dt(value: Any) -> Optional[datetime]:
+    if not value:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
+        dt = datetime.fromisoformat(text)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except ValueError:
+        return None
+
+
+def revalidate_stale_ordered_lines(
+    *,
+    limit: int = STALE_ORDERED_REVALIDATE_LIMIT,
+    older_than_hours: float = STALE_ORDERED_HOURS,
+) -> dict[str, int]:
+    """本地仍为已订购(22)且超时的子单，按 itemNo 直连 Admin 回刷。
+
+    覆盖「已从 22 跃迁到发货/签收，但未出现在本轮增量首页」的漏同步。
+    """
+    now = datetime.now(timezone.utc)
+    candidates: list[tuple[float, str]] = []
+    for row in line_cache.list_cached_lines(queue="ordered"):
+        try:
+            stat = int(row.get("ord_line_stat")) if row.get("ord_line_stat") is not None else None
+        except (TypeError, ValueError):
+            stat = None
+        if stat != _ORDERED_STAT:
+            continue
+        key = str(row.get("ord_line_no") or "").strip()
+        if not key:
+            continue
+        ref = _parse_iso_dt(row.get("pur_time")) or _parse_iso_dt(row.get("pay_time"))
+        if not ref:
+            continue
+        age_h = (now - ref).total_seconds() / 3600
+        if age_h < older_than_hours:
+            continue
+        candidates.append((age_h, key))
+
+    candidates.sort(key=lambda x: -x[0])
+    keys = [k for _, k in candidates[: max(0, limit)]]
+    if not keys:
+        return {"candidates": 0, "scanned": 0, "added": 0, "updated": 0, "unchanged": 0}
+
+    totals = {"candidates": len(candidates), "scanned": 0, "added": 0, "updated": 0, "unchanged": 0}
+
+    def _one(key: str) -> dict[str, int]:
+        return refresh_ord_lines([key])
+
+    with ThreadPoolExecutor(max_workers=min(8, len(keys))) as pool:
+        for fut in as_completed({pool.submit(_one, k): k for k in keys}):
+            try:
+                stats = fut.result()
+                for k in ("scanned", "added", "updated", "unchanged"):
+                    totals[k] += int(stats.get(k) or 0)
+            except Exception:
+                pass
+    return totals
+
+
 def sync_orders_incremental(
     *,
     queue: Optional[str] = None,
@@ -226,6 +334,16 @@ def sync_orders_incremental(
                 except Exception as exc:
                     errors.append(f"{q}: {exc}")
 
+    stale_stats: Optional[dict[str, int]] = None
+    # 全量增量时：回刷本地超时仍「已订购」的子单，吃掉队列首页漏网的状态跃迁
+    if not queue or queue in ("all", "ordered"):
+        try:
+            stale_stats = revalidate_stale_ordered_lines()
+            for key in ("added", "updated", "unchanged", "scanned"):
+                totals[key] = int(totals.get(key) or 0) + int(stale_stats.get(key) or 0)
+        except Exception as exc:
+            errors.append(f"stale_ordered: {exc}")
+
     state = line_cache.load_sync_state()
     state["last_incremental_at"] = _now_iso()
     state["cached_total"] = len(line_cache.load_all_lines())
@@ -235,6 +353,7 @@ def sync_orders_incremental(
         "ok": not errors,
         "mode": "incremental",
         "stats": totals,
+        "stale_ordered": stale_stats,
         "cache_total": state["cached_total"],
         "errors": errors or None,
         "items": line_cache.list_cached_lines(queue=queue),

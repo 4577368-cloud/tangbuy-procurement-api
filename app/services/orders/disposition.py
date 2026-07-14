@@ -44,6 +44,54 @@ def _try_admin_procurement_pass(row: dict[str, Any]) -> str:
         raise DispositionError(f"Admin 推进失败：{exc}", code="admin_write_failed") from exc
 
 
+def _note_clear_and_resume(
+    key: str,
+    row: dict[str, Any],
+    *,
+    action_key: str,
+    action_label: str,
+    operator: Optional[str],
+    signal_type: Optional[str],
+    feedback_type: Optional[str],
+    verify: Optional[dict[str, Any]],
+) -> dict[str, Any]:
+    from app.services.orders import pipeline_store
+    from app.services.orders.procurement_pipeline import resume_pipeline
+
+    pipeline_store.ack_blocker(key, "NOTE_HANDLED", operator=operator)
+    pipeline_store.ack_blocker(key, "NOTE_BLOCK", operator=operator)
+    now = datetime.now(timezone.utc).isoformat()
+    disposition_store.append_audit(
+        {
+            "ord_line_no": key,
+            "ord_no": row.get("ord_no"),
+            "action_key": action_key,
+            "action_label": action_label,
+            "signal_type": signal_type,
+            "feedback_type": feedback_type,
+            "operator": operator,
+            "admin_write": "ok",
+            "verify": verify,
+            "at": now,
+        }
+    )
+    try:
+        result = resume_pipeline(key, operator=operator)
+    except Exception as exc:
+        raise DispositionError(str(exc), code="pipeline_failed") from exc
+    state = result.get("state") or {}
+    return {
+        "ok": bool(result.get("ok")),
+        "ord_line_no": key,
+        "action_key": action_key,
+        "pipeline_step": state.get("pipeline_step"),
+        "blockers": state.get("blockers"),
+        "ord_line_stat_after": state.get("ord_line_stat") or result.get("ord_line_stat"),
+        "verify": verify,
+        "state": state,
+    }
+
+
 def submit_disposition(
     *,
     ord_line_no: str,
@@ -54,6 +102,7 @@ def submit_disposition(
     feedback_type: Optional[str] = None,
     override_reason: Optional[str] = None,
     operator: Optional[str] = None,
+    spec_before: Optional[str] = None,
 ) -> dict[str, Any]:
     key = ord_line_no.strip()
     if not key:
@@ -158,6 +207,88 @@ def submit_disposition(
             "blockers": state.get("blockers"),
             "ord_line_stat_after": state.get("ord_line_stat"),
         }
+
+    if action_key == "note_defer_1688":
+        return _note_clear_and_resume(
+            key,
+            row,
+            action_key=action_key,
+            action_label=action_label or "后续 1688 改规格",
+            operator=operator,
+            signal_type=signal_type,
+            feedback_type=feedback_type,
+            verify=None,
+        )
+
+    if action_key == "note_spec_modified":
+        from app.services.orders import order_line_sync, pipeline_store
+        from app.services.orders.note_spec_verify import verify_note_spec_alignment
+        from app.services.orders.service import get_ord_line as reload_line
+
+        try:
+            order_line_sync.refresh_ord_lines([key])
+        except Exception as exc:
+            raise DispositionError(f"刷新子单失败：{exc}", code="refresh_failed") from exc
+        refreshed = reload_line(key) or row
+        verify = verify_note_spec_alignment(
+            refreshed,
+            allow_llm=True,
+            spec_before=spec_before,
+        )
+        if not verify.aligned:
+            now = datetime.now(timezone.utc).isoformat()
+            code = "note_spec_unchanged" if verify.changed is False else "note_spec_mismatch"
+            blockers = [
+                {
+                    "key": "NOTE_BLOCK",
+                    "label": "备注待核",
+                    "stage": "prepare",
+                    "auto_resolvable": False,
+                    "requires_ack": True,
+                    "detail": verify.mismatch_summary,
+                    "expected_specs": verify.expected_specs,
+                    "actual_specs": verify.actual_specs,
+                    "spec_before": verify.spec_before or None,
+                    "changed": verify.changed,
+                    "at": now,
+                }
+            ]
+            state = pipeline_store.save_pipeline_state(
+                {
+                    "ord_line_no": key,
+                    "pipeline_step": "blocked",
+                    "ord_line_stat": refreshed.get("ord_line_stat"),
+                    "blockers": blockers,
+                    "last_run_at": now,
+                    "last_error": verify.mismatch_summary,
+                }
+            )
+            disposition_store.append_audit(
+                {
+                    "ord_line_no": key,
+                    "ord_no": refreshed.get("ord_no"),
+                    "action_key": action_key,
+                    "action_label": action_label or "已修改",
+                    "signal_type": signal_type,
+                    "feedback_type": feedback_type,
+                    "operator": operator,
+                    "admin_write": "verify_failed",
+                    "error": verify.mismatch_summary,
+                    "verify": verify.to_dict(),
+                    "at": now,
+                }
+            )
+            raise DispositionError(verify.mismatch_summary, code=code)
+        return _note_clear_and_resume(
+            key,
+            refreshed,
+            action_key=action_key,
+            action_label=action_label or "已修改",
+            operator=operator,
+            signal_type=signal_type,
+            feedback_type=feedback_type,
+            verify=verify.to_dict(),
+        )
 
     if action_key != "manual_confirm":
         raise DispositionError(f"暂不支持动作：{action_key}", code="unsupported_action")

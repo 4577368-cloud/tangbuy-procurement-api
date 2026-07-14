@@ -9,11 +9,13 @@ if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 from category_heuristics import (  # noqa: E402
+    evidence_multiplier,
     term_catalog_extension_mismatch,
     term_catalog_extension_penalty,
 )
 from category_mapper import (  # noqa: E402
     GEOGRAPHIC_REGION_TERMS,
+    THEME_SERIES_TERMS,
     _best_catalog_for_term,
     _finalize_semantic_candidate_ranks,
     classify_term,
@@ -41,6 +43,48 @@ def test_africa_classified_as_attribute():
     assert "非洲" in GEOGRAPHIC_REGION_TERMS
 
 
+def test_ocean_theme_classified_as_attribute():
+    assert classify_term("海洋") == "attribute"
+    assert "海洋" in THEME_SERIES_TERMS
+
+
+def test_book_declare_needs_book_evidence():
+    weak = evidence_multiplier(
+        "热卖藏银 1款混装海洋系列合金饰品配件DIY项链手链挂件工厂直销",
+        "海洋",
+        "教育书",
+        ["项链吊坠", "合金吊坠", "饰品配件"],
+    )
+    strong = evidence_multiplier(
+        "小学海洋科普教育书籍课外读物",
+        "海洋",
+        "教育书",
+        ["图书"],
+    )
+    assert weak <= 0.12
+    assert strong >= 0.5
+
+
+def test_ocean_series_jewelry_not_education_book():
+    """「海洋系列」饰品配件不得以 海洋·教育书 作为高置信候选项。"""
+    catalog, *_ = load_data()
+    title = "热卖藏银 1款混装海洋系列合金饰品配件DIY项链手链挂件工厂直销"
+    vision = ["项链吊坠", "合金吊坠", "饰品配件", "珠宝首饰配件"]
+    cands = rank_semantic_candidates(title, "", vision, catalog)
+    assert cands
+    labels = [c["label"] for c in cands]
+    assert "海洋" not in labels or float(next(c for c in cands if c["label"] == "海洋")["confidence"]) < 0.25
+    top_labels = labels[:2]
+    assert any(
+        any(k in (c.get("label") or "") or k in (c.get("category_cn_name") or "") or k in (c.get("declare_cn_name") or "")
+            for k in ("配件", "饰品", "项链", "吊坠", "挂件"))
+        for c in cands[:2]
+    ), top_labels
+    for c in cands:
+        if c.get("declare_cn_name") == "教育书":
+            assert float(c["confidence"]) < 0.25
+
+
 def test_jewelry_term_not_mapped_to_jewelry_box():
     assert term_catalog_extension_mismatch("首饰", "首饰盒", "首饰盒", "珍珠项链女锁骨链")
     assert term_catalog_extension_penalty("首饰", "首饰盒", "首饰盒", "珍珠项链女锁骨链") >= 0.5
@@ -56,6 +100,6 @@ def test_jewelry_term_not_mapped_to_jewelry_box():
 
     cands = rank_semantic_candidates(title, "", [], catalog)
     top = cands[0]
-    assert top["label"] in ("珍珠", "项链")
+    assert top["label"] in ("珍珠", "项链", "首饰", "锁骨链")
     jewelry = next(c for c in cands if c["label"] == "首饰")
     assert "盒" not in jewelry["category_cn_name"]

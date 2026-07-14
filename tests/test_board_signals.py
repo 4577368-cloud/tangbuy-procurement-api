@@ -45,6 +45,40 @@ def test_sku_mismatch_requires_enriched_flag():
     assert signal["urgency"] == "today"
 
 
+def test_note_spec_change_counts_as_sku_mismatch():
+    row = _base_row(
+        ord_line_stat=23,
+        note_block_procurement=True,
+        note_signal_type="SKU_MISMATCH",
+    )
+    signal = row_to_board_signal(row, [])
+    assert signal is not None
+    assert signal["signal_type"] == "SKU_MISMATCH"
+
+
+def test_note_spec_change_preferred_over_attribute_mismatch():
+    row = _base_row(
+        ord_line_stat=23,
+        sku_mismatch=True,
+        note_block_procurement=True,
+        note_signal_type="SKU_MISMATCH",
+    )
+    signal = row_to_board_signal(row, [])
+    assert signal is not None
+    assert signal["signal_type"] == "SKU_MISMATCH"
+
+
+def test_ship_overdue_skips_when_express_present():
+    row = _base_row(
+        ord_line_no="OL-SHIP-EXPRESS",
+        ord_line_stat=22,
+        pur_time=(datetime.now(timezone.utc) - timedelta(hours=72)).isoformat().replace("+00:00", "Z"),
+        exprs_no="YD465789",
+        exprs_nm="韵达快递",
+    )
+    assert row_to_board_signal(row, []) is None
+
+
 def test_ship_overdue_before_finance():
     old = datetime.now(timezone.utc) - timedelta(hours=72)
     row = _base_row(

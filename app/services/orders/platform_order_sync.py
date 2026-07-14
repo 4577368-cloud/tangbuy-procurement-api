@@ -21,30 +21,47 @@ def _extract_rows(result: dict[str, Any]) -> list[dict[str, Any]]:
     return rows if isinstance(rows, list) else []
 
 
+def _find_line_in_rows(rows: list[dict[str, Any]], key: str) -> Optional[dict[str, Any]]:
+    indexed = index_platform_rows_by_line(rows)
+    return indexed.get(key)
+
+
 def _query_for_line(
     *,
     ord_line_no: str,
     ord_no: Optional[str] = None,
 ) -> Optional[dict[str, Any]]:
-    """按子单号 / 主单号查询订单回传。"""
+    """按子单号 / 主单号查询订单回传。
+
+    Admin query 的 itemNo/orderNo 过滤目前不生效，需在待支付列表分页扫描。
+    """
     key = ord_line_no.strip()
     if not key:
         return None
 
-    attempts: list[dict[str, Any]] = [
-        {"item_no": key},
-    ]
-    if ord_no:
-        attempts.append({"order_no": ord_no.strip()})
+    page_size = 50
+    try:
+        first = query_platform_orders(page_num=1, page_size=page_size, status=0)
+    except TangbuyAdminError:
+        return None
 
-    for params in attempts:
+    hit = _find_line_in_rows(_extract_rows(first), key)
+    if hit:
+        return hit
+
+    total = int(first.get("total") or 0)
+    if total <= page_size:
+        return None
+
+    max_page = (total + page_size - 1) // page_size
+    for page_num in range(2, max_page + 1):
         try:
-            result = query_platform_orders(page_num=1, page_size=50, **params)
+            result = query_platform_orders(page_num=page_num, page_size=page_size, status=0)
         except TangbuyAdminError:
-            continue
-        indexed = index_platform_rows_by_line(_extract_rows(result))
-        if key in indexed:
-            return indexed[key]
+            break
+        hit = _find_line_in_rows(_extract_rows(result), key)
+        if hit:
+            return hit
     return None
 
 

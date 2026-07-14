@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from category_heuristics import build_heuristics_from_catalog
+from category_heuristics import build_heuristics_from_catalog, build_history_conventions
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "data" / "category"
@@ -181,9 +181,15 @@ def main() -> int:
         json.dumps(heuristics, ensure_ascii=False), encoding="utf-8"
     )
 
+    conventions = build_history_conventions(history_records, by_cid)
+    (OUT / "history-conventions.json").write_text(
+        json.dumps(conventions, ensure_ascii=False), encoding="utf-8"
+    )
+
     print(
         f"✅ catalog {len(catalog_records)} · history {len(history_records)} "
-        f"· search {len(catalog_search_entries)} · heuristics collision {len(heuristics.get('declare_collision_terms', {}))} → {OUT}"
+        f"· search {len(catalog_search_entries)} · heuristics collision {len(heuristics.get('declare_collision_terms', {}))} "
+        f"· conventions terms {conventions.get('term_count', 0)} / dominant {conventions.get('dominant_count', 0)} → {OUT}"
     )
     return 0
 
