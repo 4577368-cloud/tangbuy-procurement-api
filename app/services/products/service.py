@@ -121,8 +121,23 @@ def _reconcile_product_writeback(product: dict[str, Any]) -> dict[str, Any]:
 
 
 def list_products() -> list[dict[str, Any]]:
-    """列表只读。勿在 GET 上 reconcile/触发回写（易阻塞或死锁）。"""
-    items = load_products()
+    """列表可读；对超时 writing 只做本地收口，不调度 Admin（避免 GET 阻塞/死锁）。"""
+    from app.services.category_mapping.admin_writeback import reconcile_stale_admin_writeback
+
+    items: list[dict[str, Any]] = []
+    for product in load_products():
+        wb = (product.get("mapping_record") or {}).get("admin_writeback") or {}
+        if wb.get("status") != "writing":
+            items.append(product)
+            continue
+        reconciled, changed = reconcile_stale_admin_writeback(product)
+        if changed:
+            pid = str(reconciled.get("tangbuy_product_id") or "").strip()
+            if pid:
+                update_product(pid, lambda _: reconciled)
+            items.append(reconciled)
+        else:
+            items.append(product)
     return sorted(items, key=lambda p: p.get("created_at", ""), reverse=True)
 
 
@@ -475,24 +490,29 @@ def apply_mapping_record(product: dict[str, Any], record: dict[str, Any]) -> dic
         resolution = "manual_confirm"
     else:
         resolution = "auto"
+    # 前端可能带回旧的 failed admin_writeback；确认写回由 confirm 重新占位，勿被污染
+    clean_record = {k: v for k, v in record.items() if k != "admin_writeback"}
     updated = confirm_product_mapping(
         product,
         hs,
         resolution=resolution,
         defer_side_effects=True,
     )
-    mapping = _merge_suggest_into_mapping(dict(updated.get("mapping_record") or {}), record)
-    category_path = record.get("suggested_category_path")
+    mapping = _merge_suggest_into_mapping(dict(updated.get("mapping_record") or {}), clean_record)
+    category_path = clean_record.get("suggested_category_path")
     if category_path:
         mapping["suggested_category_path"] = category_path
     mapping["suggested_hs"] = hs
 
-    if record.get("review_status"):
-        mapping["review_status"] = record["review_status"]
-    if record.get("auto_resolved") is False:
+    if clean_record.get("review_status"):
+        mapping["review_status"] = clean_record["review_status"]
+    if clean_record.get("auto_resolved") is False:
         updated["category_status"] = "needs_review"
-    if record.get("agent_confidence") is not None:
-        updated["mapping_confidence"] = record["agent_confidence"]
+    if clean_record.get("agent_confidence") is not None:
+        updated["mapping_confidence"] = clean_record["agent_confidence"]
 
+    # 保留 confirm 写入的 writing/skipped 占位
+    if updated.get("mapping_record", {}).get("admin_writeback"):
+        mapping["admin_writeback"] = updated["mapping_record"]["admin_writeback"]
     updated["mapping_record"] = mapping
     return updated

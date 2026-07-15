@@ -28,6 +28,10 @@ from category_heuristics import (
     term_catalog_extension_mismatch,
     term_catalog_extension_penalty,
 )
+from pending_conventions import (
+    lookup_goods_id_soft,
+    lookup_pending_conventions_for_text,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data" / "category"
@@ -1019,14 +1023,56 @@ def rank_semantic_candidates(
     return _finalize_semantic_candidate_ranks(ranked[:3])
 
 
+def _merge_convention_hits(
+    history_hits: list[dict],
+    pending_hits: list[dict],
+) -> list[dict]:
+    """合并 Excel 历史惯例与在线共识；同 cid 取更强 strength。"""
+    strength_rank = {
+        "dominant": 4,
+        "pending_promoted": 3,
+        "support": 2,
+        "pending_soft": 1,
+    }
+    by_cid: dict[str, dict] = {}
+    for hit in [*history_hits, *pending_hits]:
+        cid = str(hit.get("category_id") or "")
+        if not cid:
+            continue
+        prev = by_cid.get(cid)
+        if not prev:
+            by_cid[cid] = dict(hit)
+            continue
+        if strength_rank.get(str(hit.get("strength")), 0) > strength_rank.get(
+            str(prev.get("strength")), 0
+        ):
+            merged = {**prev, **hit}
+            by_cid[cid] = merged
+        else:
+            # 保留更高票数 / share
+            if int(hit.get("count") or 0) > int(prev.get("count") or 0):
+                by_cid[cid] = {**prev, **{k: hit[k] for k in ("count", "share", "summary") if k in hit}}
+    return sorted(
+        by_cid.values(),
+        key=lambda x: (
+            strength_rank.get(str(x.get("strength")), 0),
+            float(x.get("share") or 0) * int(x.get("count") or 0),
+        ),
+        reverse=True,
+    )[:8]
+
+
 def _apply_history_conventions(
     ranked: list[dict],
     title: str,
     vision_keywords: list[str] | None,
     catalog: dict,
 ) -> list[dict]:
-    """历史订单惯例：注入常见 cid，并在接近时按惯例决胜。"""
-    hits = lookup_history_conventions_for_text(title, vision_keywords)
+    """历史订单惯例 + 在线共识 soft-boost：注入常见 cid，并在接近时按惯例决胜。"""
+    hits = _merge_convention_hits(
+        lookup_history_conventions_for_text(title, vision_keywords),
+        lookup_pending_conventions_for_text(title, vision_keywords),
+    )
     if not hits:
         return ranked
 
@@ -1040,11 +1086,19 @@ def _apply_history_conventions(
         entry = by_cid.get(cid) or (by_cid.get(int(cid)) if cid.isdigit() else None) or {}
         share = float(hit.get("share") or 0)
         count = int(hit.get("count") or 0)
-        # 惯例加分：强惯例（dominant + share≥0.4）更明显
+        strength = str(hit.get("strength") or "")
+        # 惯例加分：Excel dominant 最强；在线 promoted 次之；soft 更弱
         boost = 0.18 + share * 0.55
-        if hit.get("strength") == "dominant":
+        if strength == "dominant":
             boost += 0.12
+        elif strength == "pending_promoted":
+            boost += 0.10
+        elif strength == "pending_soft":
+            boost = 0.10 + share * 0.35
         conf_boost = min(0.92, 0.55 + share * 0.4 + min(count, 40) / 200)
+        if strength == "pending_soft":
+            conf_boost = min(0.88, conf_boost)
+        source_tag = "pending_consensus" if strength.startswith("pending") else "history"
 
         if cid in pool:
             row = pool[cid]
@@ -1053,9 +1107,11 @@ def _apply_history_conventions(
                 min(0.96, max(float(row.get("confidence") or 0), conf_boost) + boost * 0.15),
                 3,
             )
-            row["sources"] = list(dict.fromkeys([*(row.get("sources") or []), "history"]))
+            row["sources"] = list(dict.fromkeys([*(row.get("sources") or []), source_tag]))
             dims = dict(row.get("dimensions") or {})
             dims["history"] = round(share, 3)
+            if strength.startswith("pending"):
+                dims["consensus_support"] = count
             row["dimensions"] = dims
             reason = str(hit.get("summary") or "")
             if reason:
@@ -1069,7 +1125,7 @@ def _apply_history_conventions(
         cn = str(entry.get("cn_name") or hit.get("category_cn_name") or "")
         dec = str(entry.get("dec_cn_name") or hit.get("declare_cn_name") or "")
         hs = str(entry.get("hs_code") or hit.get("hs_code") or "")
-        if not valid_hs(hs) and hit.get("strength") != "dominant":
+        if not valid_hs(hs) and strength not in ("dominant", "pending_promoted"):
             continue
         pool[cid] = {
             "label": hit.get("term") or cn,
@@ -1084,6 +1140,7 @@ def _apply_history_conventions(
             "dimensions": {
                 "term_match": 0.8,
                 "history": round(share, 3),
+                "consensus_support": count if strength.startswith("pending") else 0,
                 "label_fit": 0.7,
                 "catalog_fit": 0.6 if valid_hs(hs) else 0.2,
                 "specificity": 0.7,
@@ -1093,8 +1150,8 @@ def _apply_history_conventions(
             "is_attribute": False,
             "is_generic": False,
             "matched_keywords": [hit.get("term")] if hit.get("term") else [],
-            "sources": ["history"],
-            "reason": str(hit.get("summary") or "历史订单惯例"),
+            "sources": [source_tag],
+            "reason": str(hit.get("summary") or ("在线共识" if source_tag == "pending_consensus" else "历史订单惯例")),
             "history_convention": hit,
         }
 
@@ -1417,6 +1474,15 @@ def suggest(
             vision_keywords=vk,
         )
 
+    # 1b) 在线 soft goods_id（单票不成门闩；support≥3 才强参考）
+    soft_gid = lookup_goods_id_soft(gid) if (not skip_history and gid) else None
+    soft_gid_boost_cid: int | None = None
+    if soft_gid and int(soft_gid.get("support") or 0) >= 3:
+        try:
+            soft_gid_boost_cid = int(soft_gid.get("category_id"))
+        except (TypeError, ValueError):
+            soft_gid_boost_cid = None
+
     title_tokens = tokenize(title + " " + (scoring_hint or ""))
     ranked = rank_semantic_candidates(title, scoring_hint, vk, catalog)
     decision = infer_decision(ranked, vk, title)
@@ -1435,8 +1501,16 @@ def suggest(
         history_s = float(hist_conv.get("share") or 0.0)
         if hist_conv.get("strength") == "dominant":
             history_s = max(history_s, 0.75)
+        elif hist_conv.get("strength") == "pending_promoted":
+            history_s = max(history_s, 0.65)
+        elif hist_conv.get("strength") == "pending_soft":
+            history_s = max(history_s, 0.45)
 
         base_conf = float(top.get("confidence") or score_to_confidence(top.get("score", 0)))
+        if soft_gid_boost_cid is not None and int(top.get("category_id") or 0) == soft_gid_boost_cid:
+            base_conf = min(0.94, base_conf + 0.08)
+            if "pending_consensus" not in (top.get("sources") or []):
+                top["sources"] = list(dict.fromkeys([*(top.get("sources") or []), "pending_goods_id"]))
 
         override_decision, override_detail, is_fallback = detect_platform_reference_issue(
             title=title,

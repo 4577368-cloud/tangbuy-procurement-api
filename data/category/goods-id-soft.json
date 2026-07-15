@@ -1,0 +1,186 @@
+{
+  "version": 1,
+  "by_goods_id": {
+    "732917550107": {
+      "category_id": 50024609,
+      "support": 4,
+      "hs_code": "9503008900",
+      "category_cn_name": "幼儿学爬玩具",
+      "declare_cn_name": "幼儿学爬玩具",
+      "last_at": "2026-07-15T08:27:58.708Z",
+      "last_kind": "confirm",
+      "soft_only": true
+    },
+    "807375640797": {
+      "category_id": 50456005,
+      "support": 7,
+      "hs_code": "9503002900",
+      "category_cn_name": "毛绒玩具",
+      "declare_cn_name": "毛绒玩具",
+      "last_at": "2026-07-15T08:40:10.050Z",
+      "last_kind": "confirm",
+      "soft_only": true
+    },
+    "781336274289": {
+      "category_id": 50012043,
+      "support": 6,
+      "hs_code": "6402190090",
+      "category_cn_name": "板鞋/休闲鞋",
+      "declare_cn_name": "休闲鞋",
+      "last_at": "2026-07-15T08:54:27.061Z",
+      "last_kind": "confirm",
+      "soft_only": true
+    },
+    "871771488825": {
+      "category_id": 50112002,
+      "support": 1,
+      "hs_code": "6402200000",
+      "category_cn_name": "男鞋",
+      "declare_cn_name": "男鞋",
+      "last_at": "2026-07-15T08:40:11.089Z",
+      "last_kind": "confirm",
+      "soft_only": true
+    },
+    "721469120231": {
+      "category_id": 50013869,
+      "support": 2,
+      "hs_code": "7117190000",
+      "category_cn_name": "手链",
+      "declare_cn_name": "手链",
+      "last_at": "2026-07-15T08:55:08.705Z",
+      "last_kind": "confirm",
+      "soft_only": true
+    },
+    "0": {
+      "category_id": 50008898,
+      "support": 1,
+      "hs_code": "6110200090",
+      "category_cn_name": "卫衣/绒衫",
+      "declare_cn_name": "绒衫",
+      "last_at": "2026-07-15T06:49:43.697Z",
+      "last_kind": "confirm",
+      "soft_only": true
+    },
+    "582487292293": {
+      "category_id": 50015302,
+      "support": 1,
+      "hs_code": "3926909090",
+      "category_cn_name": "贺卡/卡贴",
+      "declare_cn_name": "贺卡",
+      "last_at": "2026-07-15T06:52:52.552Z",
+      "last_kind": "correct",
+      "soft_only": true
+    },
+    "798396232483": {
+      "category_id": 50021540,
+      "support": 2,
+      "hs_code": "9017800000",
+      "category_cn_name": "卷尺",
+      "declare_cn_name": "卷尺",
+      "last_at": "2026-07-15T09:06:47.557Z",
+      "last_kind": "confirm",
+      "soft_only": true
+    },
+    "863382239292": {
+      "category_id": 50006846,
+      "support": 1,
+      "hs_code": "6115960000",
+      "category_cn_name": "短袜/打底袜/丝袜/美腿袜",
+      "declare_cn_name": "丝袜",
+      "last_at": "2026-07-15T06:53:36.984Z",
+      "last_kind": "confirm",
+      "soft_only": true
+    },
+    "848387324132": {
+      "category_id": 50011743,
+      "support": 2,
+      "hs_code": "6403919990",
+      "category_cn_name": "靴子",
+      "declare_cn_name": "靴子",
+      "last_at": "2026-07-15T08:55:16.600Z",
+      "last_kind": "confirm",
+      "soft_only": true
+    },
+    "833353370849": {
+      "category_id": 50023423,
+      "support": 2,
+      "hs_code": "6103320000",
+      "category_cn_name": "棒球服",
+      "declare_cn_name": "棒球服",
+      "last_at": "2026-07-15T09:06:53.720Z",
+      "last_kind": "confirm",
+      "soft_only": true
+    },
+    "718990331814": {
+      "category_id": 50012043,
+      "support": 3,
+      "hs_code": "6402190090",
+      "category_cn_name": "板鞋/休闲鞋",
+      "declare_cn_name": "休闲鞋",
+      "last_at": "2026-07-15T08:54:35.052Z",
+      "last_kind": "confirm",
+      "soft_only": true
+    },
+    "892580045926": {
+      "category_id": 201829117,
+      "support": 3,
+      "hs_code": "nan",
+      "category_cn_name": "猫窝/屋/帐篷",
+      "declare_cn_name": "nan",
+      "last_at": "2026-07-15T08:54:40.450Z",
+      "last_kind": "confirm",
+      "soft_only": true
+    },
+    "597838438394": {
+      "category_id": 50024609,
+      "support": 1,
+      "hs_code": "9503008900",
+      "category_cn_name": "幼儿学爬玩具",
+      "declare_cn_name": "幼儿学爬玩具",
+      "last_at": "2026-07-15T08:39:26.805Z",
+      "last_kind": "correct",
+      "soft_only": true
+    },
+    "871915431328": {
+      "category_id": 50008888,
+      "support": 2,
+      "hs_code": "6212101000",
+      "category_cn_name": "抹胸",
+      "declare_cn_name": "抹胸",
+      "last_at": "2026-07-15T08:40:38.269Z",
+      "last_kind": "confirm",
+      "soft_only": true
+    },
+    "713900662147": {
+      "category_id": 50010792,
+      "support": 1,
+      "hs_code": "3304910090",
+      "category_cn_name": "蜜粉/散粉",
+      "declare_cn_name": "日用品",
+      "last_at": "2026-07-15T09:06:36.335Z",
+      "last_kind": "confirm",
+      "soft_only": true
+    },
+    "771605508644": {
+      "category_id": 50003276,
+      "support": 1,
+      "hs_code": "4202920000",
+      "category_cn_name": "宠物背包",
+      "declare_cn_name": "宠物背包",
+      "last_at": "2026-07-15T09:06:42.913Z",
+      "last_kind": "confirm",
+      "soft_only": true
+    },
+    "773857556047": {
+      "category_id": 121386028,
+      "support": 1,
+      "hs_code": "3918109000",
+      "category_cn_name": "宠物垫",
+      "declare_cn_name": "垫子",
+      "last_at": "2026-07-15T09:07:05.695Z",
+      "last_kind": "confirm",
+      "soft_only": true
+    }
+  },
+  "updated_at": "2026-07-15T09:07:05.695Z"
+}

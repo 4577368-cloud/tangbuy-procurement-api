@@ -1,0 +1,660 @@
+{
+  "version": 1,
+  "term_to_categories": {
+    "幼儿": [
+      {
+        "category_id": 50024609,
+        "category_cn_name": "幼儿学爬玩具",
+        "declare_cn_name": "幼儿学爬玩具",
+        "hs_code": "9503008900",
+        "count": 4,
+        "share": 1.0,
+        "status": "soft",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "足球门": [
+      {
+        "category_id": 50024609,
+        "category_cn_name": "幼儿学爬玩具",
+        "declare_cn_name": "幼儿学爬玩具",
+        "hs_code": "9503008900",
+        "count": 4,
+        "share": 1.0,
+        "status": "soft",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "体育训练器材": [
+      {
+        "category_id": 50024609,
+        "category_cn_name": "幼儿学爬玩具",
+        "declare_cn_name": "幼儿学爬玩具",
+        "hs_code": "9503008900",
+        "count": 4,
+        "share": 1.0,
+        "status": "soft",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "足球运动玩具": [
+      {
+        "category_id": 50024609,
+        "category_cn_name": "幼儿学爬玩具",
+        "declare_cn_name": "幼儿学爬玩具",
+        "hs_code": "9503008900",
+        "count": 4,
+        "share": 1.0,
+        "status": "soft",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "户外运动": [
+      {
+        "category_id": 50024609,
+        "category_cn_name": "幼儿学爬玩具",
+        "declare_cn_name": "幼儿学爬玩具",
+        "hs_code": "9503008900",
+        "count": 4,
+        "share": 1.0,
+        "status": "soft",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "玩具": [
+      {
+        "category_id": 50024609,
+        "category_cn_name": "幼儿学爬玩具",
+        "declare_cn_name": "幼儿学爬玩具",
+        "hs_code": "9503008900",
+        "count": 5,
+        "share": 1.0,
+        "status": "promoted",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "儿童": [
+      {
+        "category_id": 50024609,
+        "category_cn_name": "幼儿学爬玩具",
+        "declare_cn_name": "幼儿学爬玩具",
+        "hs_code": "9503008900",
+        "count": 4,
+        "share": 1.0,
+        "status": "soft",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "便携": [
+      {
+        "category_id": 50024609,
+        "category_cn_name": "幼儿学爬玩具",
+        "declare_cn_name": "幼儿学爬玩具",
+        "hs_code": "9503008900",
+        "count": 4,
+        "share": 1.0,
+        "status": "soft",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "套装": [
+      {
+        "category_id": 50024609,
+        "category_cn_name": "幼儿学爬玩具",
+        "declare_cn_name": "幼儿学爬玩具",
+        "hs_code": "9503008900",
+        "count": 4,
+        "share": 1.0,
+        "status": "soft",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "足球": [
+      {
+        "category_id": 50024609,
+        "category_cn_name": "幼儿学爬玩具",
+        "declare_cn_name": "幼儿学爬玩具",
+        "hs_code": "9503008900",
+        "count": 4,
+        "share": 1.0,
+        "status": "soft",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "料包": [
+      {
+        "category_id": 50456005,
+        "category_cn_name": "毛绒玩具",
+        "declare_cn_name": "毛绒玩具",
+        "hs_code": "9503002900",
+        "count": 7,
+        "share": 1.0,
+        "status": "promoted",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "毛绒玩具": [
+      {
+        "category_id": 50456005,
+        "category_cn_name": "毛绒玩具",
+        "declare_cn_name": "毛绒玩具",
+        "hs_code": "9503002900",
+        "count": 7,
+        "share": 1.0,
+        "status": "promoted",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "布艺玩偶": [
+      {
+        "category_id": 50456005,
+        "category_cn_name": "毛绒玩具",
+        "declare_cn_name": "毛绒玩具",
+        "hs_code": "9503002900",
+        "count": 7,
+        "share": 1.0,
+        "status": "promoted",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "兔子玩具": [
+      {
+        "category_id": 50456005,
+        "category_cn_name": "毛绒玩具",
+        "declare_cn_name": "毛绒玩具",
+        "hs_code": "9503002900",
+        "count": 7,
+        "share": 1.0,
+        "status": "promoted",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "手工": [
+      {
+        "category_id": 50456005,
+        "category_cn_name": "毛绒玩具",
+        "declare_cn_name": "毛绒玩具",
+        "hs_code": "9503002900",
+        "count": 7,
+        "share": 1.0,
+        "status": "promoted",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "玩偶": [
+      {
+        "category_id": 50456005,
+        "category_cn_name": "毛绒玩具",
+        "declare_cn_name": "毛绒玩具",
+        "hs_code": "9503002900",
+        "count": 7,
+        "share": 1.0,
+        "status": "promoted",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "娃娃": [
+      {
+        "category_id": 50456005,
+        "category_cn_name": "毛绒玩具",
+        "declare_cn_name": "毛绒玩具",
+        "hs_code": "9503002900",
+        "count": 7,
+        "share": 1.0,
+        "status": "promoted",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "布艺": [
+      {
+        "category_id": 50456005,
+        "category_cn_name": "毛绒玩具",
+        "declare_cn_name": "毛绒玩具",
+        "hs_code": "9503002900",
+        "count": 7,
+        "share": 1.0,
+        "status": "promoted",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "材料": [
+      {
+        "category_id": 50456005,
+        "category_cn_name": "毛绒玩具",
+        "declare_cn_name": "毛绒玩具",
+        "hs_code": "9503002900",
+        "count": 7,
+        "share": 1.0,
+        "status": "promoted",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "训鞋": [
+      {
+        "category_id": 50012043,
+        "category_cn_name": "板鞋/休闲鞋",
+        "declare_cn_name": "休闲鞋",
+        "hs_code": "6402190090",
+        "count": 6,
+        "share": 1.0,
+        "status": "promoted",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "板鞋": [
+      {
+        "category_id": 50012043,
+        "category_cn_name": "板鞋/休闲鞋",
+        "declare_cn_name": "休闲鞋",
+        "hs_code": "6402190090",
+        "count": 11,
+        "share": 1.0,
+        "status": "promoted",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "白鞋": [
+      {
+        "category_id": 50012043,
+        "category_cn_name": "板鞋/休闲鞋",
+        "declare_cn_name": "休闲鞋",
+        "hs_code": "6402190090",
+        "count": 9,
+        "share": 1.0,
+        "status": "promoted",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "运动鞋": [
+      {
+        "category_id": 50012043,
+        "category_cn_name": "板鞋/休闲鞋",
+        "declare_cn_name": "休闲鞋",
+        "hs_code": "6402190090",
+        "count": 11,
+        "share": 1.0,
+        "status": "promoted",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "休闲鞋": [
+      {
+        "category_id": 50012043,
+        "category_cn_name": "板鞋/休闲鞋",
+        "declare_cn_name": "休闲鞋",
+        "hs_code": "6402190090",
+        "count": 11,
+        "share": 1.0,
+        "status": "promoted",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "运动": [
+      {
+        "category_id": 50012043,
+        "category_cn_name": "板鞋/休闲鞋",
+        "declare_cn_name": "休闲鞋",
+        "hs_code": "6402190090",
+        "count": 6,
+        "share": 1.0,
+        "status": "promoted",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "男鞋": [
+      {
+        "category_id": 50012043,
+        "category_cn_name": "板鞋/休闲鞋",
+        "declare_cn_name": "休闲鞋",
+        "hs_code": "6402190090",
+        "count": 5,
+        "share": 1.0,
+        "status": "promoted",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "动鞋": [
+      {
+        "category_id": 50012043,
+        "category_cn_name": "板鞋/休闲鞋",
+        "declare_cn_name": "休闲鞋",
+        "hs_code": "6402190090",
+        "count": 5,
+        "share": 1.0,
+        "status": "promoted",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "宠物窝": [
+      {
+        "category_id": 201829117,
+        "category_cn_name": "猫窝/屋/帐篷",
+        "declare_cn_name": "nan",
+        "hs_code": "nan",
+        "count": 3,
+        "share": 1.0,
+        "status": "soft",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "狗窝": [
+      {
+        "category_id": 201829117,
+        "category_cn_name": "猫窝/屋/帐篷",
+        "declare_cn_name": "nan",
+        "hs_code": "nan",
+        "count": 3,
+        "share": 1.0,
+        "status": "soft",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "猫窝": [
+      {
+        "category_id": 201829117,
+        "category_cn_name": "猫窝/屋/帐篷",
+        "declare_cn_name": "nan",
+        "hs_code": "nan",
+        "count": 3,
+        "share": 1.0,
+        "status": "soft",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "宠物用品": [
+      {
+        "category_id": 201829117,
+        "category_cn_name": "猫窝/屋/帐篷",
+        "declare_cn_name": "nan",
+        "hs_code": "nan",
+        "count": 3,
+        "share": 1.0,
+        "status": "soft",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ],
+    "毛绒垫": [
+      {
+        "category_id": 201829117,
+        "category_cn_name": "猫窝/屋/帐篷",
+        "declare_cn_name": "nan",
+        "hs_code": "nan",
+        "count": 3,
+        "share": 1.0,
+        "status": "soft",
+        "conflict_rate": 0,
+        "source": "pending_consensus"
+      }
+    ]
+  },
+  "dominant": {
+    "玩具": {
+      "category_id": 50024609,
+      "category_cn_name": "幼儿学爬玩具",
+      "declare_cn_name": "幼儿学爬玩具",
+      "hs_code": "9503008900",
+      "count": 5,
+      "share": 1.0,
+      "status": "promoted",
+      "conflict_rate": 0,
+      "source": "pending_consensus",
+      "support": 5,
+      "summary": "在线共识「玩具」→「幼儿学爬玩具」（5 票，冲突率 0%）"
+    },
+    "料包": {
+      "category_id": 50456005,
+      "category_cn_name": "毛绒玩具",
+      "declare_cn_name": "毛绒玩具",
+      "hs_code": "9503002900",
+      "count": 7,
+      "share": 1.0,
+      "status": "promoted",
+      "conflict_rate": 0,
+      "source": "pending_consensus",
+      "support": 7,
+      "summary": "在线共识「料包」→「毛绒玩具」（7 票，冲突率 0%）"
+    },
+    "毛绒玩具": {
+      "category_id": 50456005,
+      "category_cn_name": "毛绒玩具",
+      "declare_cn_name": "毛绒玩具",
+      "hs_code": "9503002900",
+      "count": 7,
+      "share": 1.0,
+      "status": "promoted",
+      "conflict_rate": 0,
+      "source": "pending_consensus",
+      "support": 7,
+      "summary": "在线共识「毛绒玩具」→「毛绒玩具」（7 票，冲突率 0%）"
+    },
+    "布艺玩偶": {
+      "category_id": 50456005,
+      "category_cn_name": "毛绒玩具",
+      "declare_cn_name": "毛绒玩具",
+      "hs_code": "9503002900",
+      "count": 7,
+      "share": 1.0,
+      "status": "promoted",
+      "conflict_rate": 0,
+      "source": "pending_consensus",
+      "support": 7,
+      "summary": "在线共识「布艺玩偶」→「毛绒玩具」（7 票，冲突率 0%）"
+    },
+    "兔子玩具": {
+      "category_id": 50456005,
+      "category_cn_name": "毛绒玩具",
+      "declare_cn_name": "毛绒玩具",
+      "hs_code": "9503002900",
+      "count": 7,
+      "share": 1.0,
+      "status": "promoted",
+      "conflict_rate": 0,
+      "source": "pending_consensus",
+      "support": 7,
+      "summary": "在线共识「兔子玩具」→「毛绒玩具」（7 票，冲突率 0%）"
+    },
+    "手工": {
+      "category_id": 50456005,
+      "category_cn_name": "毛绒玩具",
+      "declare_cn_name": "毛绒玩具",
+      "hs_code": "9503002900",
+      "count": 7,
+      "share": 1.0,
+      "status": "promoted",
+      "conflict_rate": 0,
+      "source": "pending_consensus",
+      "support": 7,
+      "summary": "在线共识「手工」→「毛绒玩具」（7 票，冲突率 0%）"
+    },
+    "玩偶": {
+      "category_id": 50456005,
+      "category_cn_name": "毛绒玩具",
+      "declare_cn_name": "毛绒玩具",
+      "hs_code": "9503002900",
+      "count": 7,
+      "share": 1.0,
+      "status": "promoted",
+      "conflict_rate": 0,
+      "source": "pending_consensus",
+      "support": 7,
+      "summary": "在线共识「玩偶」→「毛绒玩具」（7 票，冲突率 0%）"
+    },
+    "娃娃": {
+      "category_id": 50456005,
+      "category_cn_name": "毛绒玩具",
+      "declare_cn_name": "毛绒玩具",
+      "hs_code": "9503002900",
+      "count": 7,
+      "share": 1.0,
+      "status": "promoted",
+      "conflict_rate": 0,
+      "source": "pending_consensus",
+      "support": 7,
+      "summary": "在线共识「娃娃」→「毛绒玩具」（7 票，冲突率 0%）"
+    },
+    "布艺": {
+      "category_id": 50456005,
+      "category_cn_name": "毛绒玩具",
+      "declare_cn_name": "毛绒玩具",
+      "hs_code": "9503002900",
+      "count": 7,
+      "share": 1.0,
+      "status": "promoted",
+      "conflict_rate": 0,
+      "source": "pending_consensus",
+      "support": 7,
+      "summary": "在线共识「布艺」→「毛绒玩具」（7 票，冲突率 0%）"
+    },
+    "材料": {
+      "category_id": 50456005,
+      "category_cn_name": "毛绒玩具",
+      "declare_cn_name": "毛绒玩具",
+      "hs_code": "9503002900",
+      "count": 7,
+      "share": 1.0,
+      "status": "promoted",
+      "conflict_rate": 0,
+      "source": "pending_consensus",
+      "support": 7,
+      "summary": "在线共识「材料」→「毛绒玩具」（7 票，冲突率 0%）"
+    },
+    "训鞋": {
+      "category_id": 50012043,
+      "category_cn_name": "板鞋/休闲鞋",
+      "declare_cn_name": "休闲鞋",
+      "hs_code": "6402190090",
+      "count": 6,
+      "share": 1.0,
+      "status": "promoted",
+      "conflict_rate": 0,
+      "source": "pending_consensus",
+      "support": 6,
+      "summary": "在线共识「训鞋」→「板鞋/休闲鞋」（6 票，冲突率 0%）"
+    },
+    "板鞋": {
+      "category_id": 50012043,
+      "category_cn_name": "板鞋/休闲鞋",
+      "declare_cn_name": "休闲鞋",
+      "hs_code": "6402190090",
+      "count": 11,
+      "share": 1.0,
+      "status": "promoted",
+      "conflict_rate": 0,
+      "source": "pending_consensus",
+      "support": 11,
+      "summary": "在线共识「板鞋」→「板鞋/休闲鞋」（11 票，冲突率 0%）"
+    },
+    "白鞋": {
+      "category_id": 50012043,
+      "category_cn_name": "板鞋/休闲鞋",
+      "declare_cn_name": "休闲鞋",
+      "hs_code": "6402190090",
+      "count": 9,
+      "share": 1.0,
+      "status": "promoted",
+      "conflict_rate": 0,
+      "source": "pending_consensus",
+      "support": 9,
+      "summary": "在线共识「白鞋」→「板鞋/休闲鞋」（9 票，冲突率 0%）"
+    },
+    "运动鞋": {
+      "category_id": 50012043,
+      "category_cn_name": "板鞋/休闲鞋",
+      "declare_cn_name": "休闲鞋",
+      "hs_code": "6402190090",
+      "count": 11,
+      "share": 1.0,
+      "status": "promoted",
+      "conflict_rate": 0,
+      "source": "pending_consensus",
+      "support": 11,
+      "summary": "在线共识「运动鞋」→「板鞋/休闲鞋」（11 票，冲突率 0%）"
+    },
+    "休闲鞋": {
+      "category_id": 50012043,
+      "category_cn_name": "板鞋/休闲鞋",
+      "declare_cn_name": "休闲鞋",
+      "hs_code": "6402190090",
+      "count": 11,
+      "share": 1.0,
+      "status": "promoted",
+      "conflict_rate": 0,
+      "source": "pending_consensus",
+      "support": 11,
+      "summary": "在线共识「休闲鞋」→「板鞋/休闲鞋」（11 票，冲突率 0%）"
+    },
+    "运动": {
+      "category_id": 50012043,
+      "category_cn_name": "板鞋/休闲鞋",
+      "declare_cn_name": "休闲鞋",
+      "hs_code": "6402190090",
+      "count": 6,
+      "share": 1.0,
+      "status": "promoted",
+      "conflict_rate": 0,
+      "source": "pending_consensus",
+      "support": 6,
+      "summary": "在线共识「运动」→「板鞋/休闲鞋」（6 票，冲突率 0%）"
+    },
+    "男鞋": {
+      "category_id": 50012043,
+      "category_cn_name": "板鞋/休闲鞋",
+      "declare_cn_name": "休闲鞋",
+      "hs_code": "6402190090",
+      "count": 5,
+      "share": 1.0,
+      "status": "promoted",
+      "conflict_rate": 0,
+      "source": "pending_consensus",
+      "support": 5,
+      "summary": "在线共识「男鞋」→「板鞋/休闲鞋」（5 票，冲突率 0%）"
+    },
+    "动鞋": {
+      "category_id": 50012043,
+      "category_cn_name": "板鞋/休闲鞋",
+      "declare_cn_name": "休闲鞋",
+      "hs_code": "6402190090",
+      "count": 5,
+      "share": 1.0,
+      "status": "promoted",
+      "conflict_rate": 0,
+      "source": "pending_consensus",
+      "support": 5,
+      "summary": "在线共识「动鞋」→「板鞋/休闲鞋」（5 票，冲突率 0%）"
+    }
+  },
+  "updated_at": "2026-07-15T09:07:05.695Z",
+  "term_count": 32,
+  "dominant_count": 18
+}

@@ -460,7 +460,7 @@ def _resume_linked_orders_after_category(product: dict[str, Any], hs: dict[str, 
     """映射确认后：先写子单品类 overlay，再 resume 流水线（接单闸门解除 → 待下单）。"""
     try:
         from app.services.category_mapping.admin_writeback import collect_item_nos
-        from app.services.orders import line_cache
+        from app.services.category_mapping.write_port import apply_ord_line_category_writeback
         from app.services.orders.procurement_pipeline import is_pipeline_active, resume_pipeline
     except Exception:
         return
@@ -475,7 +475,17 @@ def _resume_linked_orders_after_category(product: dict[str, Any], hs: dict[str, 
     if not lines:
         return
     try:
-        line_cache.apply_category_overlay_to_lines(lines, hs, source="category_confirm")
+        apply_ord_line_category_writeback(
+            lines,
+            hs,
+            source="category_confirm",
+            mapping_resolution=(
+                "manual_correct"
+                if str(product.get("mapping_record", {}).get("review_status")) == "corrected"
+                else "manual_confirm"
+            ),
+            mapping_confidence=float(product.get("mapping_confidence") or 0) or None,
+        )
     except Exception:
         pass
     # 流水线内自动映射已会继续接单，勿递归 resume

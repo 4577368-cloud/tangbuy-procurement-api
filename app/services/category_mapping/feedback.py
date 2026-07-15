@@ -31,8 +31,15 @@ def _append_jsonl(path: Path, entry: dict[str, Any]) -> None:
 def append_feedback(entry: dict[str, Any]) -> None:
     if is_db_enabled():
         append_event_stream(STREAM_FEEDBACK, entry)
-        return
-    _append_jsonl(_feedback_path(), entry)
+    else:
+        _append_jsonl(_feedback_path(), entry)
+    # 二/三期：确认与纠错只加票进 pending-conventions，不单次污染主惯例
+    try:
+        from app.services.category_mapping.pending_conventions import ingest_feedback_entry
+
+        ingest_feedback_entry(entry)
+    except Exception:
+        pass
 
 
 def append_archive(entry: dict[str, Any]) -> None:

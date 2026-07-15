@@ -9,8 +9,11 @@ CATEGORY_ROW_FIELDS = (
     "ctgy_id",
     "lvl1_ctgy_id",
     "lvl1_ctgy_nm",
+    "lvl2_ctgy_id",
     "lvl2_ctgy_nm",
+    "lvl3_ctgy_id",
     "lvl3_ctgy_nm",
+    "lvl4_ctgy_id",
     "lvl4_ctgy_nm",
     "cstm_hs_cd",
     "dcl_cn_nm",
@@ -46,13 +49,28 @@ def status_fingerprint(row: dict[str, Any]) -> str:
 
 
 def _overlay_from_hs(hs: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "ctgy_id": hs.get("category_id"),
-        "lvl1_ctgy_nm": hs.get("category_cn_name"),
-        "cstm_hs_cd": hs.get("hs_code"),
-        "dcl_cn_nm": hs.get("declare_cn_name"),
-        "dcl_en_nm": hs.get("declare_en_name"),
+    out: dict[str, Any] = {
+        "ctgy_id": hs.get("category_id") if hs.get("category_id") is not None else hs.get("ctgy_id"),
+        "lvl1_ctgy_nm": hs.get("category_cn_name") or hs.get("lvl1_ctgy_nm"),
+        "cstm_hs_cd": hs.get("hs_code") or hs.get("cstm_hs_cd"),
+        "dcl_cn_nm": hs.get("declare_cn_name") or hs.get("dcl_cn_nm"),
+        "dcl_en_nm": hs.get("declare_en_name") or hs.get("dcl_en_nm"),
     }
+    for key in (
+        "lvl1_ctgy_id",
+        "lvl2_ctgy_id",
+        "lvl2_ctgy_nm",
+        "lvl3_ctgy_id",
+        "lvl3_ctgy_nm",
+        "lvl4_ctgy_id",
+        "lvl4_ctgy_nm",
+        "ctgy_decl_lvl",
+        "mapping_confidence",
+        "mapping_resolution",
+    ):
+        if hs.get(key) not in (None, ""):
+            out[key] = hs.get(key)
+    return out
 
 
 def build_category_overlay(hs: dict[str, Any], *, source: str, at: str) -> dict[str, Any]:
