@@ -23,11 +23,11 @@
     },
     "781336274289": {
       "category_id": 50012043,
-      "support": 6,
+      "support": 7,
       "hs_code": "6402190090",
       "category_cn_name": "板鞋/休闲鞋",
       "declare_cn_name": "休闲鞋",
-      "last_at": "2026-07-15T08:54:27.061Z",
+      "last_at": "2026-07-17T01:43:55.953Z",
       "last_kind": "confirm",
       "soft_only": true
     },
@@ -153,13 +153,15 @@
     },
     "713900662147": {
       "category_id": 50010792,
-      "support": 1,
+      "support": 2,
       "hs_code": "3304910090",
       "category_cn_name": "蜜粉/散粉",
       "declare_cn_name": "日用品",
-      "last_at": "2026-07-15T09:06:36.335Z",
+      "last_at": "2026-07-17T02:31:16.181Z",
       "last_kind": "confirm",
-      "soft_only": true
+      "soft_only": false,
+      "hard_override": true,
+      "overrode_category_id": null
     },
     "771605508644": {
       "category_id": 50003276,
@@ -180,7 +182,31 @@
       "last_at": "2026-07-15T09:07:05.695Z",
       "last_kind": "confirm",
       "soft_only": true
+    },
+    "742929840175": {
+      "category_id": 50025857,
+      "support": 1,
+      "hs_code": "9505100090",
+      "category_cn_name": "圣诞装饰品",
+      "declare_cn_name": "圣诞装饰品",
+      "last_at": "2026-07-17T02:32:09.885Z",
+      "last_kind": "confirm",
+      "soft_only": false,
+      "hard_override": true,
+      "overrode_category_id": null
+    },
+    "588468049988": {
+      "category_id": 50015490,
+      "support": 1,
+      "hs_code": "9401719000",
+      "category_cn_name": "折叠椅/躺椅",
+      "declare_cn_name": "折叠椅",
+      "last_at": "2026-07-17T02:32:18.651Z",
+      "last_kind": "confirm",
+      "soft_only": false,
+      "hard_override": true,
+      "overrode_category_id": null
     }
   },
-  "updated_at": "2026-07-15T09:07:05.695Z"
+  "updated_at": "2026-07-17T02:32:18.651Z"
 }

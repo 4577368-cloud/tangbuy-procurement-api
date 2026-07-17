@@ -37,3 +37,7 @@ def lookup_for_text(title: str, vision_keywords: list[str] | None = None) -> lis
 
 def lookup_goods_soft(goods_id: str) -> dict[str, Any] | None:
     return _pc().lookup_goods_id_soft(goods_id)
+
+
+def lookup_goods_hard_override(goods_id: str) -> dict[str, Any] | None:
+    return _pc().lookup_goods_id_hard_override(goods_id)

@@ -29,6 +29,7 @@ from category_heuristics import (
     term_catalog_extension_penalty,
 )
 from pending_conventions import (
+    lookup_goods_id_hard_override,
     lookup_goods_id_soft,
     lookup_pending_conventions_for_text,
 )
@@ -1457,8 +1458,32 @@ def suggest(
     ref_hint = (platform_hint or hint or "").strip()
     scoring_hint = "" if hint_as_reference else (hint or "").strip()
 
-    # 1) 历史 goods_id 精确命中 — 二元门闩，100% 通过（重新映射可跳过）
+    # 1) goods_id 解析
     gid = re.sub(r"\D", "", goods_id or "")
+
+    # 1a) 人工复核硬覆盖 — 优先于 Excel 历史捞取（重新映射可跳过）
+    if not skip_history and gid:
+        hard = lookup_goods_id_hard_override(gid)
+        if hard:
+            try:
+                cid = int(hard.get("category_id"))
+            except (TypeError, ValueError):
+                cid = 0
+            if cid:
+                return pack_result(
+                    cid,
+                    1.0,
+                    "goods_id_override",
+                    f"人工复核覆盖历史 goods_id={gid}，采用已确认类目",
+                    title=title,
+                    hint=hint,
+                    decision="local_item_mapped",
+                    history_hit=False,
+                    skip_fusion=True,
+                    vision_keywords=vk,
+                )
+
+    # 1b) Excel 历史 goods_id 精确命中 — 二元门闩；标题可疑时由 quality/前端校验拦去复核
     if not skip_history and gid and gid in goods_id_index:
         cid = goods_id_index[gid]
         return pack_result(
@@ -1474,10 +1499,10 @@ def suggest(
             vision_keywords=vk,
         )
 
-    # 1b) 在线 soft goods_id（单票不成门闩；support≥3 才强参考）
+    # 1c) 在线 soft goods_id（单票不成门闩；support≥3 才强参考）
     soft_gid = lookup_goods_id_soft(gid) if (not skip_history and gid) else None
     soft_gid_boost_cid: int | None = None
-    if soft_gid and int(soft_gid.get("support") or 0) >= 3:
+    if soft_gid and not soft_gid.get("hard_override") and int(soft_gid.get("support") or 0) >= 3:
         try:
             soft_gid_boost_cid = int(soft_gid.get("category_id"))
         except (TypeError, ValueError):

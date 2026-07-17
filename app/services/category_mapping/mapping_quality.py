@@ -275,8 +275,8 @@ def assess_mapping_quality(
 ) -> dict[str, Any]:
     ok, detail, score = mapping_aligns_with_title(title, hs, vision_keywords=vision_keywords)
     method = (match_method or "").strip()
-    # 本地缓存 / 历史命中也必须过标题门禁，否则只能人工确认
-    if method in ("local_item_mapped", "history_goods_id") and not ok:
+    # 本地缓存 / 历史命中 / 人工覆盖也必须过标题门禁，否则只能人工确认
+    if method in ("local_item_mapped", "history_goods_id", "goods_id_override") and not ok:
         auto_pass = False
     elif method in ("platform_reference", "platform_fallback", "admin_existing"):
         auto_pass = False

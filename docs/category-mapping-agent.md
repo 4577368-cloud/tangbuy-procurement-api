@@ -38,13 +38,13 @@ npm run build:category-data
 
 | decision | 含义 |
 |----------|------|
-| `history_hit` | 1688 goods_id 在历史表命中 → **100% 自动** |
-| `local_item_mapped` | Tangbuy item_id 或本地 `local-mappings.json` 已有映射 → **100% 自动** |
+| `history_hit` | 1688 goods_id 在 Excel 历史表命中 → 标题相关可自动；**可疑则待复核** |
+| `local_item_mapped` | 本地映射 **或人工复核覆盖历史** → 标题相关可自动 |
 | `semantic_agreement` | 标题语义词与图片理解一致，单一强候选 → 可自动推荐 |
 | `ambiguous_semantics` | 标题含多个品类词 → 6 维加权置信度 + 分离度（维度领先/分差）决定 agent 自动或人工选 |
 | `manual_suggested` | 弱匹配或需人工搜索 HS |
 
-**历史映射**：仅 goods_id / 本地 item 映射为二元门闩（0/1），不参与百分比融合。  
+**历史映射**：Excel goods_id 为门闩；人工确认/纠正后写入 `goods-id-soft` 硬覆盖，下次 suggest **优先用新类目**，不再捞旧历史。  
 **平台类目**：仅当 1688 回传 `source_category_hint` 时作为辅助信号。  
 **图片理解**：关键词并入 `matched_keywords`，与标题一致时提升 `semantic_agreement` 概率。
 

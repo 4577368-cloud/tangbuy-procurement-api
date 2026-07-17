@@ -4,6 +4,7 @@
 - soft：同 term→cid 窗口内 support≥3 且 conflict_rate < 20%
 - promote 候选：support≥5 且 conflict_rate < 20% → 写入 live-conventions（不改 Excel 主文件）
 - 冲突：conflict_rate ≥ 20% 且票数够 → 标 conflict，仅复盘不加分
+- goods_id：确认/纠正写入 hard_override，下次 suggest 优先于 Excel 历史索引
 """
 
 from __future__ import annotations
@@ -252,7 +253,15 @@ def record_vote(
 
         soft_promoted = _sync_live_conventions(term_map, stamp)
         if goods_id and kind in ("confirm", "correct") and cid:
-            _upsert_goods_soft(str(goods_id), cid, hs_snap, stamp, kind=kind)
+            # 人工复核后硬覆盖 Excel 历史捞取；soft 加票仍保留
+            _upsert_goods_soft(
+                str(goods_id),
+                cid,
+                hs_snap,
+                stamp,
+                kind=kind,
+                hard_override=True,
+            )
 
         clear_pending_caches()
         return {
@@ -326,6 +335,7 @@ def _upsert_goods_soft(
     stamp: str,
     *,
     kind: str,
+    hard_override: bool = False,
 ) -> None:
     gid = "".join(ch for ch in goods_id if ch.isdigit())
     if not gid:
@@ -339,6 +349,8 @@ def _upsert_goods_soft(
         support += 1
     else:
         support = 1
+    # 人工确认/纠正：硬覆盖优先于 Excel goods-id-index；否则仍只 soft
+    override = bool(hard_override) or bool(prev.get("hard_override"))
     by_g[gid] = {
         "category_id": int(cid) if cid.isdigit() else cid,
         "support": support,
@@ -347,8 +359,13 @@ def _upsert_goods_soft(
         "declare_cn_name": hs_snap.get("declare_cn_name") or prev.get("declare_cn_name"),
         "last_at": stamp,
         "last_kind": kind,
-        # 单票不得当 history_hit；仅 soft 提示
-        "soft_only": True,
+        "soft_only": not override,
+        "hard_override": override,
+        "overrode_category_id": (
+            int(prev_cid)
+            if hard_override and prev_cid and prev_cid != cid and prev_cid.isdigit()
+            else prev.get("overrode_category_id")
+        ),
     }
     data["by_goods_id"] = by_g
     data["updated_at"] = stamp
@@ -361,6 +378,16 @@ def lookup_goods_id_soft(goods_id: str) -> Optional[dict[str, Any]]:
         return None
     row = (load_goods_id_soft().get("by_goods_id") or {}).get(gid)
     return dict(row) if isinstance(row, dict) else None
+
+
+def lookup_goods_id_hard_override(goods_id: str) -> Optional[dict[str, Any]]:
+    """人工复核写入的 goods_id → cid，优先于 Excel 历史索引。"""
+    row = lookup_goods_id_soft(goods_id)
+    if not row or not row.get("hard_override"):
+        return None
+    if row.get("category_id") in (None, "", 0, "0"):
+        return None
+    return row
 
 
 def lookup_pending_conventions_for_text(

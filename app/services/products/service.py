@@ -327,7 +327,7 @@ def save_mapping_draft_from_payload(product: dict[str, Any], payload: dict[str, 
     )
     record["auto_resolved"] = (
         quality["auto_pass_eligible"]
-        and decision in ("semantic_agreement", "history_hit")
+        and decision in ("semantic_agreement", "history_hit", "local_item_mapped")
     )
     record["quality_gate"] = quality
     return save_mapping_draft(product, record)

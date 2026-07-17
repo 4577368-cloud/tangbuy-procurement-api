@@ -72,7 +72,9 @@ def test_three_confirms_soft_boost(isolated_pending):
     soft = pc.lookup_goods_id_soft("81550002")
     assert soft is not None
     assert int(soft.get("support") or 0) >= 3
-    assert soft.get("soft_only") is True
+    # 确认/纠正写入硬覆盖，下次 suggest 优先于 Excel 历史
+    assert soft.get("hard_override") is True
+    assert soft.get("soft_only") is False
 
 
 def test_correct_away_raises_conflict(isolated_pending):
@@ -140,3 +142,22 @@ def test_ingest_feedback_confirm(isolated_pending):
         }
     )
     assert out.get("ok") is True
+
+
+def test_correct_hard_overrides_goods_id(isolated_pending):
+    """人工纠正后 hard_override 优先于 Excel 历史捞取。"""
+    pc.record_vote(
+        title="身体高光修容棒散粉",
+        cid="50009999",
+        kind="correct",
+        hs={"category_cn_name": "蜜粉/散粉", "hs_code": "3304910090", "declare_cn_name": "日用品"},
+        original_cid="50001111",
+        goods_id="107710320328736",
+    )
+    hard = pc.lookup_goods_id_hard_override("107710320328736")
+    assert hard is not None
+    assert int(hard.get("category_id")) == 50009999
+    assert hard.get("hard_override") is True
+    soft = pc.lookup_goods_id_soft("107710320328736")
+    assert soft is not None
+    assert soft.get("soft_only") is False
